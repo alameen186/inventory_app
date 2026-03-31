@@ -23,7 +23,7 @@
 
                     <!-- MESSAGE -->
                     <cfif structKeyExists(url, "message")>
-                        <div class="alert 
+                        <div id="alertBox" class="alert 
                             <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
                                 alert-success
                             <cfelse>
@@ -144,6 +144,13 @@
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+<script>
+    setTimeout(function () {
+        var alertBox = document.getElementById("alertBox");
+        if (alertBox) {
+            alertBox.style.display = "none";
+        }
+    }, 5000);   
+</script>
 </body>
 </html>

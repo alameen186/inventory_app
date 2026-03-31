@@ -1,0 +1,1 @@
+<cfoutput>#hash("Admin@123", "SHA-256")#</cfoutput>

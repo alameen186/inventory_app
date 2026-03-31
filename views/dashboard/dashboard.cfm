@@ -3,6 +3,9 @@
    <cfabort>
 </cfif>
 
+<cfset userModel = createObject("component","models.User")>
+<cfset userData = userModel.getUserWithRole(session.user_id)>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -13,24 +16,49 @@
 <body class="bg-light">
 
 <div class="container mt-5">
-    <div class="card shadow">
-        <div class="card-body">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
 
-            <h3>Dashboard</h3>
+            <div class="card shadow-lg border-0 rounded-3">
 
-            <hr>
+                <!-- Header -->
+                <div class="card-header bg-dark text-white text-center">
+                    <h4 class="mb-0">Inventory Management System</h4>
+                </div>
 
-            <cfoutput>
-                <p><strong>Welcome:</strong> #session.user_email#</p>
-                <p><strong>User ID:</strong> #session.user_id#</p>
-                <p><strong>Role ID:</strong> #session.role_id#</p>
-            </cfoutput>
+                <!-- Body -->
+                <div class="card-body">
 
-            <hr>
+                    <cfoutput>
+                        <div class="text-center mb-4">
+                            <h5 class="fw-bold">Welcome, #userData.first_name# #userData.last_name#</h5>
+                            <p class="text-muted mb-0">#userData.email#</p>
+                        </div>
 
-            <a href="../../controllers/LogoutController.cfm" class="btn btn-danger">
-                Logout
-            </a>
+                        <hr>
+
+                        <!-- Role Info -->
+                        <div class="p-3 bg-light rounded">
+                            <h6 class="fw-bold text-primary mb-1">
+                                #userData.role_name#
+                            </h6>
+                            <small class="text-muted">
+                                #userData.description#
+                            </small>
+                        </div>
+                    </cfoutput>
+
+                    <hr>
+
+                    <!-- Logout -->
+                    <div class="d-grid">
+                        <a href="../../controllers/LogoutController.cfm" class="btn btn-danger">
+                            Logout
+                        </a>
+                    </div>
+
+                </div>
+            </div>
 
         </div>
     </div>

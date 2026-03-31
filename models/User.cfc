@@ -36,4 +36,20 @@
      <cfreturn userQuery>
    </cffunction>
 
+   <cffunction name="getUserWithRole" access="public" returnType="query" output="false">
+      <cfargument name="user_id" type="numeric" rquired="true">
+        <cfquery name="userData" datasource="#application.dsn#">
+           SELECT 
+             u.first_name,
+             u.last_name,
+             u.email,
+             r.role_name,
+             r.description
+           FROM users u
+           INNER JOIN roles r ON u.role_id=r.id
+           WHERE u.id = <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+      <cfreturn userData>   
+   </cffunction>
+
 </cfcomponent>
