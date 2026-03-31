@@ -1,0 +1,1 @@
+<cfset application.dsn = "inventory_app">

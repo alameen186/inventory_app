@@ -1,0 +1,19 @@
+# Lucee / CF server files
+WEB-INF/
+lucee-server/
+lucee-web/
+
+# Logs
+*.log
+
+# Temp files
+temp/
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+
+# Environment
+.env
