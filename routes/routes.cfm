@@ -10,6 +10,11 @@
 </cfif>
 
 <cfif page EQ "dashboard">
+    <cfif NOT structKeyExists(session, "user_id")>
+        <cflocation url="../index.cfm?page=auth&message=Please login first&type=error&tab=login" addtoken="false">
+        <cfabort>
+    </cfif>
+
     <cfinclude template="../views/dashboard/dashboard.cfm">
 <cfelse>
     <cfinclude template="../views/auth/auth.cfm">
