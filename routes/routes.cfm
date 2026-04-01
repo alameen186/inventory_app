@@ -10,12 +10,27 @@
 </cfif>
 
 <cfif page EQ "dashboard">
+
     <cfif NOT structKeyExists(session, "user_id")>
-        <cflocation url="../index.cfm?page=auth&message=Please login first&type=error&tab=login" addtoken="false">
+        <cflocation url="../index.cfm?page=auth" addtoken="false">
         <cfabort>
     </cfif>
 
     <cfinclude template="../views/dashboard/dashboard.cfm">
+
+
+<cfelseif page EQ "users">
+
+    <cfif NOT structKeyExists(session, "user_id") OR session.role_id NEQ 1>
+        <cflocation url="../index.cfm?page=dashboard" addtoken="false">
+        <cfabort>
+    </cfif>
+
+    <cfinclude template="../views/admin/users.cfm">
+
+
 <cfelse>
+
     <cfinclude template="../views/auth/auth.cfm">
+
 </cfif>

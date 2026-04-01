@@ -9,7 +9,6 @@
 
 <body class="bg-light">
 
-<!---  active tab --->
 <cfset activeTab = structKeyExists(url, "tab") ? url.tab : "login">
 
 <div class="container mt-5">
@@ -29,7 +28,7 @@
                             <cfelse>
                                 alert-danger
                             </cfif>">
-                            
+                    
                             <cfoutput>#url.message#</cfoutput>
                         </div>
                     </cfif>

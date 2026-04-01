@@ -52,4 +52,36 @@
       <cfreturn userData>   
    </cffunction>
 
+   <cffunction name="getAllUsers" access="public" returntype="query" output="false">
+    <cfquery name="users" datasource="#application.dsn#">
+        SELECT u.*, r.role_name
+        FROM users u
+        INNER JOIN roles r ON u.role_id = r.id
+    </cfquery>
+    <cfreturn users>
+   </cffunction>
+
+   <cffunction name="deleteUser" access="public" returntype="void" output="false">
+       <cfargument name="id" type="numeric" required="true">
+       <cfquery datasource="#application.dsn#">
+       DELETE FROM users
+       where id=<cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+       </cfquery>
+   </cffunction>
+
+   <cffunction name="updateUser" output="false">
+       <cfargument name="id" type="numeric" required="true">
+       <cfargument name="first_name" type="string" required="true">
+       <cfargument name="last_name" type="string" required="true">
+       <cfargument name="email" type="string" required="true">
+
+       <cfquery datasource="#application.dsn#">
+        UPDATE users
+        SET first_name = <cfqueryparam value="#arguments.first_name#" cfsqltype="cf_sql_varchar">,
+            last_name = <cfqueryparam value="#arguments.last_name#" cfsqltype="cf_sql_varchar">,
+            email = <cfqueryparam value="#arguments.email#" cfsqltype="cf_sql_varchar">
+        WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+   </cffunction>
+
 </cfcomponent>
