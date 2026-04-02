@@ -19,7 +19,8 @@
         <thead class="table-dark">
             <tr>
                 <th>ID</th>
-                <th>Name</th>
+                <th>First Name</th>
+                <th>Last Name</th>
                 <th>Email</th>
                 <th>Role</th>
                 <th>Actions</th>
@@ -63,17 +64,22 @@
             <cfelse>
                 <tr>
                     <td>#id#</td>
-                    <td>#first_name# #last_name#</td>
+                    <td>#first_name#</td>
+                    <td>#last_name#</td>
                     <td>#email#</td>
                     <td>#role_name#</td>
                     <td>
-                        <a href="../../index.cfm?page=dashboard&section=users&editId=#id#" 
+                      <cfif role_id NEQ 1>
+                      <a href="../../index.cfm?page=dashboard&section=users&editId=#id#" 
                            class="btn btn-warning btn-sm">Edit</a>
                         <a href="../../controllers/UserController.cfm?action=delete&id=#id#" 
                            class="btn btn-sm btn-danger"
                            onclick="return confirm('Delete this user?')">
                            Delete
                         </a>
+                        <cfelse>
+                                 Restricted
+                      </cfif>
                     </td>
                 </tr>
             </cfif>    

@@ -39,6 +39,12 @@
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=roles">Roles</a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=category">Categories</a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=products">Products</a>
+                    </li>
                 </ul>
             </cfif>
 
@@ -90,6 +96,12 @@
     <cfelseif section EQ "roles">
 
         <cfinclude template="../admin/roles.cfm">
+    <cfelseif section EQ "category">
+
+        <cfinclude template="../admin/category.cfm">
+    <cfelseif section EQ "products">
+
+        <cfinclude template="../admin/products.cfm">
 
     <cfelse>
 
