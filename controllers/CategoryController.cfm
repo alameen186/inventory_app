@@ -31,6 +31,15 @@
 
     <cfelse>
 
+       <cfset category = CategoryModel.getAllCategories()>
+       <cfif category_name EQ category.category_name>
+
+        <cflocation url="#baseUrl#&message=Category already exist&type=error&showForm=1" addtoken="false">
+        <cfabort>
+
+        </cfif>
+
+
         <cfset categoryModel.addCategory(category_name, description)>
 
         <cflocation url="#baseUrl#&message=Category Added successfully&type=success" addtoken="false">

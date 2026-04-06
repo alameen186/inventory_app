@@ -61,9 +61,10 @@
     <!-- actions -->
     <div class="col-md-2">
         <button type="submit" class="btn btn-primary btn-block">Add Product</button>
-        <button class="btn btn-link btn-sm w-100" onclick="document.getElementById('addForm').style.display='none'">
-            Cancel
-        </button>        
+        <button type="button" class="btn btn-link btn-sm w-100" onclick="document.getElementById('addForm').style.display='none'">
+          Cancel
+        </button>
+        
     
     </div>
  

@@ -8,6 +8,7 @@
 <cfif structKeyExists(form, "action") AND form.action EQ "add">
 
     <cfset productModel = createObject("component","models.Product")>
+    <cfset productname=productModel.getAllProducts()>
 
     <cfset productName = trim(form.product_name)>
     <cfset price = val(form.price)>
@@ -22,6 +23,9 @@
 
     <cfelseif len(productName) GT 50>
         <cflocation url="#baseUrl#&message=Product name too long&type=error&showForm=1" addtoken="false">
+        <cfabort>
+    <cfelseif  productName EQ productname>
+        <cflocation url="#baseUrl#&message=Product name already exist&type=error&showForm=1" addtoken="false">
         <cfabort>
 
     <cfelseif price LTE 0>
