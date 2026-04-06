@@ -105,4 +105,24 @@
        </cfquery>
        <cfreturn product>
     </cffunction>
+
+    <cffunction name="searchProducts" returntype="query">
+       <cfargument name="keyword" type="string" required="false">
+
+       <cfquery name="products" datasource="#application.dsn#">
+         SELECT P.*, c.category_name 
+         FROM products P
+         join categories c ON p.category_id = c.id
+         where p.is_active=1
+         AND c.is_active=1
+
+         <cfif len(arguments.keyword)>
+            AND p.product_name LIKE 
+            <cfqueryparam value="%#arguments.keyword#%" cfsqltype="cf_sql_varchar">
+            OR c.category_name LIKE 
+            <cfqueryparam value="%#arguments.keyword#%" cfsqltype="cf_sql_varchar">
+        </cfif>
+       </cfquery>
+       <cfreturn products>
+    </cffunction>
 </cfcomponent>

@@ -51,6 +51,9 @@
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=productList">Products</a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=orders">Orders</a>
+                    </li>
                 </ul>
                      
 
@@ -75,6 +78,8 @@
 
                 <!-- PROFILE DROPDOWN -->
                 <div class="dropdown">
+                <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm w-35 d-inline">Cart</a>
+                    </button>
                     <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
                         Profile
                     </button>
@@ -112,6 +117,14 @@
     <cfelseif section EQ "productList">
 
         <cfinclude template="../user/products.cfm">
+
+    <cfelseif section EQ "cart">
+        <cfinclude template="../user/cart.cfm">   
+        
+    <cfelseif section EQ "orders">
+        <cfinclude template="../user/orders.cfm">   
+
+        
 
     <cfelse>
 
