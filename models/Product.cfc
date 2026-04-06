@@ -9,17 +9,24 @@
        <cfreturn products>
    </cffunction>
 
-   <cffunction name="getAllActiveProducts" access="public" returnType="query" output="false">
-       <cfquery name="products" datasource="#application.dsn#">
-         SELECT p.id, p.product_name
-         FROM products p
-         JOIN categories c ON p.category_id = c.id
-         WHERE p.is_active = 1
-         AND c.is_active = 1
-       </cfquery>
+  <cffunction name="getAllActiveProducts" returntype="query" output="false">
 
-       <cfreturn products>
-   </cffunction>
+    <cfquery name="products" datasource="#application.dsn#">
+        SELECT 
+            p.id,
+            p.product_name,
+            p.price,
+            p.image,   
+            c.category_name
+        FROM products p
+        JOIN categories c ON p.category_id = c.id
+        WHERE p.is_active = 1
+        AND c.is_active = 1
+    </cfquery>
+
+    <cfreturn products>
+
+</cffunction>
 
    <cffunction name="addProduct" access="public" returntype="boolean" output="false">
      <cfargument name="product_name" type="string" required="true">

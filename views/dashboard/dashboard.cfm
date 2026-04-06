@@ -46,6 +46,14 @@
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=products">Products</a>
                     </li>
                 </ul>
+            <cfelse>
+                <ul>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=productList">Products</a>
+                    </li>
+                </ul>
+                     
+
             </cfif>
 
             <!-- Logout -->
@@ -78,7 +86,6 @@
                             <p class="mb-1">#userData.email#</p>
                             <hr>
                             <p class="mb-1"><strong>#userData.role_name#</strong></p>
-                            <small>#userData.description#</small>
                         </cfoutput>
 
                     </div>
@@ -102,6 +109,9 @@
     <cfelseif section EQ "products">
 
         <cfinclude template="../admin/products.cfm">
+    <cfelseif section EQ "productList">
+
+        <cfinclude template="../user/products.cfm">
 
     <cfelse>
 

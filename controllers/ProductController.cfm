@@ -96,7 +96,7 @@
     <cfset imageName = "">
 
     <cfset oldProduct = productModel.getProductById(id)>
-<cfset imageName = oldProduct.image>
+    <cfset imageName = oldProduct.image>
 
     <cftry>
 
