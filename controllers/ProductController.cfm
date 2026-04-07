@@ -8,30 +8,28 @@
 <cfif structKeyExists(form, "action") AND form.action EQ "add">
 
     <cfset productModel = createObject("component","models.Product")>
-    <cfset productname=productModel.getAllProducts()>
-
+    
     <cfset productName = trim(form.product_name)>
     <cfset price = val(form.price)>
     <cfset category_id = val(form.category_id)>
-
     <cfset baseUrl = "../index.cfm?page=dashboard&section=products">
 
-    <!--- VALIDATION --->
+    <cfset qAllProducts = productModel.getAllProducts()>
+    <cfset existingNames = valueList(qAllProducts.product_name)>
+
     <cfif len(productName) LT 3>
         <cflocation url="#baseUrl#&message=Product name must be at least 3 characters&type=error&showForm=1" addtoken="false">
         <cfabort>
-
     <cfelseif len(productName) GT 50>
         <cflocation url="#baseUrl#&message=Product name too long&type=error&showForm=1" addtoken="false">
         <cfabort>
-    <cfelseif  productName EQ productname>
-        <cflocation url="#baseUrl#&message=Product name already exist&type=error&showForm=1" addtoken="false">
+    <!--- FIXED: This now checks every existing product name, not just the first one --->
+    <cfelseif listFindNoCase(existingNames, productName)>
+        <cflocation url="#baseUrl#&message=Product name already exists&type=error&showForm=1" addtoken="false">
         <cfabort>
-
     <cfelseif price LTE 0>
         <cflocation url="#baseUrl#&message=Invalid price&type=error&showForm=1" addtoken="false">
         <cfabort>
-
     <cfelseif category_id LTE 0>
         <cflocation url="#baseUrl#&message=Invalid category&type=error&showForm=1" addtoken="false">
         <cfabort>
@@ -40,12 +38,17 @@
     <cfset imageName = "">
 
     <cftry>
-
         <cfif structKeyExists(form, "product_image") AND len(form.product_image)>
+            <cfset uploadPath = expandPath('../assets/images/products/')>
+            
+            <cfif NOT directoryExists(uploadPath)>
+                <cfdirectory action="create" directory="#uploadPath#">
+            </cfif>
+
             <cffile 
                 action="upload"
                 filefield="product_image"
-                destination="#expandPath('../assets/images/products/')#"
+                destination="#uploadPath#"
                 nameconflict="makeunique"
                 accept="image/jpeg,image/png,image/jpg">
             <cfset imageName = cffile.serverFile>
@@ -56,18 +59,25 @@
         <cfif result>
             <cflocation url="#baseUrl#&message=Product added successfully&type=success" addtoken="false">
         <cfelse>
+            <cfif len(imageName)>
+                <cffile action="delete" file="#uploadPath##imageName#">
+            </cfif>
             <cflocation url="#baseUrl#&message=Insert failed&type=error&showForm=1" addtoken="false">
         </cfif>
         <cfabort>
 
     <cfcatch>
-        <cflocation url="#baseUrl#&message=Something went wrong&type=error&showForm=1" addtoken="false">
+        <cfif len(imageName) AND fileExists(uploadPath & imageName)>
+            <cffile action="delete" file="#uploadPath##imageName#">
+        </cfif>
+        <cflocation url="#baseUrl#&message=Something went wrong: #cfcatch.message#&type=error&showForm=1" addtoken="false">
         <cfabort>
     </cfcatch>
 
     </cftry>
 
 </cfif>
+
 
 
 
