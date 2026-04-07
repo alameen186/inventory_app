@@ -19,13 +19,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-light">
+<body class="bg-light style="overflow: hidden;">
 
-<div class="container-fluid">
-    <div class="row">
+<div class="container-fluid vh-100">
+    <div class="row h-100">
 
         <!-- LEFT SIDEBAR -->
-        <div class="col-md-2 bg-dark text-white vh-100 p-3">
+        <div class="col-md-2 bg-dark text-white h-100 p-3">
 
             <h5 class="text-center">Menu</h5>
             <hr class="bg-light">
@@ -47,7 +47,7 @@
                     </li>
                 </ul>
             <cfelse>
-                <ul>
+                <ul class="nav flex-column">
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=productList">Products</a>
                     </li>
@@ -69,7 +69,7 @@
         </div>
 
         <!-- MAIN CONTENT -->
-        <div class="col-md-10">
+        <div class="col-md-10 d-flex flex-column h-100">
 
             <!-- TOP BAR -->
             <div class="d-flex justify-content-between align-items-center p-3 border-bottom shadow-sm">
@@ -99,7 +99,7 @@
             </div>
 
             <!-- CENTER CONTENT -->
-            <div class="p-4">
+            <div class="p-4 flex-grow-1 overflow-auto">
 
     <cfif section EQ "users">
 

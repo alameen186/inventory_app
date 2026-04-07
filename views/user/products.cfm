@@ -12,6 +12,18 @@
 <cfset products = productModel.searchProducts(url.search)>
 
 <div class="container mt-4">
+<cfif structKeyExists(url, "message")>
+    <div id="alertBox"  class="alert 
+        <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
+            alert-success
+        <cfelse>
+            alert-danger
+        </cfif>">
+
+        <cfoutput>#url.message#</cfoutput>
+
+    </div>
+</cfif>
 <form method="get" action="../../index.cfm" class="mb-3">
     <input type="hidden" name="page" value="dashboard">
     <input type="hidden" name="section" value="productList">
@@ -76,3 +88,12 @@
 
     </div>
 </div>
+
+<script>
+    setTimeout(function () {
+        var alertBox = document.getElementById("alertBox");
+        if (alertBox) {
+            alertBox.style.display = "none";
+        }
+    }, 5000);   
+</script>   

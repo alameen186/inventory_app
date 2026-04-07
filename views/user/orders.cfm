@@ -18,11 +18,11 @@
 
 <cfoutput query="orders">
 
-    <!-- new card  -->
+    <!-- NEW ORDER CARD -->
     <cfif currentGroup NEQ order_group_id>
 
+        <!-- CLOSE PREVIOUS -->
         <cfif currentGroup NEQ "">
-           
             <tr class="table-secondary">
                 <td colspan="4" class="text-end"><strong>Order Total:</strong></td>
                 <td><strong>#gTotal#</strong></td>
@@ -32,12 +32,26 @@
             <cfset gTotal = 0>
         </cfif>
 
+        <!-- CARD START -->
         <div class="card mb-4">
-            <div class="card-header bg-dark text-white">
-                Order ID: #order_group_id#
-                <span class="float-end">Date: #dateFormat(created_at, "dd-mmm-yyyy")#</span>
+
+            <!-- HEADER WITH DOWNLOAD BUTTON -->
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+
+                <span>
+                    Order ID: #order_group_id#
+                    | Date: #dateFormat(created_at, "dd-mmm-yyyy")#
+                </span>
+
+                <a href="../../assets/invoices/invoice_#order_group_id#.pdf" 
+                   target="_blank"
+                   class="btn btn-success btn-sm">
+                    Download PDF
+                </a>
+
             </div>
 
+            <!-- TABLE -->
             <table class="table mb-0">
                 <tr>
                     <th>Product</th>
@@ -69,15 +83,16 @@
 
     <cfset gTotal += total_amount>
 
-    <!--- order total --->
+    <!-- LAST ROW -->
     <cfif currentRow EQ recordCount>
         <tr class="table-secondary">
             <td colspan="4" class="text-end"><strong>Order Total:</strong></td>
             <td><strong>#gTotal#</strong></td>
         </tr>
+        </table>
+        </div>
     </cfif>
+
 </cfoutput>
 
-</table>
-</div>
 </div>
