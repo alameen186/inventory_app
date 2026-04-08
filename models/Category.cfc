@@ -1,11 +1,69 @@
 <cfcomponent output="false">
    <cffunction name="getAllCategories" access="public" returntype="query" output="false">
+     <cfargument name="search" default="">
+     <cfargument name="sort" default="">
+     <cfargument name="page" default="1">
+     <cfargument name="limit" default="2">
+
+     <cfset var searchValue = trim(arguments.search)>
+     <cfset var offset = (arguments.page - 1) * arguments.limit>
+
+
        <cfquery name="category" datasource="#application.dsn#">
-          SELECT * FROM categories
+          SELECT c.* FROM categories c
+          WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(c.category_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(c.description) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+        <cfif arguments.sort EQ "a_z">
+            ORDER BY c.category_name ASC
+        <cfelseif arguments.sort EQ "z_a">
+            ORDER BY c.category_name DESC
+        <cfelse>
+            ORDER BY c.id DESC
+        </cfif>
+
+        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
        </cfquery>
 
        <cfreturn category>
    </cffunction>
+
+   <cffunction name="getCategoryCount" returntype="numeric">
+
+    <cfargument name="search" default="">
+
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="result" datasource="#application.dsn#">
+        SELECT COUNT(*) as total
+        FROM categories c
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(c.category_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(c.description) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+    </cfquery>
+
+    <cfreturn result.total>
+
+</cffunction>
+
 
    <cffunction name="getAllActiveCategory" access="public" returnType="query" output="false">
        <cfquery name="categories" datasource="#application.dsn#">

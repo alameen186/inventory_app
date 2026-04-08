@@ -45,6 +45,9 @@
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=products">Products</a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=allorders">Orders</a>
+                    </li>
                 </ul>
             <cfelse>
                 <ul class="nav flex-column">
@@ -122,7 +125,10 @@
         <cfinclude template="../user/cart.cfm">   
         
     <cfelseif section EQ "orders">
-        <cfinclude template="../user/orders.cfm">   
+        <cfinclude template="../user/orders.cfm">  
+
+    <cfelseif section EQ "allorders">
+        <cfinclude template="../admin/orders.cfm">   
 
         
 

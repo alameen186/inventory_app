@@ -1,7 +1,30 @@
 <cfset categoryModel = createObject("component", "models.Category")>
-<cfset category = categoryModel.getAllCategories()>
+
 <cfparam name="url.editId" default="0">
 <cfparam name="url.showForm" default="0">
+<cfparam name="url.search" default="">
+<cfparam name="url.sort" default="">
+<cfparam name="url.p" default="1">
+
+<cfset currentPage = val(url.p)>
+<cfif currentPage LT 1>
+    <cfset currentPage = 1>
+</cfif>
+
+<cfset limit = 2>
+
+<cfset category = categoryModel.getAllCategories(
+    search = trim(url.search),
+    sort = url.sort,
+    page = currentPage,
+    limit = limit
+)>
+
+<cfset totalRecords = categoryModel.getCategoryCount(
+    search = trim(url.search)
+)>
+
+<cfset totalPages = ceiling(totalRecords / limit)>
 
 <div class="container mt-4">
     <h3 class="mb-3">Category Management</h3>
@@ -53,6 +76,23 @@
 
 </form>
      </div>
+
+      <cfoutput>
+      <form method="get" action="../../index.cfm" class="mb-3">
+         <input type="hidden" name="page" value="dashboard">
+         <input type="hidden" name="section" value="category">
+
+         <input type="text" name="search" values="#url.search#"
+                placeholder="search categories...."
+                class="form-control w-25 d-inline">
+         <select name="sort" class="form-control w-25 d-inline">
+           <option value="">Sort</option>
+           <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
+           <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
+         </select>   
+         <button class="btn btn-primary btn-sm">Apply</button>
+      </form>
+   </cfoutput>
      
     <table class="table table-bordered table-striped table-hover shadow-sm mt-3">
         <thead class="table-dark">
@@ -125,6 +165,23 @@
             </cfoutput>
         </tbody>
     </table>
+
+     <cfoutput>
+<div class="mt-4">
+
+<cfloop from="1" to="#totalPages#" index="i">
+
+    <a href="?page=dashboard&section=category&p=#i#&search=#url.search#&sort=#url.sort#"
+       class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
+
+        #i#
+
+    </a>
+
+</cfloop>
+
+</div>
+</cfoutput>
 </div>
 
 <script>

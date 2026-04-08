@@ -191,4 +191,97 @@
 
     <cfreturn result.total>
 </cffunction>
+
+
+
+<cffunction name="getAllProductsAdmin" returntype="query">
+
+    <cfargument name="search" default="">
+    <cfargument name="sort" default="">
+    <cfargument name="page" default="1">
+    <cfargument name="limit" default="10">
+    <cfargument name="category_id" default="">
+
+    <cfset var searchValue = trim(arguments.search)>
+    <cfset var offset = (arguments.page - 1) * arguments.limit>
+
+    <cfquery name="products" datasource="#application.dsn#">
+        SELECT p.*, c.category_name
+        FROM products p
+        JOIN categories c ON p.category_id = c.id
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(p.product_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(c.category_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+        <cfif isNumeric(arguments.category_id)>
+           AND p.category_id = 
+            <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
+        </cfif>
+
+        <cfif arguments.sort EQ "a_z">
+            ORDER BY p.product_name ASC
+        <cfelseif arguments.sort EQ "z_a">
+            ORDER BY p.product_name DESC
+        <cfelseif arguments.sort EQ "price_low">
+            ORDER BY p.price ASC
+        <cfelseif arguments.sort EQ "price_high">
+            ORDER BY p.price DESC
+        <cfelseif arguments.sort EQ "category_a_z">
+            ORDER BY c.category_name ASC
+        <cfelseif arguments.sort EQ "category_z_a">
+            ORDER BY c.category_name DESC
+        <cfelse>
+            ORDER BY p.id DESC
+        </cfif>
+
+        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
+
+    </cfquery>
+
+    <cfreturn products>
+
+</cffunction>
+
+
+<cffunction name="getProductCountAdmin" returntype="numeric">
+
+    <cfargument name="search" default="">
+     <cfargument name="category_id" default=""> 
+
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="result" datasource="#application.dsn#">
+        SELECT COUNT(*) as total
+        FROM products p
+        JOIN categories c ON p.category_id = c.id
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(p.product_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(c.category_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+        <cfif isNumeric(arguments.category_id)>
+           AND p.category_id = 
+        <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
+        </cfif>
+    </cfquery>
+
+    <cfreturn result.total>
+
+</cffunction>
+
     </cfcomponent>

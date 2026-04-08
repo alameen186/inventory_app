@@ -53,13 +53,81 @@
    </cffunction>
 
    <cffunction name="getAllUsers" access="public" returntype="query" output="false">
+     <cfargument name="search" default="">
+     <cfargument name="sort" default="">
+     <cfargument name="page" default="1">
+     <cfargument name="limit" default="2">
+
+     <cfset var searchValue = trim(arguments.search)>
+     <cfset var offset = (arguments.page - 1) * arguments.limit>
+    
     <cfquery name="users" datasource="#application.dsn#">
         SELECT u.*, r.role_name
         FROM users u
         INNER JOIN roles r ON u.role_id = r.id
+         WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(u.first_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(u.last_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(u.email) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(r.role_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+        <cfif arguments.sort EQ "a_z">
+            ORDER BY u.first_name ASC
+        <cfelseif arguments.sort EQ "z_a">
+            ORDER BY u.first_name DESC
+        <cfelse>
+            ORDER BY u.id DESC
+        </cfif>
+
+        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
     </cfquery>
     <cfreturn users>
    </cffunction>
+
+   <cffunction name="getUserCount" returntype="numeric">
+
+    <cfargument name="search" default="">
+
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="result" datasource="#application.dsn#">
+        SELECT COUNT(*) as total
+        FROM users u
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(u.first_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(u.last_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(u.email) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(r.role_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+    </cfquery>
+
+    <cfreturn result.total>
+
+</cffunction>
 
    <cffunction name="deleteUser" access="public" returntype="void" output="false">
        <cfargument name="id" type="numeric" required="true">

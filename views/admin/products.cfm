@@ -6,6 +6,33 @@
 
 <cfparam name="url.editId" default="0">
 <cfparam name="url.showForm" default="0">
+<cfparam name="url.search" default="">
+<cfparam name="url.sort" default="">
+<cfparam name="url.p" default="1">
+<cfparam name="url.category_id" default="">
+
+<cfset currentPage = val(url.p)>
+<cfif currentPage LT 1>
+    <cfset currentPage = 1>
+</cfif>
+
+<cfset limit = 3>
+
+<!-- fetch products -->
+<cfset products = productModel.getAllProductsAdmin(
+    search = url.search,
+    sort = url.sort,
+    category_id = url.category_id,
+    page = currentPage,
+    limit = limit
+)>
+
+<!-- total count -->
+<cfset totalRecords = productModel.getProductCountAdmin(
+    search = url.search
+)>
+
+<cfset totalPages = ceiling(totalRecords / limit)>
 
 <div class="container mt-4">
     <h3 class="mb-3">Product Management</h3>
@@ -53,7 +80,7 @@
 </select>
     </div>
 
-    <!-- Image -->
+    <!-- image -->
     <div class="col-md-2">
         <input type="file" name="product_image" class="form-control" accept="image/*" required>
     </div>
@@ -71,6 +98,38 @@
   </div>
  </form>
 </div>
+<cfoutput>
+<form method="get" action="../../index.cfm" class="mb-3">
+
+    <input type="hidden" name="page" value="dashboard">
+    <input type="hidden" name="section" value="products">
+
+    <input type="text" name="search" value="#url.search#" 
+           placeholder="Search product..." 
+           class="form-control w-25 d-inline">
+
+    <select name="sort" class="form-control w-25 d-inline">
+        <option value="">Sort</option>
+        <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
+        <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
+        <option value="price_low" <cfif url.sort EQ "price_low">selected</cfif>>Price Low to High</option>
+        <option value="price_high" <cfif url.sort EQ "price_high">selected</cfif>>Price High to Low</option>
+    </select>
+    <select name="category_id" class="form-control w-25 d-inline">
+    <option value="">All Categories</option>
+
+    <cfoutput query="categories">
+        <option value="#id#" 
+            <cfif url.category_id EQ id>selected</cfif>>
+            #category_name#
+        </option>
+    </cfoutput>
+</select>
+
+    <button class="btn btn-primary btn-sm">Apply</button>
+
+</form>
+</cfoutput>
      
     <table class="table table-bordered table-striped table-hover shadow-sm mt-3">
         <thead class="table-dark">
@@ -181,6 +240,23 @@
 </cfoutput>
         </tbody>
     </table>
+
+    <cfoutput>
+<div class="mt-4">
+
+<cfloop from="1" to="#totalPages#" index="i">
+
+    <a href="?page=dashboard&section=products&p=#i#&search=#url.search#&sort=#url.sort#&category_id=#url.category_id#""
+       class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
+
+        #i#
+
+    </a>
+
+</cfloop>
+
+</div>
+</cfoutput>
 </div>
 
 <script>

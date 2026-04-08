@@ -1,8 +1,38 @@
 <cfcomponent output="false">
   
    <cffunction name="getAllRoles" access="public" returntype="query" output="false">
+     <cfargument name="search" default="">
+     <cfargument name="sort" default="">
+     <cfargument name="page" default="1">
+     <cfargument name="limit" default="2">
+
+     <cfset var searchValue = trim(arguments.search)>
+     <cfset var offset = (arguments.page - 1) * arguments.limit>
+
      <cfquery name="roles" datasource = "#application.dsn#">
-       SELECT * FROM roles
+       SELECT r.* FROM roles r
+       WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(r.role_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(r.description) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+        <cfif arguments.sort EQ "a_z">
+            ORDER BY r.role_name ASC
+        <cfelseif arguments.sort EQ "z_a">
+            ORDER BY r.role_name DESC
+        <cfelse>
+            ORDER BY r.id DESC
+        </cfif>
+
+        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
      </cfquery>
 
    <cfreturn roles>  
@@ -27,6 +57,32 @@
             description = <cfqueryparam value="#arguments.description#" cfsqltype="cf_sql_varchar">
         WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
     </cfquery>
+</cffunction>
+
+<cffunction name="getRoleCount" returntype="numeric">
+
+    <cfargument name="search" default="">
+
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="result" datasource="#application.dsn#">
+        SELECT COUNT(*) as total
+        FROM roles r
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                LOWER(r.role_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+
+                OR LOWER(r.description) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+    </cfquery>
+
+    <cfreturn result.total>
+
 </cffunction>
 
 </cfcomponent>

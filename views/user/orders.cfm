@@ -3,28 +3,72 @@
 </cfif>
 
 <cfset orderModel = createObject("component","models.Order")>
-<cfset orders = orderModel.getUserOrders(session.user_id)>
 
-<cfif orders.recordCount EQ 0>
-    <h4>No orders found</h4>
-    <cfabort>
+<!-- params -->
+<cfparam name="url.search" default="">
+<cfparam name="url.p" default="1">
+
+<cfset searchValue = trim(url.search)>
+<cfset currentPage = val(url.p)>
+<cfif currentPage LT 1>
+    <cfset currentPage = 1>
 </cfif>
 
+<cfset limit = 2>
+
+<!-- fetch orders -->
+<cfset orders = orderModel.getUserOrdersWithPagination(
+    user_id = session.user_id,
+    search = searchValue,
+    page = currentPage,
+    limit = limit
+)>
+
+<!-- count -->
+<cfset totalRecords = orderModel.getUserOrderCount(
+    user_id = session.user_id,
+    search = searchValue
+)>
+
+<cfset totalPages = ceiling(totalRecords / limit)>
+
 <div class="container mt-4">
-    <h3>Your Orders</h3>
+
+<!-- SEARCH -->
+<cfoutput>
+<form method="get" action="" class="mb-3">
+    <input type="hidden" name="page" value="dashboard">
+    <input type="hidden" name="section" value="orders">
+
+    <div class="input-group w-50">
+        <input type="text" name="search" value="#encodeForHTMLAttribute(searchValue)#"
+               placeholder="Search Order ID" class="form-control">
+
+        <button class="btn btn-primary">Search</button>
+
+        <cfif len(searchValue)>
+            <a href="?page=dashboard&section=orders" class="btn btn-secondary">Clear</a>
+        </cfif>
+    </div>
+</form>
+</cfoutput>
+
+<h3>Your Orders</h3>
+
+<cfif orders.recordCount EQ 0>
+    <div class="alert alert-info">No orders found</div>
+<cfelse>
 
 <cfset currentGroup = "">
-<cfset gTotal = 0> 
+<cfset gTotal = 0>
 
 <cfoutput query="orders">
 
-    <!-- NEW ORDER CARD -->
     <cfif currentGroup NEQ order_group_id>
 
-        <!-- CLOSE PREVIOUS -->
         <cfif currentGroup NEQ "">
             <tr class="table-secondary">
-                <td colspan="4" class="text-end"><strong>Order Total:</strong></td>
+                <td colspan="4" class="text-end"><strong>Total:</strong></td>
                 <td><strong>#gTotal#</strong></td>
             </tr>
             </table>
@@ -32,26 +76,21 @@
             <cfset gTotal = 0>
         </cfif>
 
-        <!-- CARD START -->
         <div class="card mb-4">
 
-            <!-- HEADER WITH DOWNLOAD BUTTON -->
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-
+            <div class="card-header bg-dark text-white d-flex justify-content-between">
                 <span>
-                    Order ID: #order_group_id#
-                    | Date: #dateFormat(created_at, "dd-mmm-yyyy")#
+                    Order ID: #order_group_id# |
+                    #dateFormat(created_at, "dd-mmm-yyyy")#
                 </span>
 
-                <a href="../../assets/invoices/invoice_#order_group_id#.pdf" 
+                <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
                    target="_blank"
                    class="btn btn-success btn-sm">
-                    Download PDF
+                    PDF
                 </a>
-
             </div>
 
-            <!-- TABLE -->
             <table class="table mb-0">
                 <tr>
                     <th>Product</th>
@@ -64,10 +103,8 @@
         <cfset currentGroup = order_group_id>
     </cfif>
 
-    <!-- ORDER ITEMS -->
     <tr>
         <td>#product_name#</td>
-
         <td>
             <cfif len(image)>
                 <img src="../../assets/images/products/#image#" width="50">
@@ -75,7 +112,6 @@
                 No Image
             </cfif>
         </td>
-
         <td>#price#</td>
         <td>#quantity#</td>
         <td>#total_amount#</td>
@@ -83,16 +119,31 @@
 
     <cfset gTotal += total_amount>
 
-    <!-- LAST ROW -->
     <cfif currentRow EQ recordCount>
         <tr class="table-secondary">
-            <td colspan="4" class="text-end"><strong>Order Total:</strong></td>
+            <td colspan="4" class="text-end"><strong>Total:</strong></td>
             <td><strong>#gTotal#</strong></td>
         </tr>
         </table>
         </div>
     </cfif>
 
+</cfoutput>
+
+</cfif>
+
+<!-- PAGINATION -->
+<cfoutput>
+<div class="mt-4">
+
+<cfloop from="1" to="#totalPages#" index="i">
+    <a href="?page=dashboard&section=orders&p=#i#&search=#urlEncodedFormat(searchValue)#"
+       class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
+        #i#
+    </a>
+</cfloop>
+
+</div>
 </cfoutput>
 
 </div>
