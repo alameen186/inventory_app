@@ -4,9 +4,20 @@
         <cflocation url="../index.cfm?page=dashboard&section=cart&message=Cart empty&type=error">
         <cfabort>
     </cfif>
-
+     
+    <cfset productModel = createObject("component","models.Product")>
     <cfset orderModel = createObject("component", "models.Order")>
     <cfset orderGroupId = createUUID()>
+
+    <cfloop collection="#session.cart#" item="pid">
+    <cfset item = session.cart[pid]>
+    <cfset available = productModel.getStock(pid)>
+
+    <cfif available LT item.qty>
+        <cflocation url="../index.cfm?page=dashboard&section=cart&message=Not enough stock&type=error">
+        <cfabort>
+    </cfif>
+    </cfloop>
 
     <cfloop collection="#session.cart#" item="pid">
         <cfset item = session.cart[pid]>
@@ -18,6 +29,12 @@
             (item.price * item.qty),
             orderGroupId
         )>
+
+        <cfset productModel.reduceStock(
+        product_id = pid,
+        qty = item.qty
+        )>
+
     </cfloop>
 
     <cfset invoiceDir = expandPath("../assets/invoices/")>
@@ -130,5 +147,24 @@
     <cfelse>
         <cflocation url="../index.cfm?page=dashboard&section=orders&message=Error&type=error">
     </cfif>
+
+</cfif>
+
+
+<cfif form.action EQ "approveCancel">
+
+    <cfset orderModel = createObject("component","models.Order")>
+
+    <cfset result = orderModel.approveCancel(
+        order_group_id = form.order_group_id
+    )>
+
+    <cfif result>
+        <cfset orderModel.restoreStock(
+            order_group_id = form.order_group_id
+        )>
+    </cfif>
+
+    <cflocation url="../index.cfm?page=dashboard&section=allorders&message=Order Cancelled and Stock Restored&type=success">
 
 </cfif>

@@ -16,6 +16,7 @@
                 p.id,
                 p.product_name,
                 p.price,
+                p.stock,
                 p.image,   
                 c.category_name
             FROM products p
@@ -31,14 +32,16 @@
     <cffunction name="addProduct" access="public" returntype="boolean" output="false">
         <cfargument name="product_name" type="string" required="true">
         <cfargument name="price" type="numeric" required="true">
+        <cfargument name="stock" type="numeric">
         <cfargument name="category_id" type="numeric" required="true">
         <cfargument name="image" type="string" required="false" default="">
         <cftry>
             <cfquery datasource="#application.dsn#">
-    INSERT INTO products(product_name, price, category_id, image)
+    INSERT INTO products(product_name, price, stock, category_id, image)
     VALUES (
         <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
         <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
+        <cfqueryparam value="#arguments.stock#" cfsqltype="cf_sql_decimal">,
         <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">,
         <cfqueryparam value="#arguments.image#" cfsqltype="cf_sql_varchar">
     )
@@ -56,6 +59,7 @@
         <cfargument name="id" type="numeric" required="true">
         <cfargument name="product_name" type="string" required="true">
         <cfargument name="price" type="numeric" required="true">
+        <cfargument name="stock" type="numeric" >
         <cfargument name="category_id" type="numeric" required="true">
         <cfargument name="image" type="string" required="true">
 
@@ -64,6 +68,7 @@
                 UPDATE products
                 SET product_name = <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
                     price = <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
+                    stock = <cfqueryparam value="#arguments.stock#" cfsqltype="cf_sql_decimal">,
                     category_id = <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">,
                     image = <cfqueryparam value="#arguments.image#" cfsqltype="cf_sql_varchar">
                 WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
@@ -284,4 +289,44 @@
 
 </cffunction>
 
-    </cfcomponent>
+<cffunction name="reduceStock" returntype="boolean" output="false">
+    <cfargument name="product_id" type="numeric" required="true">
+    <cfargument name="qty" type="numeric" required="true">
+
+    <cftry>
+
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET stock = stock - 
+                <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+            WHERE id = 
+                <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+            AND stock >= 
+                <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+        </cfquery>
+
+        <cfreturn true>
+
+    <cfcatch>
+        <cfreturn false>
+    </cfcatch>
+
+    </cftry>
+</cffunction>
+
+
+<cffunction name="getStock" returntype="numeric">
+
+    <cfargument name="product_id" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT stock FROM products
+        WHERE id = 
+        <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn q.stock>
+
+</cffunction>
+
+</cfcomponent>

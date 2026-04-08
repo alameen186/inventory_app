@@ -7,6 +7,7 @@
    <cfset productId = form.product_id>
 
    <cfif structKeyExists(session.cart, productId)>
+ 
     <cfset session.cart[productId].qty += 1>
    <cfelse>
     <cfset session.cart[productId] = {

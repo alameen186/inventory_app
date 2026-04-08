@@ -1,4 +1,3 @@
-<!--- ================= SECURITY ================= --->
 <cfif NOT structKeyExists(session, "role_id") OR session.role_id NEQ 1>
     <cfabort>
 </cfif>
@@ -11,6 +10,7 @@
     
     <cfset productName = trim(form.product_name)>
     <cfset price = val(form.price)>
+    <cfset stock = val(form.stock)>
     <cfset category_id = val(form.category_id)>
     <cfset baseUrl = "../index.cfm?page=dashboard&section=products">
 
@@ -29,6 +29,9 @@
         <cfabort>
     <cfelseif price LTE 0>
         <cflocation url="#baseUrl#&message=Invalid price&type=error&showForm=1" addtoken="false">
+        <cfabort>
+    <cfelseif stock LT 0>
+        <cflocation url="#baseUrl#&message=Invalid stock&type=error&showForm=1" addtoken="false">
         <cfabort>
     <cfelseif category_id LTE 0>
         <cflocation url="#baseUrl#&message=Invalid category&type=error&showForm=1" addtoken="false">
@@ -54,7 +57,7 @@
             <cfset imageName = cffile.serverFile>
         </cfif>
 
-        <cfset result = productModel.addProduct(productName, price, category_id, imageName)>
+        <cfset result = productModel.addProduct(productName, price, stock, category_id, imageName)>
 
         <cfif result>
             <cflocation url="#baseUrl#&message=Product added successfully&type=success" addtoken="false">
@@ -88,6 +91,7 @@
 
     <cfset productName = trim(form.product_name)>
     <cfset price = val(form.price)>
+    <cfset stock = val(form.stock)>
     <cfset category_id = val(form.category_id)>
     <cfset id = val(form.id)>
 
@@ -100,6 +104,9 @@
 
     <cfelseif price LTE 0>
         <cflocation url="#baseUrl#&message=Invalid price&type=error&editId=#id#" addtoken="false">
+        <cfabort>
+    <cfelseif stock LT 0>
+        <cflocation url="#baseUrl#&message=Invalid stock&type=error&editId=#id#" addtoken="false">
         <cfabort>
 
     <cfelseif category_id LTE 0>
@@ -124,7 +131,7 @@
             <cfset imageName = cffile.serverFile>
         </cfif>
 
-        <cfset result = productModel.updateProduct(id, productName, price, category_id, imageName)>
+        <cfset result = productModel.updateProduct(id, productName, price, stock, category_id, imageName)>
 
         <cfif result>
             <cflocation url="#baseUrl#&message=Product updated successfully&type=success" addtoken="false">

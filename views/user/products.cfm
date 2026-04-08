@@ -47,6 +47,24 @@
 <cfset currentPage = val(url.p)>
 
 <div class="container mt-4">
+    <cfif structKeyExists(url, "message")>
+                <div id="alertBox" class="alert 
+                <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
+                     alert-success
+                <cfelse>
+                     alert-danger
+                </cfif>">
+                     <cfoutput>#url.message#</cfoutput> 
+                </div>
+           </cfif>
+           <script>
+    setTimeout(function () {
+        var alertBox = document.getElementById("alertBox");
+        if (alertBox) {
+            alertBox.style.display = "none";
+        }
+    }, 5000);   
+</script>
 
 <!-- search + filters -->
 <form method="get" action="../../index.cfm" class="mb-3">
@@ -109,6 +127,7 @@
                         <input type="hidden" name="product_id" value="#id#">
                         <input type="hidden" name="product_name" value="#product_name#">
                         <input type="hidden" name="price" value="#price#">
+                        <input type="hidden" name="image" value="#image#">
                         <button class="btn btn-success btn-sm">Add</button>
                     </form>
                 </cfif>

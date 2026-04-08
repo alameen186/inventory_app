@@ -47,9 +47,72 @@
 
                 <div class="card mb-4 shadow">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                        <span><strong>Order: #order_group_id#</strong> | #dateFormat(created_at, "dd-mmm-yyyy")# | #user_name#</span>
-                        <a href="../../assets/invoices/invoice_#order_group_id#.pdf" target="_blank" class="btn btn-success btn-sm">PDF</a>
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+
+    <span>
+        <strong>Order: #order_group_id#</strong> |
+        #dateFormat(created_at, "dd-mmm-yyyy")# |
+        #user_name#
+    </span>
+
+    <div>
+
+        <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
+           target="_blank"
+           class="btn btn-success btn-sm">
+            PDF
+        </a>
+
+        <!-- STATUS -->
+        <cfif status EQ "cancel_requested">
+
+            <span class="badge bg-warning text-dark ms-2">
+                Cancel Requested
+            </span>
+
+        <cfelseif status EQ "cancelled">
+
+            <span class="badge bg-secondary ms-2">
+                Cancelled
+            </span>
+
+        <cfelse>
+
+            <span class="badge bg-success ms-2">
+                Active
+            </span>
+
+        </cfif>
+
+    </div>
+
+</div>
                     </div>
+
+                    <cfif status EQ "cancel_requested">
+
+    <div class="p-3 border-top bg-light">
+
+        <p><strong>Cancel Reason:</strong></p>
+
+        <div class="alert alert-warning">
+            #cancel_reason#
+        </div>
+
+        <form method="post" action="../../controllers/OrderController.cfm">
+
+            <input type="hidden" name="action" value="approveCancel">
+            <input type="hidden" name="order_group_id" value="#order_group_id#">
+
+            <button class="btn btn-success btn-sm">
+                Approve Cancel
+            </button>
+
+        </form>
+
+    </div>
+
+</cfif>
                     <table class="table mb-0">
                         <tr><th>Product</th><th>Image</th><th>Price</th><th>Qty</th><th>Total</th></tr>
                 <cfset currentGroup = order_group_id>

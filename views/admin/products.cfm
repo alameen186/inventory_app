@@ -68,6 +68,9 @@
     <div class="col-md-2">
         <input type="number" step="0.01" name="price" class="form-control" placeholder="Price" required>
     </div>
+    <div class="col-md-2">
+        <input type="number" step="0.01" name="stock" class="form-control" placeholder="Stock">
+    </div>
 
     <div class="col-md-3">
       <select name="category_id" class="form-control" required>
@@ -77,7 +80,7 @@
         <option value="#id#">#category_name#</option>
     </cfoutput>
 
-</select>
+    </select>
     </div>
 
     <!-- image -->
@@ -137,6 +140,7 @@
                 <th>ID</th>
                 <th>Name</th>
                 <th>Price</th>
+                <th>Stock</th>
                 <th>Category</th>
                 <th>Image</th>
                 <th>status</th>
@@ -160,6 +164,9 @@
 
     <td>
         <input type="number" step="0.01" name="price" value="#price#" class="form-control">
+    </td>
+    <td>
+        <input type="number" step="0.01" name="stock" value="#stock#" class="form-control">
     </td>
 
     <td>
@@ -207,6 +214,7 @@
     <td>#id#</td>
     <td>#product_name#</td>
     <td>#price#</td>
+    <td>#stock#</td>
     <td>#category_name#</td>
 
     <td>

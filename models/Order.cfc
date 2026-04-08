@@ -33,7 +33,7 @@
         <cfset var offset = (max(val(arguments.page), 1) - 1) * arguments.limit>
 
         <cfquery name="orders" datasource="#application.dsn#">
-            SELECT o.order_group_id, o.created_at, o.quantity, o.total_amount, 
+            SELECT o.order_group_id, o.created_at, o.quantity, o.total_amount, o.status, o.cancel_reason,
                    p.product_name, p.image, p.price,
                    CONCAT(u.first_name, ' ', u.last_name) as user_name
             FROM orders o
@@ -198,6 +198,52 @@
         <p><strong>Reason:</strong> #arguments.reason#</p>
 
     </cfmail>
+
+</cffunction>
+
+<cffunction name="approveCancel" returntype="boolean" output="false">
+
+    <cfargument name="order_group_id" required="true">
+
+    <cftry>
+
+        <cfquery datasource="#application.dsn#">
+            UPDATE orders
+            SET status = 'cancelled'
+            WHERE order_group_id = 
+                <cfqueryparam value="#arguments.order_group_id#" cfsqltype="cf_sql_varchar">
+        </cfquery>
+
+        <cfreturn true>
+
+    <cfcatch>
+        <cfreturn false>
+    </cfcatch>
+
+    </cftry>
+
+</cffunction>
+
+<cffunction name="restoreStock">
+
+    <cfargument name="order_group_id">
+
+    <cfquery name="items" datasource="#application.dsn#">
+        SELECT product_id, quantity
+        FROM orders
+        WHERE order_group_id = 
+        <cfqueryparam value="#arguments.order_group_id#" cfsqltype="cf_sql_varchar">
+    </cfquery>
+
+    <cfloop query="items">
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET stock = stock + 
+                <cfqueryparam value="#quantity#" cfsqltype="cf_sql_integer">
+            WHERE id = 
+                <cfqueryparam value="#product_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+    </cfloop>
 
 </cffunction>
 

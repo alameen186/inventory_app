@@ -8,7 +8,7 @@
 <!-- params -->
 <cfparam name="url.search" default="">
 <cfparam name="url.p" default="1">
-x`
+<cfparam name="url.cancelId" default="">
 
 <cfset searchValue = trim(url.search)>
 <cfset currentPage = val(url.p)>
@@ -91,18 +91,21 @@ x`
                 </span>
 
                 <div>
+                 <cfif status EQ "placed">
                     <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
                        target="_blank"
                        class="btn btn-success btn-sm">
                         PDF
                     </a>
+               </cfif>
+
 
                     <!-- CANCEL BUTTON -->
                     <cfif status EQ "placed">
-                        <a href="?page=dashboard&section=orders&cancelId=#order_group_id#"
+                        <a href="?page=dashboard&section=orders&cancelId=#order_group_id#&p=#currentPage#&search=#urlEncodedFormat(searchValue)#"
                            class="btn btn-danger btn-sm">
                            Cancel
-                        </a>
+                    </a>
 
                     <cfelseif status EQ "cancel_requested">
                         <span class="badge bg-warning">Cancel Requested</span>
@@ -114,7 +117,7 @@ x`
 
             </div>
 
-            <!-- CANCEL FORM (ONLY FOR SELECTED ORDER) -->
+            <!-- cancel form -->
             <cfif url.cancelId EQ order_group_id AND status EQ "placed">
                 <div class="p-3 border-top">
 
