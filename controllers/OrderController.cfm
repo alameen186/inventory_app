@@ -109,3 +109,26 @@
     <cfabort>
 
 </cfif>
+
+<cfif form.action EQ "cancel">
+
+    <cfset orderModel = createObject("component","models.Order")>
+
+    <cfset result = orderModel.cancelOrder(
+    order_group_id = form.order_group_id,
+    reason = form.reason,
+    user_id = session.user_id
+)>
+
+    <cfif result>
+        <cfset orderModel.sendCancelEmail(
+            order_id = form.order_group_id,
+            reason = form.reason
+        )>
+
+        <cflocation url="../index.cfm?page=dashboard&section=orders&message=Cancelled&type=success">
+    <cfelse>
+        <cflocation url="../index.cfm?page=dashboard&section=orders&message=Error&type=error">
+    </cfif>
+
+</cfif>

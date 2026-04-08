@@ -1,3 +1,4 @@
+<!-- check login -->
 <cfif NOT structKeyExists(session, "user_id")>
     <cfabort>
 </cfif>
@@ -7,6 +8,7 @@
 <!-- params -->
 <cfparam name="url.search" default="">
 <cfparam name="url.p" default="1">
+x`
 
 <cfset searchValue = trim(url.search)>
 <cfset currentPage = val(url.p)>
@@ -64,8 +66,10 @@
 
 <cfoutput query="orders">
 
+    <!-- NEW ORDER CARD -->
     <cfif currentGroup NEQ order_group_id>
 
+        <!-- CLOSE PREVIOUS -->
         <cfif currentGroup NEQ "">
             <tr class="table-secondary">
                 <td colspan="4" class="text-end"><strong>Total:</strong></td>
@@ -78,19 +82,61 @@
 
         <div class="card mb-4">
 
-            <div class="card-header bg-dark text-white d-flex justify-content-between">
+            <!-- HEADER -->
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+
                 <span>
                     Order ID: #order_group_id# |
                     #dateFormat(created_at, "dd-mmm-yyyy")#
                 </span>
 
-                <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
-                   target="_blank"
-                   class="btn btn-success btn-sm">
-                    PDF
-                </a>
+                <div>
+                    <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
+                       target="_blank"
+                       class="btn btn-success btn-sm">
+                        PDF
+                    </a>
+
+                    <!-- CANCEL BUTTON -->
+                    <cfif status EQ "placed">
+                        <a href="?page=dashboard&section=orders&cancelId=#order_group_id#"
+                           class="btn btn-danger btn-sm">
+                           Cancel
+                        </a>
+
+                    <cfelseif status EQ "cancel_requested">
+                        <span class="badge bg-warning">Cancel Requested</span>
+
+                    <cfelse>
+                        <span class="badge bg-secondary">Cancelled</span>
+                    </cfif>
+                </div>
+
             </div>
 
+            <!-- CANCEL FORM (ONLY FOR SELECTED ORDER) -->
+            <cfif url.cancelId EQ order_group_id AND status EQ "placed">
+                <div class="p-3 border-top">
+
+                    <form method="post" action="../../controllers/OrderController.cfm">
+
+                        <input type="hidden" name="action" value="cancel">
+                        <input type="hidden" name="order_group_id" value="#order_group_id#">
+
+                        <textarea name="reason" class="form-control mb-2"
+                                  placeholder="Enter cancel reason" required></textarea>
+
+                        <button class="btn btn-danger btn-sm">Confirm Cancel</button>
+
+                        <a href="?page=dashboard&section=orders"
+                           class="btn btn-secondary btn-sm">Close</a>
+
+                    </form>
+
+                </div>
+            </cfif>
+
+            <!-- TABLE -->
             <table class="table mb-0">
                 <tr>
                     <th>Product</th>
@@ -103,8 +149,10 @@
         <cfset currentGroup = order_group_id>
     </cfif>
 
+    <!-- ORDER ITEMS -->
     <tr>
         <td>#product_name#</td>
+
         <td>
             <cfif len(image)>
                 <img src="../../assets/images/products/#image#" width="50">
@@ -112,6 +160,7 @@
                 No Image
             </cfif>
         </td>
+
         <td>#price#</td>
         <td>#quantity#</td>
         <td>#total_amount#</td>
@@ -119,6 +168,7 @@
 
     <cfset gTotal += total_amount>
 
+    <!-- LAST ROW -->
     <cfif currentRow EQ recordCount>
         <tr class="table-secondary">
             <td colspan="4" class="text-end"><strong>Total:</strong></td>

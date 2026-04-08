@@ -107,6 +107,7 @@
             o.created_at,
             o.quantity,
             o.total_amount,
+            o.status,
             p.product_name,
             p.image,
             p.price
@@ -153,5 +154,51 @@
 
 </cffunction>
 
+<cffunction name="cancelOrder" returntype="boolean">
+
+    <cfargument name="order_group_id" required="true">
+    <cfargument name="reason" required="true">
+    <cfargument name="user_id" required="true">
+
+    <cftry>
+
+        <cfquery datasource="#application.dsn#">
+            UPDATE orders
+            SET 
+                status = 'cancel_requested',
+                cancel_reason = <cfqueryparam value="#arguments.reason#" cfsqltype="cf_sql_varchar">
+            WHERE order_group_id = 
+                <cfqueryparam value="#arguments.order_group_id#" cfsqltype="cf_sql_varchar">
+            AND user_id =
+                <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+
+        <cfreturn true>
+
+    <cfcatch>
+        <cfreturn false>
+    </cfcatch>
+
+    </cftry>
+</cffunction>
+
+<cffunction name="sendCancelEmail" returntype="void">
+
+    <cfargument name="order_id">
+    <cfargument name="reason">
+
+    <cfmail 
+        to="admin8841@gmail.com"
+        from="noreply@yourcompany.com"
+        subject="Order Cancel Request"
+        type="html">
+
+        <h3>Order Cancel Request</h3>
+        <p><strong>Order ID:</strong> #arguments.order_id#</p>
+        <p><strong>Reason:</strong> #arguments.reason#</p>
+
+    </cfmail>
+
+</cffunction>
 
 </cfcomponent>
