@@ -120,4 +120,52 @@
     </cfquery>
 </cffunction>
 
+<cffunction name="getCouponByCode" returntype="query" output="false">
+    <cfargument name="code" type="string" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT *
+        FROM coupons
+        WHERE code = <cfqueryparam value="#arguments.code#" cfsqltype="cf_sql_varchar">
+        AND is_active = 1
+        AND expiry_date >= CURDATE()
+    </cfquery>
+
+    <cfreturn q>
+</cffunction>
+
+<cffunction name="getActiveCoupons" returntype="query" output="false">
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT code, discount_type, discount_value, min_amount, max_discount
+        FROM coupons
+        WHERE is_active = 1
+        AND expiry_date >= CURDATE()
+    </cfquery>
+    <cfreturn q>
+</cffunction>
+
+
+<cffunction name="isCouponUsed" returntype="boolean">
+    <cfargument name="code">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT COUNT(*) as total
+        FROM orders
+        WHERE coupon_code = 
+        <cfqueryparam value="#arguments.code#" cfsqltype="cf_sql_varchar">
+    </cfquery>
+
+    <cfreturn q.total GT 0>
+</cffunction>
+
+<cffunction name="getCouponById" returntype="query">
+    <cfargument name="id">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT code FROM coupons
+        WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn q>
+</cffunction>
 </cfcomponent>

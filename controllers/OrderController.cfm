@@ -19,16 +19,53 @@
     </cfif>
     </cfloop>
 
+
+       <cfset grandTotal = 0>
     <cfloop collection="#session.cart#" item="pid">
         <cfset item = session.cart[pid]>
-        <cfset orderModel.addOrder(
-            session.user_id,
-            pid,
-            item.price,
-            item.qty,
-            (item.price * item.qty),
-            orderGroupId
-        )>
+        <cfset grandTotal += item.price * item.qty>
+    </cfloop>
+
+    <!-- coupon apply -->
+    <cfset discount = 0>
+    <cfset couponCode = "">
+
+    <cfif structKeyExists(session, "coupon")>
+
+        <cfset couponCode = session.coupon.code>
+
+        <cfif session.coupon.type EQ "percent">
+            <cfset discount = (grandTotal * session.coupon.value) / 100>
+        <cfelse>
+            <cfset discount = session.coupon.value>
+        </cfif>
+
+        <cfif discount GT session.coupon.max>
+            <cfset discount = session.coupon.max>
+        </cfif>
+
+    </cfif>
+
+    <cfset finalTotal = grandTotal - discount>
+
+    <cfloop collection="#session.cart#" item="pid">
+        <cfset item = session.cart[pid]>
+        <cfset result = orderModel.addOrder(
+    session.user_id,
+    pid,
+    item.price,
+    item.qty,
+    (item.price * item.qty),
+    orderGroupId,
+    couponCode,
+    discount,
+    finalTotal
+)>
+
+<cfif NOT result>
+    <cflocation url="../index.cfm?page=dashboard&section=cart&message=Order failed&type=error">
+    <cfabort>
+</cfif>
 
         <cfset productModel.reduceStock(
         product_id = pid,
@@ -38,63 +75,38 @@
     </cfloop>
 
     <cfset invoiceDir = expandPath("../assets/invoices/")>
-
     <cfset fileName = "invoice_#orderGroupId#.pdf">
     <cfset invoicePath = invoiceDir & fileName>
 
-    <!--- GENERATE THE PDF INVOICE --->
+    <!--- create pdf --->
     <cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; color: ##333; }
-                .header { text-align: center; border-bottom: 2px solid ##2c3e50; padding-bottom: 15px; margin-bottom: 20px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th { background-color: ##f8f9fa; padding: 12px; border: 1px solid ##dee2e6; text-align: left; }
-                td { padding: 12px; border: 1px solid ##dee2e6; }
-                .total-box { text-align: right; margin-top: 25px; font-size: 1.2em; font-weight: bold; }
-            </style>
-        </head>
-        <body>
-            <cfoutput>
-                <div class="header">
-                    <h1>TAX INVOICE</h1>
-                    <p>Order ID: <strong>#orderGroupId#</strong></p>
-                    <p>Date: #dateFormat(now(), "dd-mmm-yyyy")#</p>
-                </div>
+        <cfoutput>
+            <h2>Invoice</h2>
+            <p>Order ID: #orderGroupId#</p>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <cfset grandTotal = 0>
-                        <cfloop collection="#session.cart#" item="pid">
-                            <cfset item = session.cart[pid]>
-                            <cfset lineTotal = item.price * item.qty>
-                            <cfset grandTotal += lineTotal>
-                            <tr>
+            <table border="1" width="100%">
+                <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                </tr>
 
-                                <td>#item.name#</td>
-                                <td>#numberFormat(item.price, "0.00")#</td>
-                                <td>#item.qty#</td>
-                                <td>#numberFormat(lineTotal, "0.00")#</td>
-                            </tr>
-                        </cfloop>
-                    </tbody>
-                </table>
-                
-                <div class="total-box">
-                    Grand Total: #numberFormat(grandTotal, "0.00")#
-                </div>
-            </cfoutput>
-        </body>
-        </html>
+                <cfloop collection="#session.cart#" item="pid">
+                    <cfset item = session.cart[pid]>
+                    <tr>
+                        <td>#item.name#</td>
+                        <td>#item.price#</td>
+                        <td>#item.qty#</td>
+                        <td>#item.price * item.qty#</td>
+                    </tr>
+                </cfloop>
+            </table>
+
+            <p>Total: #grandTotal#</p>
+            <p>Discount: #discount#</p>
+            <h3>Final: #finalTotal#</h3>
+        </cfoutput>
     </cfdocument>
 
     <!--- SEND EMAIL --->
@@ -121,10 +133,12 @@
     </cftry>
 
     <cfset session.cart = structNew()>
+    <cfif structKeyExists(session,"coupon")>
+    <cfset structDelete(session,"coupon")>
+</cfif>
 
     <cflocation url="../index.cfm?page=dashboard&section=productList&message=Order successful! Invoice sent to your mail.&type=success" addtoken="false">
     <cfabort>
-
 </cfif>
 
 <cfif form.action EQ "cancel">

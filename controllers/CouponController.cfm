@@ -63,6 +63,11 @@
     <cfset minimumDiscount = val(form.max)>
     <cfset expiry = form.expiry>
 
+    <cfif couponModel.isCouponUsed(form.code)>
+    <cflocation url="../index.cfm?page=dashboard&section=coupons&message=Coupon already used, cannot edit&type=error">
+    <cfabort>
+</cfif>
+
    <cfif NOT len(codes) OR NOT len(value)>
           <cflocation url="../index.cfm?page=dashboard&section=coupons&message=Missing required fields&type=error&editId=#form.id#" addtoken="false">
           <cfabort>
@@ -120,16 +125,22 @@
         <cfabort>
     </cfif>
 
+    <!-- GET COUPON CODE FIRST -->
+    <cfset coupon = couponModel.getCouponById(url.id)>
+
+    <!-- CHECK BEFORE UPDATE -->
+    <cfif couponModel.isCouponUsed(coupon.code)>
+        <cflocation url="../index.cfm?page=dashboard&section=coupons&message=Used coupon cannot be blocked&type=error">
+        <cfabort>
+    </cfif>
+
+    <!-- THEN UPDATE -->
     <cftry>
-
         <cfset couponModel.toggleCoupon(url.id)>
-
         <cflocation url="../index.cfm?page=dashboard&section=coupons&message=Status updated&type=success">
-
     <cfcatch>
         <cflocation url="../index.cfm?page=dashboard&section=coupons&message=Error updating status&type=error">
     </cfcatch>
-
     </cftry>
 
     <cfabort>
