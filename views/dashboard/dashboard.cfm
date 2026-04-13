@@ -34,6 +34,9 @@
             <cfif session.role_id EQ 1>
                 <ul class="nav flex-column">
                     <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard">dashboard</a>
+                    </li>
+                    <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=users">Users</a>
                     </li>
                     <li class="nav-item mb-2">
@@ -52,7 +55,7 @@
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=coupons">Coupons</a>
                     </li>
                 </ul>
-            <cfelse>
+            <cfelseif>
                 <ul class="nav flex-column">
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=productList">Products</a>
@@ -132,17 +135,151 @@
 
     <cfelseif section EQ "allorders">
         <cfinclude template="../admin/orders.cfm">   
+<cfelseif section EQ "coupons">
+    <cfinclude template="../admin/coupon.cfm">
 
-    <cfelseif section EQ "coupons">
-        <cfinclude template="../admin/coupon.cfm">   
+<cfelse>
 
-        
+<cfset dashModel = createObject("component","models.Dashboard")>
 
-    <cfelse>
+<cfset totalOrders = dashModel.getTotalOrders()>
+<cfset totalRevenue = dashModel.getTotalRevenue()>
+<cfset totalUsers = dashModel.getTotalUsers()>
+<cfset totalProducts = dashModel.getTotalProducts()>
+<cfset totalCoupons = dashModel.getTotalCoupons()>
+<cfset lowStock = dashModel.getLowStockProducts()>
+<cfset latestOrders = dashModel.getLatestOrders()>
 
-        <h3>Welcome to Inventory Store</h3>
+<style>
+.dashboard-card{
+    border:none;
+    border-radius:16px;
+    background:#ffffff;
+    box-shadow:0 6px 18px rgba(0,0,0,0.05);
+}
 
-    </cfif>
+.stat-title{
+    font-size:14px;
+    color:#6c757d;
+    margin-bottom:8px;
+}
+
+.stat-value{
+    font-size:28px;
+    font-weight:700;
+    color:#212529;
+}
+
+.section-title{
+    font-size:18px;
+    font-weight:600;
+    margin-bottom:18px;
+    color:#212529;
+}
+
+.list-row{
+    padding:12px 0;
+    border-bottom:1px solid #f1f1f1;
+}
+
+.list-row:last-child{
+    border-bottom:none;
+}
+</style>
+
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Admin Dashboard</h3>
+    <p class="text-muted mb-0">Inventory analytics overview</p>
+</div>
+
+<cfoutput>
+
+<div class="row g-4 mb-4">
+
+    <div class="col-md-3">
+        <div class="card dashboard-card p-4 text-center">
+            <div class="stat-title">Total Orders</div>
+            <div class="stat-value">#totalOrders#</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card dashboard-card p-4 text-center">
+            <div class="stat-title">Revenue</div>
+            <div class="stat-value">#numberFormat(totalRevenue,"0,0")#</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card dashboard-card p-4 text-center">
+            <div class="stat-title">Users</div>
+            <div class="stat-value">#totalUsers#</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card dashboard-card p-4 text-center">
+            <div class="stat-title">Products</div>
+            <div class="stat-value">#totalProducts#</div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-4 mb-4">
+
+    <!-- LOW STOCK -->
+    <div class="col-md-6">
+        <div class="card dashboard-card p-4">
+            <div class="section-title">Low Stock Products</div>
+
+            <cfif lowStock.recordCount EQ 0>
+                <p class="text-muted mb-0">All products are sufficiently stocked.</p>
+            <cfelse>
+                <cfoutput query="lowStock">
+                    <div class="list-row d-flex justify-content-between">
+                        <span>#product_name#</span>
+                        <span class="text-danger fw-semibold">#stock# left</span>
+                    </div>
+                </cfoutput>
+            </cfif>
+        </div>
+    </div>
+
+    <!-- LATEST ORDERS -->
+    <div class="col-md-6">
+        <div class="card dashboard-card p-4">
+            <div class="section-title">Latest Orders</div>
+
+            <cfif latestOrders.recordCount EQ 0>
+                <p class="text-muted mb-0">No recent orders found.</p>
+            <cfelse>
+                <cfoutput query="latestOrders">
+                    <div class="list-row d-flex justify-content-between">
+                        <span>#order_group_id#</span>
+                        <span class="fw-semibold">#final_amount#</span>
+                    </div>
+                </cfoutput>
+            </cfif>
+        </div>
+    </div>
+
+</div>
+
+<!-- COUPON CARD -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card dashboard-card p-4 text-center">
+            <div class="stat-title">Total Coupons Available</div>
+            <div class="stat-value">#totalCoupons#</div>
+        </div>
+    </div>
+</div>
+</cfoutput>
+
+</cfif>
+
+
 
 </div>
 
