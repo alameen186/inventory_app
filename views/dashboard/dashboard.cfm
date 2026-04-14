@@ -57,6 +57,9 @@
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=coupons">Coupons</a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=adminEnquiries">Product Enquiries</a>
+                    </li>
                 </ul>
             <cfelse>  
                 <ul class="nav flex-column">
@@ -151,8 +154,11 @@
     <cfelseif section EQ "enquiry">
         <cfinclude template="../user/enquiry.cfm">
 
-<cfelse>
+    <cfelseif section EQ "adminEnquiries">
+        <cfinclude template="../admin/enquiries.cfm">
 
+<cfelse>
+<cfif session.role_id EQ 1>
 <cfset dashModel = createObject("component","models.Dashboard")>
 
 <cfset totalOrders = dashModel.getTotalOrders()>
@@ -289,6 +295,10 @@
     </div>
 </div>
 </cfoutput>
+<cfelse>
+
+    <cfinclude template="../user/products.cfm">
+</cfif>
 
 </cfif>
 

@@ -42,4 +42,117 @@
        <cfreturn q>
 </cffunction>
 
+
+<cffunction name="getAllEnquiries" returntype="query" output="false">
+
+    <cfargument name="search" default="">
+    <cfargument name="status" default="">
+    <cfargument name="page" default="1">
+    <cfargument name="limit" default="5">
+
+    <cfset var offset = (arguments.page - 1) * arguments.limit>
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT 
+            pe.id,
+            pe.product_id,
+            pe.user_id,
+            pe.created_at,
+            pe.status,
+            p.product_name,
+            p.price,
+            p.stock,
+            p.image,
+            c.category_name,
+            CONCAT(u.first_name,' ',u.last_name) AS user_name
+
+        FROM product_enquiries pe
+        INNER JOIN products p ON pe.product_id = p.id
+        INNER JOIN users u ON pe.user_id = u.id
+        LEFT JOIN categories c ON p.category_id = c.id
+
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                p.product_name LIKE 
+                <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+                OR CONCAT(u.first_name,' ',u.last_name) LIKE
+                <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+        <cfif len(arguments.status)>
+            AND pe.status =
+            <cfqueryparam value="#arguments.status#" cfsqltype="cf_sql_varchar">
+        </cfif>
+
+        ORDER BY pe.created_at DESC
+
+        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn q>
+
+</cffunction>
+
+
+<cffunction name="markFulfilled" returntype="boolean" output="false">
+    <cfargument name="product_id" required="true">
+
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            UPDATE product_enquiries
+            SET status='fulfilled'
+            WHERE product_id =
+            <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+            AND status='pending'
+        </cfquery>
+
+        <cfreturn true>
+
+        <cfcatch>
+            <cfreturn false>
+        </cfcatch>
+    </cftry>
+</cffunction>
+
+
+<cffunction name="getEnquiryCount" returntype="numeric" output="false">
+
+    <cfargument name="search" default="">
+    <cfargument name="status" default="">
+
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT COUNT(*) AS total
+
+        FROM product_enquiries pe
+        INNER JOIN products p ON pe.product_id = p.id
+        INNER JOIN users u ON pe.user_id = u.id
+
+        WHERE 1=1
+
+        <cfif len(searchValue)>
+            AND (
+                p.product_name LIKE 
+                <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+                OR CONCAT(u.first_name,' ',u.last_name) LIKE
+                <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+        <cfif len(arguments.status)>
+            AND pe.status =
+            <cfqueryparam value="#arguments.status#" cfsqltype="cf_sql_varchar">
+        </cfif>
+    </cfquery>
+
+    <cfreturn q.total>
+
+</cffunction>
+
 </cfcomponent>

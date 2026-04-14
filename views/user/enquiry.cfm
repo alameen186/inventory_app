@@ -29,7 +29,7 @@
         <cfif status EQ "pending">
             <span class="badge bg-warning">Pending</span>
         <cfelse>
-            <span class="badge bg-success">Fulfilled</span>
+            <span class="badge bg-success">Restocked</span>
         </cfif>
     </td>
     <td>#dateFormat(created_at,"dd-mmm-yyyy")#</td>

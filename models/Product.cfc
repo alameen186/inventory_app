@@ -101,15 +101,27 @@
             </cftry>
         </cffunction>
 
-        <cffunction name="getProductById" access="public" returntype="query" output="false">
-        <cfargument name="id" type="numeric" required="true">
+        <cffunction name="getProductById" returntype="query" output="false">
+    <cfargument name="id" required="true">
 
-        <cfquery name="product" datasource="#application.dsn#">
-        SELECT * from products
-        WHERE id=<cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
-        </cfquery>
-        <cfreturn product>
-        </cffunction>
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT 
+            p.id,
+            p.product_name,
+            p.price,
+            p.stock,
+            p.image,
+            p.category_id,
+            c.category_name
+        FROM products p
+        LEFT JOIN categories c 
+            ON p.category_id = c.id
+        WHERE p.id =
+        <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn q>
+</cffunction>
 
      <cffunction name="searchProducts" returntype="query">
     <cfargument name="keyword" type="string" required="false" default="">
@@ -338,6 +350,28 @@
         ORDER BY product_name ASC
     </cfquery>
     <cfreturn products>
+</cffunction>
+
+
+<cffunction name="addStock" returntype="boolean" output="false">
+    <cfargument name="product_id" required="true">
+    <cfargument name="qty" required="true">
+
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET stock = stock + 
+            <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+            WHERE id =
+            <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+
+        <cfreturn true>
+
+        <cfcatch>
+            <cfreturn false>
+        </cfcatch>
+    </cftry>
 </cffunction>
 
 </cfcomponent>
