@@ -136,14 +136,13 @@
 
 <cffunction name="getActiveCoupons" returntype="query" output="false">
     <cfquery name="q" datasource="#application.dsn#">
-        SELECT code, discount_type, discount_value, min_amount, max_discount
+        SELECT id, code, discount_type, discount_value, min_amount, max_discount
         FROM coupons
         WHERE is_active = 1
         AND expiry_date >= CURDATE()
     </cfquery>
     <cfreturn q>
 </cffunction>
-
 
 <cffunction name="isCouponUsed" returntype="boolean">
     <cfargument name="code">
@@ -158,14 +157,23 @@
     <cfreturn q.total GT 0>
 </cffunction>
 
-<cffunction name="getCouponById" returntype="query">
-    <cfargument name="id">
+<cffunction name="getCouponById" returntype="query" output="false">
+    <cfargument name="id" required="true">
 
-    <cfquery name="q" datasource="#application.dsn#">
-        SELECT code FROM coupons
+    <cfquery name="coupon" datasource="#application.dsn#">
+        SELECT 
+            id,
+            code,
+            discount_type,
+            discount_value,
+            min_amount,
+            max_discount,
+            is_active,
+            expiry_date
+        FROM coupons
         WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
     </cfquery>
 
-    <cfreturn q>
-</cffunction>
+    <cfreturn coupon>
+</cffunction>   
 </cfcomponent>

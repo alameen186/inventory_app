@@ -152,4 +152,14 @@
     </cfquery>
    </cffunction>
 
+   <cffunction name="getAllUsersSimple" returntype="query">
+    <cfquery name="users" datasource="#application.dsn#">
+        SELECT id, first_name, last_name
+        FROM users
+        WHERE role_id != 1
+        ORDER BY first_name ASC
+    </cfquery>
+    <cfreturn users>
+   </cffunction>
+
 </cfcomponent>

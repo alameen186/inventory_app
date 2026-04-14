@@ -329,4 +329,15 @@
 
 </cffunction>
 
+
+<cffunction name="getAllProductsSimple" returntype="query">
+    <cfquery name="products" datasource="#application.dsn#">
+        SELECT id, product_name, price, stock
+        FROM products
+        WHERE stock > 0
+        ORDER BY product_name ASC
+    </cfquery>
+    <cfreturn products>
+</cffunction>
+
 </cfcomponent>

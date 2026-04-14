@@ -52,10 +52,13 @@
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=allorders">Orders</a>
                     </li>
                     <li class="nav-item mb-2">
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=createOrder">Create Order</a>
+                    </li>
+                    <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=coupons">Coupons</a>
                     </li>
                 </ul>
-            <cfelseif>
+            <cfelse>  
                 <ul class="nav flex-column">
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=productList">Products</a>
@@ -134,9 +137,13 @@
         <cfinclude template="../user/orders.cfm">  
 
     <cfelseif section EQ "allorders">
-        <cfinclude template="../admin/orders.cfm">   
-<cfelseif section EQ "coupons">
-    <cfinclude template="../admin/coupon.cfm">
+        <cfinclude template="../admin/orders.cfm">
+
+    <cfelseif section EQ "coupons">
+        <cfinclude template="../admin/coupon.cfm">
+
+    <cfelseif section EQ "createOrder">
+        <cfinclude template="../admin/createOrder.cfm">
 
 <cfelse>
 
