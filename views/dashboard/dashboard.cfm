@@ -66,6 +66,9 @@
                     <li class="nav-item mb-2">
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=orders">Orders</a>
                     </li>
+                    <li class="nav-item mb-2"> 
+                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=enquiry">My Enquiries</a>
+                    </li>
                 </ul>
                      
 
@@ -144,6 +147,9 @@
 
     <cfelseif section EQ "createOrder">
         <cfinclude template="../admin/createOrder.cfm">
+
+    <cfelseif section EQ "enquiry">
+        <cfinclude template="../user/enquiry.cfm">
 
 <cfelse>
 

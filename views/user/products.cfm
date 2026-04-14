@@ -119,18 +119,41 @@
                 <p>#price#</p>
 
                 <!-- cart button -->
-                <cfif structKeyExists(session.cart, id)>
-                    <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm">Go to Cart</a>
-                <cfelse>
-                    <form method="post" action="../../controllers/CartController.cfm">
-                        <input type="hidden" name="action" value="add">
-                        <input type="hidden" name="product_id" value="#id#">
-                        <input type="hidden" name="product_name" value="#product_name#">
-                        <input type="hidden" name="price" value="#price#">
-                        <input type="hidden" name="image" value="#image#">
-                        <button class="btn btn-success btn-sm">Add</button>
-                    </form>
-                </cfif>
+                <!-- stock check -->
+<cfif stock LTE 0>
+
+    <p class="text-danger fw-bold">Out of Stock</p>
+
+    <form method="post" action="../../controllers/EnquiryController.cfm">
+        <input type="hidden" name="action" value="addEnquiry">
+        <input type="hidden" name="product_id" value="#id#">
+
+        <button class="btn btn-warning btn-sm">
+            Request Product
+        </button>
+    </form>
+
+<cfelse>
+
+    <!-- normal cart logic -->
+    <cfif structKeyExists(session.cart, id)>
+        <a href="../../index.cfm?page=dashboard&section=cart" 
+           class="btn btn-success btn-sm">
+           Go to Cart
+        </a>
+    <cfelse>
+        <form method="post" action="../../controllers/CartController.cfm">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="product_id" value="#id#">
+            <input type="hidden" name="product_name" value="#product_name#">
+            <input type="hidden" name="price" value="#price#">
+            <input type="hidden" name="image" value="#image#">
+
+            <button class="btn btn-success btn-sm">Add</button>
+        </form>
+    </cfif>
+
+</cfif>
 
             </div>
         </div>
