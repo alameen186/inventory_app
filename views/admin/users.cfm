@@ -69,6 +69,8 @@
 </a>
 
 <!-- Add User Form -->
+<div id="ajaxMessage"></div>
+
 <div id="addUserForm"
 style="display:<cfif url.showForm EQ '1'>block<cfelse>none</cfif>;"
 class="card shadow-sm p-4 mb-4">
@@ -81,7 +83,7 @@ class="card shadow-sm p-4 mb-4">
     </div>
 </cfif>
 
-<form method="post" action="../../controllers/UserController.cfm">
+<form id="createUserForm" method="post">
 
 <input type="hidden" name="action" value="create">
 
@@ -140,8 +142,8 @@ Cancel
 
 <cfif url.editId EQ id>
 
-<form method="post" action="../../controllers/UserController.cfm">
-<tr>
+<form class="updateUserForm" method="post">
+<tr id="userRow_#id#">
 <td>#id#</td>
 <td><input type="text" name="first_name" value="#first_name#" class="form-control"></td>
 <td><input type="text" name="last_name" value="#last_name#" class="form-control"></td>
@@ -171,11 +173,9 @@ class="btn btn-secondary btn-sm">Cancel</a>
 <a href="../../index.cfm?page=dashboard&section=users&editId=#id#"
 class="btn btn-warning btn-sm">Edit</a>
 
-<a href="../../controllers/UserController.cfm?action=delete&id=#id#"
-class="btn btn-danger btn-sm"
-onclick="return confirm('Delete this user?')">
+<button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">
 Delete
-</a>
+</button>
 <cfelse>
 Restricted
 </cfif>
@@ -201,3 +201,126 @@ class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary<
 </cfoutput>
 
 </div>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function(){
+
+    $("#createUserForm").submit(function(e){
+        e.preventDefault();
+
+        $.ajax({
+            url: "../../controllers/UserController.cfm",
+            type: "POST",
+            data: $(this).serialize(),
+            dataType: "json",
+
+            success: function(res){
+
+                $("#ajaxMessage").html(
+                    '<div id="msgBox" class="alert alert-' +
+                    (res.status === "success" ? "success" : "danger") +
+                    '">' + res.message + '</div>'
+                );
+
+                setTimeout(function(){
+                    $("#msgBox").fadeOut();
+                }, 5000);
+
+                if(res.status === "success"){
+                    $("#createUserForm")[0].reset();
+                    $("#addUserForm").fadeOut();  
+                }
+            },
+
+            error: function(xhr){
+                console.log(xhr.responseText);
+
+                $("#ajaxMessage").html(
+                    '<div id="msgBox" class="alert alert-danger">Something went wrong</div>'
+                );
+
+                setTimeout(function(){
+                    $("#msgBox").fadeOut();
+                }, 5000);
+            }
+        });
+
+    });
+
+    $(".updateUserForm").submit(function(e) {
+        e.preventDefault();
+
+        $.ajax({
+            url:"../../controllers/UserController.cfm",
+            type:"POST",
+            data:$(this).serialize(),
+            dataType:"json",
+
+              success: function(res){
+
+                $("#ajaxMessage").html(
+                    '<div id="msgBox" class="alert alert-' +
+                    (res.status === "success" ? "success" : "danger") +
+                    '">' + res.message + '</div>'
+                );
+
+                setTimeout(function(){
+                    $("#msgBox").fadeOut();
+                }, 5000);
+
+                if(res.status === "success"){
+                    $("#updateUserForm")[0].reset();
+                }
+            },
+
+            error: function(xhr){
+                console.log(xhr.responseText);
+
+                $("#ajaxMessage").html(
+                    '<div id="msgBox" class="alert alert-danger">Something went wrong</div>'
+                );
+
+                setTimeout(function(){
+                    $("#msgBox").fadeOut();
+                }, 5000);
+            }
+        })
+    })
+
+    $(document).on("click", ".deleteBtn", function(){
+
+    let userId = $(this).data("id");
+
+    if(confirm("Delete this user?")){
+
+        $.ajax({
+            url: "../../controllers/UserController.cfm",
+            type: "GET",
+            data: {
+                action: "delete",
+                id: userId
+            },
+            dataType: "json",
+
+            success: function(res){
+
+                $("#userRow_" + res.id).remove();
+
+                $("#ajaxMessage").html(
+                    '<div class="alert alert-success">' +
+                    res.message +
+                    '</div>'
+                );
+
+                setTimeout(function(){
+                    $("#ajaxMessage").fadeOut();
+                },5000);
+            }
+        });
+
+    }
+
+});
+
+});
+</script>

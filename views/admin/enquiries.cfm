@@ -47,7 +47,7 @@ alert-danger
 </div>
 </cfif>
 
-<!-- SEARCH + FILTER -->
+<!-- search / filter -->
 <cfoutput>
 <form method="get" action="../../index.cfm" class="mb-3">
 
@@ -122,7 +122,7 @@ No enquiries found
         <cfif status EQ "pending">
             <span class="badge bg-warning text-dark">Pending</span>
         <cfelse>
-            <span class="badge bg-success">Fulfilled</span>
+            <span class="badge bg-success">Restocked</span>
         </cfif>
     </td>
     <td>#dateFormat(created_at,"dd-mmm-yyyy")#</td>
