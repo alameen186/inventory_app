@@ -176,4 +176,17 @@
 
     <cfreturn coupon>
 </cffunction>   
+
+<cffunction name="isCouponExists" returntype="boolean">
+    <cfargument name="code">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT COUNT(*) as total
+        FROM coupons
+        WHERE code = 
+        <cfqueryparam value="#arguments.code#" cfsqltype="cf_sql_varchar">
+    </cfquery>
+
+    <cfreturn q.total GT 0>
+</cffunction>
 </cfcomponent>

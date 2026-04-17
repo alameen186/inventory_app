@@ -30,27 +30,17 @@
 <div class="container mt-4">
     <h3 class="mb-3">Coupon Management</h3>
 
-    <!-- ALERT -->
-    <cfif structKeyExists(url, "message")>
-        <div id="alertBox" class="alert 
-            <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
-                alert-success
-            <cfelse>
-                alert-danger
-            </cfif>">
-            <cfoutput>#url.message#</cfoutput>
-        </div>
-    </cfif>
-
     <!-- add button-->
     <button class="btn btn-primary mb-3" 
         onclick="document.getElementById('addForm').style.display='block'">
         Add Coupon
     </button>
 
+    <div id="ajaxMessage"></div>
+
     <!-- add from -->
     <div id="addForm" style="display:<cfif url.showForm EQ 1>block<cfelse>none</cfif>;">
-        <form method="post" action="../../controllers/CouponController.cfm" class="mb-4">
+        <form method="post" id="createCouponForm" class="mb-4">
 
             <input type="hidden" name="action" value="add">
 
@@ -97,7 +87,7 @@
 
     <!-- search -->
     <cfoutput>
-    <form method="get" action="../../index.cfm" class="mb-3">
+    <form method="get"  id="searchForm" class="mb-3">
 
         <input type="hidden" name="page" value="dashboard">
         <input type="hidden" name="section" value="coupons">
@@ -131,13 +121,13 @@
         </tr>
     </thead>
 
-    <tbody>
+    <tbody id="couponTableBody">
     <cfoutput query="coupons">
 
         <cfif url.editId EQ id>
 
             <tr>
-            <form method="post" action="../../controllers/CouponController.cfm">
+            <form class="updateForm" method="post" >
 
                 <td>#id#</td>
 
@@ -215,10 +205,10 @@
                     <a href="../../index.cfm?page=dashboard&section=coupons&editId=#id#" 
                        class="btn btn-warning btn-sm">Edit</a>
 
-                    <a href="../../controllers/CouponController.cfm?action=toggle&id=#id#"
-                       class="btn btn-danger btn-sm">
+                    <button class="toggleBtn btn btn-danger btn-sm"
+data-id="#id#" data-status="#is_active#">
                        <cfif is_active EQ 1>Block<cfelse>Unblock</cfif>
-                    </a>
+                    </button>
                 </td>
             </tr>
 
@@ -234,12 +224,9 @@
 
         <cfloop from="1" to="#totalPages#" index="i">
 
-            <a href="?page=dashboard&section=coupons&p=#i#&search=#url.search#&status=#url.status#"
-               class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
-
-                #i#
-
-            </a>
+            <button 
+class="btn btn-sm pageBtn <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+data-page="#i#">#i#</button>
 
         </cfloop>
 
@@ -249,10 +236,94 @@
 </div>
 
 <script>
-setTimeout(function () {
-    var alertBox = document.getElementById("alertBox");
-    if (alertBox) {
-        alertBox.style.display = "none";
-    }
-}, 5000);
+$(function(){
+
+function msg(res){
+$("#ajaxMessage").html(
+'<div class="alert alert-'+(res.status=="success"?"success":"danger")+'">'+res.message+'</div>'
+);
+setTimeout(()=>$("#ajaxMessage").fadeOut(),3000);
+}
+
+
+// ADD
+$("#createCouponForm").submit(function(e){
+e.preventDefault();
+
+$.post("../../controllers/CouponController.cfm",
+$(this).serialize(),
+function(res){
+
+msg(res);
+
+if(res.status=="success"){
+location.reload();
+}
+
+},"json");
+});
+
+
+// UPDATE
+$(document).on("submit",".updateForm",function(e){
+e.preventDefault();
+
+$.post("../../controllers/CouponController.cfm",
+$(this).serialize(),
+function(res){
+msg(res);
+if(res.status=="success"){
+location.reload();
+}
+},"json");
+});
+
+
+// TOGGLE
+$(document).on("click",".toggleBtn",function(){
+
+let btn=$(this);
+
+$.get("../../controllers/CouponController.cfm",{
+action:"toggle",
+id:btn.data("id")
+},function(res){
+
+msg(res);
+
+if(res.status=="success"){
+location.reload();
+}
+
+},"json");
+
+});
+
+
+// SEARCH
+$("#searchForm").submit(function(e){
+e.preventDefault();
+
+$.get("../../controllers/CouponController.cfm",
+"action=search&"+$(this).serialize(),
+function(res){
+$("#couponTableBody").html(res);
+});
+});
+
+
+// PAGINATION
+$(document).on("click",".pageBtn",function(){
+
+let page=$(this).data("page");
+
+$.get("../../controllers/CouponController.cfm",
+"action=search&p="+page+"&"+$("#searchForm").serialize(),
+function(res){
+$("#couponTableBody").html(res);
+});
+
+});
+
+});
 </script>
