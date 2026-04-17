@@ -1,174 +1,227 @@
-<cfif NOT structKeyExists(session, "role_id") OR session.role_id NEQ 1>
-    <cfabort>
-</cfif>
-
-
-<!--- ADD PRODUCT --->
+<!-- ADD PRODUCT -->
 <cfif structKeyExists(form, "action") AND form.action EQ "add">
 
-    <cfset productModel = createObject("component","models.Product")>
-    
-    <cfset productName = trim(form.product_name)>
-    <cfset price = val(form.price)>
-    <cfset stock = val(form.stock)>
-    <cfset category_id = val(form.category_id)>
-    <cfset baseUrl = "../index.cfm?page=dashboard&section=products">
+<cfset productModel = createObject("component","models.Product")>
 
-    <cfset qAllProducts = productModel.getAllProducts()>
-    <cfset existingNames = valueList(qAllProducts.product_name)>
+<cfset productName = trim(form.product_name)>
+<cfset price = val(form.price)>
+<cfset stock = val(form.stock)>
+<cfset category_id = val(form.category_id)>
 
-    <cfif len(productName) LT 3>
-        <cflocation url="#baseUrl#&message=Product name must be at least 3 characters&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    <cfelseif len(productName) GT 50>
-        <cflocation url="#baseUrl#&message=Product name too long&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    <!--- FIXED: This now checks every existing product name, not just the first one --->
-    <cfelseif listFindNoCase(existingNames, productName)>
-        <cflocation url="#baseUrl#&message=Product name already exists&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    <cfelseif price LTE 0>
-        <cflocation url="#baseUrl#&message=Invalid price&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    <cfelseif stock LT 0>
-        <cflocation url="#baseUrl#&message=Invalid stock&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    <cfelseif category_id LTE 0>
-        <cflocation url="#baseUrl#&message=Invalid category&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    </cfif>
+<!-- VALIDATION -->
+<cfif len(productName) LT 3>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Product name must be at least 3 characters"}</cfoutput>
+<cfabort>
 
-    <cfset imageName = "">
+<cfelseif len(productName) GT 50>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Product name too long"}</cfoutput>
+<cfabort>
 
-    <cftry>
-        <cfif structKeyExists(form, "product_image") AND len(form.product_image)>
-            <cfset uploadPath = expandPath('../assets/images/products/')>
-            
-            <cfif NOT directoryExists(uploadPath)>
-                <cfdirectory action="create" directory="#uploadPath#">
-            </cfif>
+<cfelseif price LTE 0>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Invalid price"}</cfoutput>
+<cfabort>
 
-            <cffile 
-                action="upload"
-                filefield="product_image"
-                destination="#uploadPath#"
-                nameconflict="makeunique"
-                accept="image/jpeg,image/png,image/jpg">
-            <cfset imageName = cffile.serverFile>
-        </cfif>
+<cfelseif stock LT 0>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Invalid stock"}</cfoutput>
+<cfabort>
 
-        <cfset result = productModel.addProduct(productName, price, stock, category_id, imageName)>
+<cfelseif category_id LTE 0>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Invalid category"}</cfoutput>
+<cfabort>
+</cfif>
 
-        <cfif result>
-            <cflocation url="#baseUrl#&message=Product added successfully&type=success" addtoken="false">
-        <cfelse>
-            <cfif len(imageName)>
-                <cffile action="delete" file="#uploadPath##imageName#">
-            </cfif>
-            <cflocation url="#baseUrl#&message=Insert failed&type=error&showForm=1" addtoken="false">
-        </cfif>
-        <cfabort>
+<!-- DUPLICATE CHECK -->
+<cfset qAllProducts = productModel.getAllProducts()>
+<cfset existingNames = valueList(qAllProducts.product_name)>
 
-    <cfcatch>
-        <cfif len(imageName) AND fileExists(uploadPath & imageName)>
-            <cffile action="delete" file="#uploadPath##imageName#">
-        </cfif>
-        <cflocation url="#baseUrl#&message=Something went wrong: #cfcatch.message#&type=error&showForm=1" addtoken="false">
-        <cfabort>
-    </cfcatch>
+<cfif listFindNoCase(existingNames, productName)>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Product name already exists"}</cfoutput>
+<cfabort>
+</cfif>
 
-    </cftry>
+<cfset imageName = "">
+
+<cftry>
+
+<cfif structKeyExists(form, "product_image") AND len(form.product_image)>
+    <cfset uploadPath = expandPath('../assets/images/products/')>
+
+    <cffile action="upload"
+        filefield="product_image"
+        destination="#uploadPath#"
+        nameconflict="makeunique"
+        accept="image/jpeg,image/png,image/jpg">
+
+    <cfset imageName = cffile.serverFile>
+</cfif>
+
+<cfset result = productModel.addProduct(productName, price, stock, category_id, imageName)>
+
+<cfif result>
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>{"status":"success","message":"Product added successfully"}</cfoutput>
+<cfelse>
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>{"status":"error","message":"Insert failed"}</cfoutput>
+</cfif>
+
+<cfabort>
+
+<cfcatch>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"#cfcatch.message#"}</cfoutput>
+<cfabort>
+</cfcatch>
+
+</cftry>
 
 </cfif>
 
-
-
-
-<!--- UPDATE PRODUCT --->
+<!-- UPDATE PRODUCT -->
 <cfif structKeyExists(form, "action") AND form.action EQ "update">
 
-    <cfset productModel = createObject("component","models.Product")>
+<cfset productModel = createObject("component","models.Product")>
 
-    <cfset productName = trim(form.product_name)>
-    <cfset price = val(form.price)>
-    <cfset stock = val(form.stock)>
-    <cfset category_id = val(form.category_id)>
-    <cfset id = val(form.id)>
+<cfset productName = trim(form.product_name)>
+<cfset price = val(form.price)>
+<cfset stock = val(form.stock)>
+<cfset category_id = val(form.category_id)>
+<cfset id = val(form.id)>
 
-    <cfset baseUrl = "../index.cfm?page=dashboard&section=products">
+<!-- VALIDATION -->
+<cfif len(productName) LT 3>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Product name must be at least 3 characters"}</cfoutput>
+<cfabort>
 
-    <!--- VALIDATION --->
-    <cfif len(productName) LT 3>
-        <cflocation url="#baseUrl#&message=Product name must be at least 3 characters&type=error&editId=#id#" addtoken="false">
-        <cfabort>
+<cfelseif price LTE 0>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Invalid price"}</cfoutput>
+<cfabort>
 
-    <cfelseif price LTE 0>
-        <cflocation url="#baseUrl#&message=Invalid price&type=error&editId=#id#" addtoken="false">
-        <cfabort>
-    <cfelseif stock LT 0>
-        <cflocation url="#baseUrl#&message=Invalid stock&type=error&editId=#id#" addtoken="false">
-        <cfabort>
+<cfelseif stock LT 0>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Invalid stock"}</cfoutput>
+<cfabort>
 
-    <cfelseif category_id LTE 0>
-        <cflocation url="#baseUrl#&message=Invalid category&type=error&editId=#id#" addtoken="false">
-        <cfabort>
-    </cfif>
+<cfelseif category_id LTE 0>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Invalid category"}</cfoutput>
+<cfabort>
+</cfif>
 
-    <cfset imageName = "">
+<cfset imageName = "">
+<cfset oldProduct = productModel.getProductById(id)>
+<cfset imageName = oldProduct.image>
 
-    <cfset oldProduct = productModel.getProductById(id)>
-    <cfset imageName = oldProduct.image>
+<cftry>
 
-    <cftry>
+<cfif structKeyExists(form, "product_image") AND len(form.product_image)>
+    <cffile action="upload"
+        filefield="product_image"
+        destination="#expandPath('../assets/images/products/')#"
+        nameconflict="makeunique"
+        accept="image/jpeg,image/png,image/jpg">
+    <cfset imageName = cffile.serverFile>
+</cfif>
 
-        <cfif structKeyExists(form, "product_image") AND len(form.product_image)>
-            <cffile 
-                action="upload"
-                filefield="product_image"
-                destination="#expandPath('../assets/images/products/')#"
-                nameconflict="makeunique"
-                accept="image/jpeg,image/png,image/jpg">
-            <cfset imageName = cffile.serverFile>
-        </cfif>
+<cfset result = productModel.updateProduct(id, productName, price, stock, category_id, imageName)>
 
-        <cfset result = productModel.updateProduct(id, productName, price, stock, category_id, imageName)>
+<cfif result>
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>{"status":"success","message":"Product updated successfully"}</cfoutput>
+<cfelse>
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>{"status":"error","message":"Update failed"}</cfoutput>
+</cfif>
 
-        <cfif result>
-            <cflocation url="#baseUrl#&message=Product updated successfully&type=success" addtoken="false">
-        <cfelse>
-            <cflocation url="#baseUrl#&message=Update failed&type=error&editId=#id#" addtoken="false">
-        </cfif>
-        <cfabort>
+<cfabort>
 
-    <cfcatch>
-        <cflocation url="#baseUrl#&message=Something went wrong&type=error&editId=#id#" addtoken="false">
-        <cfabort>
-    </cfcatch>
+<cfcatch>
+<cfcontent type="application/json" reset="true">
+<cfoutput>{"status":"error","message":"Something went wrong"}</cfoutput>
+<cfabort>
+</cfcatch>
 
-    </cftry>
+</cftry>
 
 </cfif>
 
 
-
-<!--- TOGGLE STATUS --->
+<!-- TOGGLE -->
 <cfif structKeyExists(url, "action") AND url.action EQ "block">
 
-    <cfif NOT structKeyExists(url, "id") OR NOT isNumeric(url.id)>
-        <cfabort>
-    </cfif>
+<cfset productModel = createObject("component", "models.Product")>
 
-    <cfif NOT structKeyExists(url, "currentStatus") OR NOT isNumeric(url.currentStatus)>
-        <cfabort>
-    </cfif>
+<cfset newStatus = (url.currentStatus EQ 1 ? 0 : 1)>
+<cfset productModel.toggleStatus(url.id, newStatus)>
 
-    <cfset productModel = createObject("component", "models.Product")>
+<cfcontent type="application/json" reset="true">
+<cfoutput>
+{
+    "status":"success",
+    "message":"Status updated",
+    "id":"#url.id#",
+    "newStatus":"#newStatus#"
+}
+</cfoutput>
+<cfabort>
 
-    <cfset newStatus = (url.currentStatus EQ 1 ? 0 : 1)>
+</cfif>
+<!-- search -->
+<cfif structKeyExists(url,"action") AND url.action EQ "search">
 
-    <cfset productModel.toggleStatus(url.id, newStatus)>
+    <cfset productModel = createObject("component","models.Product")>
 
-    <cflocation url="../index.cfm?page=dashboard&section=products&message=Updated&type=success" addtoken="false">
-    <cfabort>
+    <cfparam name="url.p" default="1">
+    <cfparam name="url.search" default="">
+    <cfparam name="url.sort" default="">
+    <cfparam name="url.category_id" default="">
 
+    <cfset q = productModel.getAllProductsAdmin(
+        search=url.search,
+        sort=url.sort,
+        category_id=url.category_id,
+        page=url.p,
+        limit=3
+    )>
+
+    <cfoutput query="q">
+        <tr>
+            <td>#id#</td>
+            <td>#product_name#</td>
+            <td>#price#</td>
+            <td>#stock#</td>
+            <td>#category_name#</td>
+            <td>
+                <cfif len(image)>
+                    <img src="../../assets/images/products/#image#" width="50">
+                <cfelse>
+                    No Image
+                </cfif>
+            </td>
+            <td>
+                <cfif is_active EQ 1>
+                    <span class="badge bg-success">Active</span>
+                <cfelse>
+                    <span class="badge bg-warning">Blocked</span>
+                </cfif>
+            </td>
+            <td>
+                <button class="editBtn btn btn-warning btn-sm" data-id="#id#">Edit</button>
+                <button class="toggleStatusBtn btn btn-danger btn-sm"
+                        data-id="#id#" data-status="#is_active#">
+                    <cfif is_active EQ 1>Block<cfelse>Unblock</cfif>
+                </button>
+            </td>
+        </tr>
+    </cfoutput>
+
+<cfabort>
 </cfif>
