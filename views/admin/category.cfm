@@ -1,7 +1,5 @@
 <cfset categoryModel = createObject("component", "models.Category")>
 
-<cfparam name="url.editId" default="0">
-<cfparam name="url.showForm" default="0">
 <cfparam name="url.search" default="">
 <cfparam name="url.sort" default="">
 <cfparam name="url.p" default="1">
@@ -11,7 +9,13 @@
     <cfset currentPage = 1>
 </cfif>
 
-<cfset limit = 2>
+<cfset limit = 5>
+
+<!-- IMPORTANT FIX -->
+<cfset totalRecords = categoryModel.getCategoryCount(
+    search = trim(url.search)
+)>
+<cfset totalPages = ceiling(totalRecords / limit)>
 
 <cfset category = categoryModel.getAllCategories(
     search = trim(url.search),
@@ -20,175 +24,271 @@
     limit = limit
 )>
 
-<cfset totalRecords = categoryModel.getCategoryCount(
-    search = trim(url.search)
-)>
-
-<cfset totalPages = ceiling(totalRecords / limit)>
-
 <div class="container mt-4">
-    <h3 class="mb-3">Category Management</h3>
-        <cfif structKeyExists(url, "message")>
-                        <div id="alertBox" class="alert 
-                            <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
-                                alert-success
-                            <cfelse>
-                                alert-danger
-                            </cfif>">
-                    
-                            <cfoutput>#url.message#</cfoutput>
-                        </div>
-                    </cfif>
-    <button class="btn btn-primary mb-3" onclick="document.getElementById('addForm').style.display='block'">
-    Add Category
-    </button>
-     <div id="addForm" style="display:<cfif url.showForm EQ 1>block<cfelse>none</cfif>;">
-           <form method="post" action="../../controllers/CategoryController.cfm" class="mb-4">
+<h3>Category Management</h3>
 
-    <input type="hidden" name="action" value="add">
+<div id="ajaxMessage"></div>
 
-    <div class="row">
-    
-        <div class="col-md-4">
-            <input type="text" 
-             name="category_name" 
-             class="form-control" 
-             placeholder="Category Name" 
-             required>
-        </div>
+<button class="btn btn-primary mb-3" onclick="$('#addForm').toggle()">Add Category</button>
 
-        <div class="col-md-4">
-            <input type="text" 
-            name="description" 
-            class="form-control" 
-            placeholder="Description" 
-            required>
-        </div>
+<div id="addForm" style="display:none;">
+<form id="createCategoryForm">
+<input type="hidden" name="action" value="add">
 
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Add Category</button>
-            <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="document.getElementById('addForm').style.display='none'">
-    Cancel
-</button>        
-        </div>
-    </div>
+<div class="row">
+<div class="col-md-4">
+<input type="text" name="category_name" class="form-control" placeholder="Category Name" required>
+</div>
 
+<div class="col-md-4">
+<input type="text" name="description" class="form-control" placeholder="Description" required>
+</div>
 
+<div class="col-md-2">
+<button class="btn btn-success">Add</button>
+</div>
+</div>
 </form>
-     </div>
+</div>
 
-      <cfoutput>
-      <form method="get" action="../../index.cfm" class="mb-3">
-         <input type="hidden" name="page" value="dashboard">
-         <input type="hidden" name="section" value="category">
+<!-- SEARCH -->
+<form id="searchForm" class="mt-3">
+<cfoutput>
+<input type="text" placeholder="Search category..."  name="search" value="#url.search#" class="form-control w-25 d-inline">
+</cfoutput>
+<select name="sort" class="form-control w-25 d-inline">
+<option value="">Sort</option>
+<option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
+<option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
+</select>
+<button class="btn btn-primary btn-sm">Search</button>
+</form>
 
-         <input type="text" name="search" values="#url.search#"
-                placeholder="search categories...."
-                class="form-control w-25 d-inline">
-         <select name="sort" class="form-control w-25 d-inline">
-           <option value="">Sort</option>
-           <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
-           <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
-         </select>   
-         <button class="btn btn-primary btn-sm">Apply</button>
-      </form>
-   </cfoutput>
-     
-    <table class="table table-bordered table-striped table-hover shadow-sm mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+<table class="table table-bordered mt-3">
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Description</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
 
-        <tbody>
-            <cfoutput query="category">
+<tbody id="categoryTableBody">
 
-            <cfif url.editId EQ id>
-                 <form method="post" action="../../controllers/CategoryController.cfm">
+<cfoutput query="category">
 
-                        <td>#id#</td>
+<tr id="categoryRow_#id#">
+<td>#id#</td>
+<td>#category_name#</td>
+<td>#description#</td>
 
-                        <td>
-                            <input type="text" name="category_name" value="#category_name#" class="form-control">
-                        </td>
+<td>
+<cfif is_active EQ 1>
+<p class="text-success">Active</p>
+<cfelse>
+<p class="text-warning">Blocked</p>
+</cfif>
+</td>
 
-                        <td>
-                            <input type="text" name="description" value="#description#" class="form-control">
-                        </td>
+<td>
+<button class="editBtn btn btn-warning btn-sm" data-id="#id#">Edit</button>
 
-                        <td>
-                             <cfif is_active EQ 1>
-                               <span class="badge bg-success">Active</span>
-                             <cfelse>
-                               <span class="badge bg-warning">Blocked</span>
-                             </cfif>
-                        </td>
+<button class="toggleStatusBtn btn btn-danger btn-sm"
+data-id="#id#" data-status="#is_active#">
+<cfif is_active EQ 1>Block<cfelse>Unblock</cfif>
+</button>
+</td>
+</tr>
 
-                        <td>
-                            <input type="hidden" name="id" value="#id#">
-                            <input type="hidden" name="action" value="update">
+<tr id="editCategoryRow_#id#" style="display:none;">
+<td>#id#</td>
+<td><input value="#category_name#" class="form-control name"></td>
+<td><input value="#description#" class="form-control desc"></td>
+<td><cfif is_active EQ 1>
+<p class="text-success">Active</p>
+<cfelse>
+<p class="text-warning">Blocked</p>
+</cfif>
+</td>
+<td>
+<button class="saveEdit btn btn-success btn-sm" data-id="#id#">Save</button>
+<button class="cancelEdit btn btn-secondary btn-sm" data-id="#id#">Cancel</button>
+</td>
+</tr>
 
-                            <button class="btn btn-success btn-sm">Save</button>
+</cfoutput>
 
-                            <a href="../../index.cfm?page=dashboard&section=category" 
-                               class="btn btn-secondary btn-sm">Cancel</a>
-                        </td>
+</tbody>
+</table>
 
-                    </form>
-            
-            <cfelse>
-                <tr>
-                    <td>#id#</td>
-                    <td>#category_name#</td>
-                    <td>#description#</td>
-                    <cfif is_active EQ 1>
-                    <td><p class="text-success">Active</p></td>
-                    <cfelse>
-                    <td><p class="text-warning">Blocked</p></td>
-                    </cfif>
-                    <td>
-                        <a href="../../index.cfm?page=dashboard&section=category&editId=#id#" 
-                           class="btn btn-warning btn-sm">Edit</a>
-                        <a href="../../controllers/CategoryController.cfm?action=block&id=#id#&currentStatus=#is_active#"
-   class="btn btn-sm btn-danger"
-   onclick="return confirm('Are you sure?')">
-   <cfif is_active EQ 1>Block<cfelse>Unblock</cfif>
-</a>
-                    </td>
-                </tr>
-            </cfif>    
-            </cfoutput>
-        </tbody>
-    </table>
-
-     <cfoutput>
-<div class="mt-4">
+<!-- PAGINATION -->
+<cfoutput>
+<div id="paginationArea" class="mt-3">
 
 <cfloop from="1" to="#totalPages#" index="i">
 
-    <a href="?page=dashboard&section=category&p=#i#&search=#url.search#&sort=#url.sort#"
-       class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
+<button 
+class="btn btn-sm pageBtn <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+data-page="#i#">
 
-        #i#
+#i#
 
-    </a>
+</button>
 
 </cfloop>
 
 </div>
 </cfoutput>
+
 </div>
 
 <script>
-    setTimeout(function () {
-        var alertBox = document.getElementById("alertBox");
-        if (alertBox) {
-            alertBox.style.display = "none";
+$(document).ready(function(){
+
+function showMessage(res){
+    $("#ajaxMessage").html(
+        '<div id="msgBox" class="alert alert-'+
+        (res.status==="success"?"success":"danger")+
+        '">' + res.message + '</div>'
+    );
+
+    setTimeout(function(){
+        $("#msgBox").fadeOut();
+    }, 5000);
+}
+
+
+// ADD
+$("#createCategoryForm").submit(function(e){
+    e.preventDefault();
+
+    $.post("../../controllers/CategoryController.cfm",
+        $(this).serialize(),
+        function(res){
+
+            showMessage(res);
+
+            if(res.status==="success"){
+                location.reload(); 
+            }
+
+        },"json");
+});
+
+
+// EDIT
+$(document).on("click",".editBtn",function(){
+    let id=$(this).data("id");
+    $("#categoryRow_"+id).hide();
+    $("#editCategoryRow_"+id).show();
+});
+
+
+// CANCEL
+$(document).on("click",".cancelEdit",function(){
+    let id=$(this).data("id");
+    $("#editCategoryRow_"+id).hide();
+    $("#categoryRow_"+id).show();
+});
+
+
+// SAVE EDIT
+$(document).on("click",".saveEdit",function(){
+
+    let id=$(this).data("id");
+    let row=$("#editCategoryRow_"+id);
+
+    $.post("../../controllers/CategoryController.cfm",{
+        action:"update",
+        id:id,
+        category_name:row.find(".name").val(),
+        description:row.find(".desc").val()
+    },function(res){
+
+        showMessage(res);
+
+        // ❗ stop if validation error
+        if(res.status !== "success") return;
+
+        // update UI
+        let updatedRow = `
+        <tr id="categoryRow_${res.id}">
+            <td>${res.id}</td>
+            <td>${res.category_name}</td>
+            <td>${res.description}</td>
+            <td><p class="text-success">Active</p></td>
+            <td>
+                <button class="editBtn btn btn-warning btn-sm" data-id="${res.id}">Edit</button>
+            </td>
+        </tr>`;
+
+        $("#editCategoryRow_"+id).replaceWith(updatedRow);
+
+    },"json");
+
+});
+
+
+// TOGGLE
+$(document).on("click",".toggleStatusBtn",function(){
+
+    let btn=$(this);
+
+    $.get("../../controllers/CategoryController.cfm",{
+        action:"block",
+        id:btn.data("id"),
+        currentStatus:btn.data("status")
+    },function(res){
+
+        showMessage(res);
+
+        if(res.status !== "success") return;
+
+        let newStatus = res.newStatus;
+
+        btn.data("status", newStatus);
+        btn.text(newStatus == 1 ? "Block" : "Unblock");
+
+        $("#categoryRow_"+res.id+" td:nth-child(4)").html(
+            newStatus == 1
+            ? '<p class="text-success">Active</p>'
+            : '<p class="text-warning">Blocked</p>'
+        );
+
+    },"json");
+
+});
+
+
+// SEARCH
+$("#searchForm").submit(function(e){
+    e.preventDefault();
+
+    $.get("../../controllers/CategoryController.cfm",
+        "action=search&p=1&"+$(this).serialize(),
+        function(res){
+            $("#categoryTableBody").html(res);
         }
-    }, 5000);   
+    );
+});
+
+
+// PAGINATION
+$(document).on("click",".pageBtn",function(){
+
+    let page=$(this).data("page");
+
+    let searchData=$("#searchForm").serialize();
+
+    $.get("../../controllers/CategoryController.cfm",
+        "action=search&p="+page+"&"+searchData,
+        function(res){
+            $("#categoryTableBody").html(res);
+        }
+    );
+});
+
+});
 </script>

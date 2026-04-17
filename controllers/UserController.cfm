@@ -17,14 +17,12 @@
 </cfif>
 
 
-<!-- UPDATE USER (Normal Form Submit) -->
+<!-- UPDATE USER  -->
 <cfif structKeyExists(form, "action") AND form.action EQ "update">
 
     <cfset first_name = trim(form.first_name)>
     <cfset last_name = trim(form.last_name)>
     <cfset email = trim(form.email)>
-
-    <cfset baseUrl = "../index.cfm?page=dashboard&section=users">
 
     <cfif len(first_name) LT 3>
         <cfcontent type="application/json" reset="true">
@@ -84,7 +82,7 @@
 </cfif>
 
 
-<!-- CREATE USER (AJAX ONLY) -->
+<!-- CREATE USER  -->
 <cfif structKeyExists(form,"action") AND form.action EQ "create">
 
     <cfset userModel = createObject("component","models.User")>

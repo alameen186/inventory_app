@@ -1,5 +1,4 @@
-<!---Add category--->
-
+<!-- ADD -->
 <cfif structKeyExists(form, "action") AND form.action EQ "add">
 
     <cfset categoryModel = createObject("component","models.Category")>
@@ -7,107 +6,160 @@
     <cfset category_name = trim(form.category_name)>
     <cfset description = trim(form.description)>
 
-    <cfset baseUrl = "../index.cfm?page=dashboard&section=category">
-
+    <!-- VALIDATION -->
     <cfif len(category_name) LT 3>
-
-        <cflocation url="#baseUrl#&message=Category name must be at least 3 characters&type=error&showForm=1" addtoken="false">
+        <cfcontent type="application/json" reset="true">
+        <cfoutput>{"status":"error","message":"Category name must be at least 3 characters"}</cfoutput>
         <cfabort>
-
-    <cfelseif len(category_name) GT 20>
-
-        <cflocation url="#baseUrl#&message=Category name must be less than 20 characters&type=error&showForm=1" addtoken="false">
-        <cfabort>
-
-    <cfelseif len(description) LT 5>
-
-        <cflocation url="#baseUrl#&message=Description must be at least 5 characters&type=error&showForm=1" addtoken="false">
-        <cfabort>
-
-    <cfelseif len(description) GT 255>
-
-        <cflocation url="#baseUrl#&message=Description must be less than 255 characters&type=error&showForm=1" addtoken="false">
-        <cfabort>
-
-    <cfelse>
-
-       <cfset category = CategoryModel.getAllCategories()>
-       <cfif category_name EQ category.category_name>
-
-        <cflocation url="#baseUrl#&message=Category already exist&type=error&showForm=1" addtoken="false">
-        <cfabort>
-
-        </cfif>
-
-
-        <cfset categoryModel.addCategory(category_name, description)>
-
-        <cflocation url="#baseUrl#&message=Category Added successfully&type=success" addtoken="false">
-        <cfabort>
-
     </cfif>
 
+    <cfif len(description) LT 5>
+        <cfcontent type="application/json" reset="true">
+        <cfoutput>{"status":"error","message":"Description must be at least 5 characters"}</cfoutput>
+        <cfabort>
+    </cfif>
+
+    <cfif categoryModel.isCategoryExists(category_name)>
+        <cfcontent type="application/json" reset="true">
+        <cfoutput>{"status":"error","message":"Category already exists"}</cfoutput>
+        <cfabort>
+    </cfif>
+
+    <!-- INSERT -->
+    <cfset newId = categoryModel.addCategory(category_name, description)>
+
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>
+    {
+        "status":"success",
+        "message":"Category added",
+        "id":"#newId#",
+        "category_name":"#category_name#",
+        "description":"#description#"
+    }
+    </cfoutput>
+    <cfabort>
 </cfif>
 
-<!---edit--->
 
+
+<!-- UPDATE -->
 <cfif structKeyExists(form, "action") AND form.action EQ "update">
+
+    <cfset categoryModel = createObject("component","models.Category")>
 
     <cfset category_name = trim(form.category_name)>
     <cfset description = trim(form.description)>
 
-    <cfset baseUrl = "../index.cfm?page=dashboard&section=category">
-
+    <!-- VALIDATION -->
     <cfif len(category_name) LT 3>
-        <cflocation url="#baseUrl#&message=category name must be at least 3 characters&type=error&editId=#form.id#" addtoken="false">
-        <cfabort>
-
-    <cfelseif len(category_name) GT 20>
-        <cflocation url="#baseUrl#&message=category name must be less than 20 characters&type=error&editId=#form.id#" addtoken="false">
-        <cfabort>
-
-    <cfelseif len(description) LT 5>
-        <cflocation url="#baseUrl#&message=Description name must be at least 5 character&type=error&editId=#form.id#" addtoken="false">
-        <cfabort>
-
-    <cfelseif len(description) GT 255>
-        <cflocation url="#baseUrl#&message=Description name must be less than 255 characters&type=error&editId=#form.id#" addtoken="false">
-        <cfabort>
-
-    <cfelse>
-
-        <cfset CategoryModel = createObject("component","models.Category")>
-
-        <cfset categoryModel.update_category(
-            form.id,
-            category_name,
-            description
-        )>
-
-        <cflocation url="#baseUrl#&message=Category updated successfully&type=success" addtoken="false">
-        <cfabort>
-
-    </cfif>
-
-</cfif>
-
-<!---toggle status--->
-<cfif structKeyExists(url, "action") AND url.action EQ "block">
-
-    <cfif NOT structKeyExists(url, "id") OR NOT isNumeric(url.id)>
-        <cfabort>
-    </cfif>
-    <cfif NOT structKeyExists(url, "currentStatus") OR NOT isNumeric(url.currentStatus)>
+        <cfcontent type="application/json" reset="true">
+        <cfoutput>{"status":"error","message":"Category name must be at least 3 characters"}</cfoutput>
         <cfabort>
     </cfif>
 
-    <cfset categoryModel = createObject("component", "models.Category")>
+    <cfif len(description) LT 5>
+        <cfcontent type="application/json" reset="true">
+        <cfoutput>{"status":"error","message":"Description must be at least 5 characters"}</cfoutput>
+        <cfabort>
+    </cfif>
 
-    <cfset newStatus = (url.currentStatus EQ 1 ? 0 : 1)>
+    <!-- UPDATE -->
+    <cfset categoryModel.update_category(form.id, category_name, description)>
 
-    <cfset categoryModel.toggleStatus(url.id, newStatus)>
-
-    <cflocation url="../index.cfm?page=dashboard&section=category&message=Updated&type=success" addtoken="false">
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>
+    {
+        "status":"success",
+        "message":"Updated successfully",
+        "id":"#form.id#",
+        "category_name":"#category_name#",
+        "description":"#description#"
+    }
+    </cfoutput>
     <cfabort>
 </cfif>
 
+
+
+<!-- TOGGLE -->
+<cfif structKeyExists(url,"action") AND url.action EQ "block">
+
+    <cfset categoryModel = createObject("component","models.Category")>
+
+    <cfset newStatus = (url.currentStatus EQ 1 ? 0 : 1)>
+    <cfset categoryModel.toggleStatus(url.id, newStatus)>
+
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>
+    {
+        "status":"success",
+        "id":"#url.id#",
+        "newStatus":"#newStatus#"
+    }
+    </cfoutput>
+    <cfabort>
+</cfif>
+
+
+
+<!-- SEARCH -->
+<cfif structKeyExists(url,"action") AND url.action EQ "search">
+
+    <cfset categoryModel = createObject("component","models.Category")>
+
+    <cfparam name="url.p" default="1">
+    <cfparam name="url.search" default="">
+    <cfparam name="url.sort" default="">
+
+    <cfset page = val(url.p)>
+    <cfif page LT 1><cfset page = 1></cfif>
+
+    <cfset limit = 5>
+
+    <cfset q = categoryModel.getAllCategories(
+        search = trim(url.search),
+        sort = url.sort,
+        page = page,
+        limit = limit
+    )>
+
+    <cfoutput query="q">
+        <tr id="categoryRow_#id#">
+            <td>#id#</td>
+            <td>#category_name#</td>
+            <td>#description#</td>
+            <td>
+                <cfif is_active EQ 1>
+                    <p class="text-success">Active</p>
+                <cfelse>
+                    <p class="text-warning">Blocked</p>
+                </cfif>
+            </td>
+            <td>
+                <button class="editBtn btn btn-warning btn-sm" data-id="#id#">Edit</button>
+                <button class="toggleStatusBtn btn btn-danger btn-sm"
+                        data-id="#id#" data-status="#is_active#">
+                    <cfif is_active EQ 1>Block<cfelse>Unblock</cfif>
+                </button>
+            </td>
+        </tr>
+
+        <tr id="editCategoryRow_#id#" style="display:none;">
+            <td>#id#</td>
+            <td><input value="#category_name#" class="form-control name"></td>
+            <td><input value="#description#" class="form-control desc"></td>
+            <td></td>
+            <td>
+                <button class="saveEdit btn btn-success btn-sm" data-id="#id#">Save</button>
+                <button class="cancelEdit btn btn-secondary btn-sm" data-id="#id#">Cancel</button>
+            </td>
+        </tr>
+    </cfoutput>
+
+    <cfif q.recordCount EQ 0>
+        <tr><td colspan="5" class="text-center text-danger">No records found</td></tr>
+    </cfif>
+
+    <cfabort>
+</cfif>

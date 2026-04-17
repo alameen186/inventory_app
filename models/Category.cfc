@@ -132,4 +132,17 @@
             </cfcatch>
         </cftry>
     </cffunction>
+
+    <cffunction name="isCategoryExists" returntype="boolean" output="false">
+    <cfargument name="category_name" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT id 
+        FROM categories 
+        WHERE category_name = 
+        <cfqueryparam value="#arguments.category_name#" cfsqltype="cf_sql_varchar">
+    </cfquery>
+
+    <cfreturn q.recordCount GT 0>
+</cffunction>
 </cfcomponent>
