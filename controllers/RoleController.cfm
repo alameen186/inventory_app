@@ -5,9 +5,15 @@
 <cfif structKeyExists(url, "action") AND url.action EQ "delete">
       <cfset roleModel = createObject("component","models.Role")>
       <cfset roleModel.deleteRole(url.id)>
-
-      <cflocation url="../index.cfm?page=dashboard&section=roles&message=Role deleted&type=success" addtoken="false">
-    <cfabort>
+        <cfcontent type="application/json" reset="true">
+          <cfoutput>
+            {
+               "status":"success",
+               "message":"Role deleted successfully",
+               "id":"#url.id#"
+            }
+          </cfoutput>
+          <cfabort>
 </cfif>
 
 <cfif structKeyExists(form, "action") AND form.action EQ "update">
@@ -17,26 +23,37 @@
       <cfset baseUrl = "../index.cfm?page=dashboard&section=roles">
 
       <cfif len(roleName) LT 3>
-        <cflocation url="#baseUrl#&message=Role name must be at least 3 characters&type=error&editId=#form.id#" addtoken="false">
+        <cfcontent type="application/json" reset="true">
+          <cfoutput>
+            {"status":"error", "message":"Role name must be at least 3 characters"}
+          </cfoutput>
         <cfabort>
 
         <cfelseif len(roleName) GT 20>
-        <cflocation url="#baseUrl#&message=Role name must be less than 20 characters&type=error&editId=#form.id#" addtoken="false">
-        
+        <cfcontent type="application/json" reset="true">
+          <cfoutput>
+            {"status":"error", "message":"Role name must be less than 20 characters"}
+          </cfoutput>
         <cfabort>
       <cfelseif len(description) LT 5>
-        <cflocation url="#baseUrl#&message=Description must be at least 5 characters&type=error&editId=#form.id#" addtoken="false">
+          <cfcontent type="application/json" reset="true">
+          <cfoutput>
+            {"status":"error", "message":"Description must be at least 5 characters"}
+          </cfoutput>
         <cfabort>
-
         <cfelseif len(description) GT 100>
-        <cflocation url="#baseUrl#&message=Description must be less than 100 characters&type=error&editId=#form.id#" addtoken="false">
+         <cfcontent type="application/json" reset="true">
+          <cfoutput>
+            {"status":"error", "message":"Description must be less than 100 characters"}
+          </cfoutput>
         <cfabort>
-
     <cfelse>
     <cfset roleModel = createObject("component","models.Role")>
         <cfset roleModel.updateRole(form.id, roleName, description)>
-
-    <cflocation url="../index.cfm?page=dashboard&section=roles&message=Role updated&type=success" addtoken="false">
-    <cfabort>
+     <cfcontent type="application/json" reset="true">
+          <cfoutput>
+            {"status":"success", "message":"Role updated"}
+          </cfoutput>
+        <cfabort>
     </cfif>  
 </cfif>

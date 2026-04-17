@@ -56,7 +56,7 @@
          <button class="btn btn-primary btn-sm">Apply</button>
       </form>
    </cfoutput>
-
+<div id="ajaxMessage"></div>
     <table class="table table-bordered table-striped table-hover shadow-sm mt-3">
         <thead class="table-dark">
             <tr>
@@ -71,7 +71,7 @@
             <cfoutput query="roles">
 
             <cfif url.editId EQ id>
-                 <form method="post" action="../../controllers/RoleController.cfm">
+                 <form class="updateRoleForm" method="post" >
 
                         <td>#id#</td>
 
@@ -95,18 +95,16 @@
                     </form>
             
             <cfelse>
-                <tr>
+                <tr id="roleRow_#id#">
                     <td>#id#</td>
                     <td>#role_name#</td>
                     <td>#description#</td>
                     <td>
                         <a href="../../index.cfm?page=dashboard&section=roles&editId=#id#" 
                            class="btn btn-warning btn-sm">Edit</a>
-                        <a href="../../controllers/RoleController.cfm?action=delete&id=#id#" 
-                           class="btn btn-sm btn-danger"
-                           onclick="return confirm('Delete this role?')">
-                           Delete
-                        </a>
+                        <button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">
+                         Delete
+                        </button>
                     </td>
                 </tr>
             </cfif>    
@@ -133,10 +131,76 @@
 </div>
 
 <script>
-    setTimeout(function () {
-        var alertBox = document.getElementById("alertBox");
-        if (alertBox) {
-            alertBox.style.display = "none";
+$(document).ready(function(){
+
+$(document).on("submit", ".updateRoleForm", function(e){
+    e.preventDefault();
+
+    $.ajax({
+        url: "../../controllers/RoleController.cfm",
+        type: "POST",
+        data: $(this).serialize(),
+        dataType: "json",
+
+        success: function(res){
+
+                $("#ajaxMessage").html(
+                    '<div id="msgBox" class="alert alert-' +
+                    (res.status === "success" ? "success" : "danger") +
+                    '">' + res.message + '</div>'
+                );
+
+                setTimeout(function(){
+                    $("#msgBox").fadeOut();
+                }, 5000);
+
+                if(res.status === "success"){
+                    $("#updateUserForm")[0].reset();
+                }
+            },
+
+            error: function(xhr){
+                console.log(xhr.responseText);
+
+                $("#ajaxMessage").html(
+                    '<div id="msgBox" class="alert alert-danger">Something went wrong</div>'
+                );
+
+                setTimeout(function(){
+                    $("#msgBox").fadeOut();
+                }, 5000);
+            }
+    });
+});
+
+$(document).on("click",".deleteBtn", function() {
+        let roleId  = $(this).data("id");
+        if(confirm("Delete this Role?")) {
+            $.ajax({
+                url:"../../controllers/RoleController.cfm",
+                type:"GET",
+                data: {
+                    action:"delete",
+                    id:roleId 
+                },
+                dataType:"json",
+
+                success: function(res) {
+                    $("#userRow_" + res.id).remove()
+
+                    $("#ajaxMessage").html(
+                        '<div class="alert alert-success">' 
+                        + res.message + 
+                        '</div>'
+                    )
+                    setTimeout(function(){
+                    $("#ajaxMessage").fadeOut();
+                },5000);
+                }
+            })
         }
-    }, 5000);   
+
+})
+   
+})
 </script>
