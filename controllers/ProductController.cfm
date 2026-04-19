@@ -225,3 +225,72 @@
 
 <cfabort>
 </cfif>
+
+<!-- USER PRODUCT SEARCH  -->
+<cfif structKeyExists(url,"action") AND url.action EQ "userSearch">
+
+<cfset productModel = createObject("component","models.Product")>
+
+<cfparam name="url.search" default="">
+<cfparam name="url.category_id" default="">
+<cfparam name="url.min_price" default="">
+<cfparam name="url.max_price" default="">
+<cfparam name="url.sort" default="">
+<cfparam name="url.p" default="1">
+
+<cfset products = productModel.searchProducts(
+    keyword = url.search,
+    category_id = isNumeric(url.category_id) ? url.category_id : javacast("null",""),
+    min_price = isNumeric(url.min_price) ? url.min_price : javacast("null",""),
+    max_price = isNumeric(url.max_price) ? url.max_price : javacast("null",""),
+    sort = url.sort,
+    page = val(url.p)
+)>
+
+<cfoutput query="products">
+
+<div class="col-md-3 mb-3">
+<div class="card">
+
+<cfif len(image)>
+<img src="../../assets/images/products/#image#" style="height:200px;">
+<cfelse>
+<img src="https://via.placeholder.com/200">
+</cfif>
+
+<div class="card-body text-center">
+
+<h5>#product_name#</h5>
+<p>#category_name#</p>
+<p>#price#</p>
+
+<cfif stock LTE 0>
+
+<p class="text-danger">Out of Stock</p>
+
+<form class="enquiryForm">
+<input type="hidden" name="action" value="addEnquiry">
+<input type="hidden" name="product_id" value="#id#">
+<button class="btn btn-warning btn-sm">Request</button>
+</form>
+
+<cfelse>
+
+<form class="addToCartForm">
+<input type="hidden" name="action" value="add">
+<input type="hidden" name="product_id" value="#id#">
+<input type="hidden" name="product_name" value="#product_name#">
+<input type="hidden" name="price" value="#price#">
+<button class="btn btn-success btn-sm">Add</button>
+</form>
+
+</cfif>
+
+</div>
+</div>
+</div>
+
+</cfoutput>
+
+<cfabort>
+</cfif>
