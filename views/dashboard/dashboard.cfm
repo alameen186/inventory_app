@@ -97,23 +97,31 @@
 
                 <!-- PROFILE DROPDOWN -->
                 <div class="dropdown">
-                <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm w-35 d-inline">Cart</a>
-                    </button>
-                    <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                        Profile
-                    </button>
+    <!-- 1. Cart Link: Only shows if NOT role_id 1 -->
+    <cfif session.role_id NEQ 1>   
+        <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm w-35 d-inline">Cart</a>
+    </cfif>
 
-                    <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 250px;">
+    <!-- 2. Profile Toggle: Fixed the broken button tag below -->
+    <button class="btn btn-secondary btn-sm w-35 d-inline dropdown-toggle" data-bs-toggle="dropdown">
+        Profile
+    </button>
 
-                        <cfoutput>
-                            <p><strong>#userData.first_name# #userData.last_name#</strong></p>
-                            <p class="mb-1">#userData.email#</p>
-                            <hr>
-                            <p class="mb-1"><strong>#userData.role_name#</strong></p>
-                        </cfoutput>
+    <!-- 3. Dropdown Menu -->
+    <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 250px;">
+        <cfif structKeyExists(variables, "userData")>
+            <cfoutput>
+                <p><strong>#userData.first_name# #userData.last_name#</strong></p>
+                <p class="mb-1">#userData.email#</p>
+                <hr>
+                <p class="mb-1"><strong>#userData.role_name#</strong></p>
+            </cfoutput>
+        <cfelse>
+            <p>Guest User</p>
+        </cfif>
+    </div>
+</div>
 
-                    </div>
-                </div>
 
             </div>
 

@@ -21,7 +21,8 @@
         <cfoutput>#url.message#</cfoutput>
     </div>
 </cfif>
-<form method="post" action="../../controllers/AdminOrderController.cfm">
+<div id="ajaxMessage"></div>
+<form id="createOrderForm" method="post" >
 
 <input type="hidden" name="action" value="createAdminOrder">
 
@@ -67,3 +68,35 @@
 
 </form>
 </div>
+
+<script>
+$(document).ready(function(){
+
+$("#createOrderForm").submit(function(e){
+    e.preventDefault();
+
+    $.post("../../controllers/AdminOrderController.cfm",
+        $(this).serialize(),
+        function(res){
+
+            $("#ajaxMessage").html(
+                '<div id="msgBox" class="alert alert-' +
+                (res.status === "success" ? "success" : "danger") +
+                '">' + res.message + '</div>'
+            );
+
+            setTimeout(function(){
+                $("#msgBox").fadeOut();
+            }, 5000);
+
+            if(res.status === "success"){
+                $("#createOrderForm")[0].reset();
+            }
+
+        },
+        "json"
+    );
+});
+
+});
+</script>

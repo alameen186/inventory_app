@@ -1,5 +1,4 @@
-<cfif structKeyExists(form,"action") 
-AND form.action EQ "createAdminOrder">
+<cfif structKeyExists(form,"action") AND form.action EQ "createAdminOrder">
 
 <cfset productModel = createObject("component","models.Product")>
 <cfset orderModel = createObject("component","models.Order")>
@@ -11,42 +10,44 @@ AND form.action EQ "createAdminOrder">
 <cfset qty = val(form.qty)>
 <cfset couponId = val(form.coupon_id)>
 
-<!-- qty validation -->
+<!-- VALIDATION -->
 <cfif qty LTE 0>
-    <cflocation url="../index.cfm?page=dashboard&section=createOrder&message=Invalid quantity&type=error">
+    <cfcontent type="application/json">
+    <cfoutput>{"status":"error","message":"Invalid quantity"}</cfoutput>
     <cfabort>
 </cfif>
 
 <cfif qty GT 3>
-    <cflocation url="../index.cfm?page=dashboard&section=createOrder&message=Maximum 3 quantity allowed&type=error">
+    <cfcontent type="application/json">
+    <cfoutput>{"status":"error","message":"Maximum 3 quantity allowed"}</cfoutput>
     <cfabort>
 </cfif>
 
-<!-- stock validation -->
+<!-- STOCK -->
 <cfset stock = productModel.getStock(productId)>
-
 <cfif qty GT stock>
-    <cflocation url="../index.cfm?page=dashboard&section=createOrder&message=Only #stock# items available in stock&type=error">
+    <cfcontent type="application/json">
+    <cfoutput>{"status":"error","message":"Only #stock# items available"}</cfoutput>
     <cfabort>
 </cfif>
 
-<!-- product -->
+<!-- PRODUCT -->
 <cfset product = productModel.getProductById(productId)>
 <cfset total = product.price * qty>
 
-<!-- coupon -->
+<!-- COUPON -->
 <cfset couponCode = "">
 <cfset discount = 0>
 <cfset finalTotal = total>
 
 <cfif couponId GT 0>
-
     <cfset coupon = couponModel.getCouponById(couponId)>
 
     <cfif coupon.recordCount>
 
         <cfif total LT coupon.min_amount>
-            <cflocation url="../index.cfm?page=dashboard&section=createOrder&message=Minimum purchase amount is #coupon.min_amount# for this coupon&type=error">
+            <cfcontent type="application/json">
+            <cfoutput>{"status":"error","message":"Minimum purchase is #coupon.min_amount#"}</cfoutput>
             <cfabort>
         </cfif>
 
@@ -63,12 +64,10 @@ AND form.action EQ "createAdminOrder">
         </cfif>
 
         <cfset finalTotal = total - discount>
-
     </cfif>
-
 </cfif>
 
-<!-- create order -->
+<!-- ORDER -->
 <cfset orderGroupId = createUUID()>
 
 <cfset result = orderModel.addOrder(
@@ -84,52 +83,19 @@ AND form.action EQ "createAdminOrder">
 )>
 
 <cfif NOT result>
-    <cflocation url="../index.cfm?page=dashboard&section=createOrder&message=Order creation failed&type=error">
+    <cfcontent type="application/json">
+    <cfoutput>{"status":"error","message":"Order failed"}</cfoutput>
     <cfabort>
 </cfif>
 
-<!-- reduce stock -->
+<!-- STOCK REDUCE -->
 <cfset productModel.reduceStock(productId, qty)>
 
-<!-- create pdf -->
-<cfset invoiceDir = expandPath("../assets/invoices/")>
-
-<!-- chcking folder exists -->
-<cfif NOT directoryExists(invoiceDir)>
-    <cfdirectory action="create" directory="#invoiceDir#">
-</cfif>
-
-<cfset fileName = "invoice_#orderGroupId#.pdf">
-<cfset invoicePath = invoiceDir & fileName>
-
-<cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
+<!-- SUCCESS -->
+<cfcontent type="application/json">
 <cfoutput>
-<h2>Invoice</h2>
-<p>Order ID: #orderGroupId#</p>
-
-<table border="1" width="100%">
-<tr>
-<th>Product</th>
-<th>Price</th>
-<th>Qty</th>
-<th>Total</th>
-</tr>
-
-<tr>
-<td>#product.product_name#</td>
-<td>#product.price#</td>
-<td>#qty#</td>
-<td>#total#</td>
-</tr>
-</table>
-
-<p>Total: #total#</p>
-<p>Discount: #discount#</p>
-<h3>Final: #finalTotal#</h3>
+{"status":"success","message":"Order created successfully"}
 </cfoutput>
-</cfdocument>
-
-<cflocation url="../index.cfm?page=dashboard&section=allorders&message=Order created successfully&type=success">
 <cfabort>
 
 </cfif>

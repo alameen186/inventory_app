@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX Test</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+
+<button id="loadBtn">Load Message</button>
+<button id="getBtn">GET</button>
+
+<div id="result">
+    <h1 id="h5"></h1>
+</div>
+
+<form id="myForm">
+   <input type="text" name="username" placeholder="Enter Name">
+   <input type="email" name="email" placeholder="Enter Email">
+
+   <button type="button" id="postBtn">Send</button>
+</form>
+
+<script>
+
+$("#loadBtn").click(function(){
+    $.ajax({
+        url: "text.cfm",
+        type: "GET",
+        success: function(response){
+            $("#h5").html(response);
+        }
+    });
+});
+
+$("#getBtn").click(function() {
+    $.get("text.cfm", function(response) {
+        $("#result").html(response);
+    });
+});
+
+$("#postBtn").click(function() {
+
+    var data = $("#myForm").serialize();
+
+    $.post("server.cfm", data, function(response) {
+        $("#result").html(response);
+    });
+
+});
+
+</script>
+
+</body>
+</html>
