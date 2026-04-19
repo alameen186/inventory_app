@@ -1,7 +1,5 @@
 <cfset roleModel = createObject("component", "models.Role")>
 
-<cfparam name="url.editId" default="0">
-
 <cfparam name="url.search" default="">
 <cfparam name="url.sort" default="">
 <cfparam name="url.p" default="1">
@@ -27,180 +25,187 @@
 <cfset totalPages = ceiling(totalRecords / limit)>
 
 <div class="container mt-4">
-    <h3 class="mb-3">Role Management</h3>
-      <cfif structKeyExists(url, "message")>
-                        <div id="alertBox" class="alert 
-                            <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
-                                alert-success
-                            <cfelse>
-                                alert-danger
-                            </cfif>">
-                    
-                            <cfoutput>#url.message#</cfoutput>
-                        </div>
-                    </cfif>
 
-   <cfoutput>
-      <form method="get" action="../../index.cfm" class="mb-3">
-         <input type="hidden" name="page" value="dashboard">
-         <input type="hidden" name="section" value="roles">
+<h3>Role Management</h3>
 
-         <input type="text" name="search" values="#url.search#"
-                placeholder="search role...."
-                class="form-control w-25 d-inline">
-         <select name="sort" class="form-control w-25 d-inline">
-           <option value="">Sort</option>
-           <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
-           <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
-         </select>   
-         <button class="btn btn-primary btn-sm">Apply</button>
-      </form>
-   </cfoutput>
 <div id="ajaxMessage"></div>
-    <table class="table table-bordered table-striped table-hover shadow-sm mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>description</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
 
-        <tbody>
-            <cfoutput query="roles">
+<!-- SEARCH -->
+<form id="searchForm" class="mb-3">
+<cfoutput>
+<input type="text" name="search" value="#url.search#"
+class="form-control w-25 d-inline" placeholder="Search role">
+</cfoutput>
 
-            <cfif url.editId EQ id>
-                 <form class="updateRoleForm" method="post" >
+<select name="sort" class="form-control w-25 d-inline">
+<option value="">Sort</option>
+<option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
+<option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
+</select>
 
-                        <td>#id#</td>
+<button type="submit" class="btn btn-primary btn-sm">Apply</button>
 
-                        <td>
-                            <input type="text" name="name" value="#role_name#" class="form-control">
-                        </td>
+</form>
 
-                        <td>
-                            <input type="text" name="description" value="#description#" class="form-control">
-                        </td>
-                        <td>
-                            <input type="hidden" name="id" value="#id#">
-                            <input type="hidden" name="action" value="update">
+<!-- TABLE -->
+<table class="table table-bordered">
 
-                            <button class="btn btn-success btn-sm">Save</button>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Description</th>
+<th>Actions</th>
+</tr>
+</thead>
 
-                            <a href="../../index.cfm?page=dashboard&section=roles" 
-                               class="btn btn-secondary btn-sm">Cancel</a>
-                        </td>
+<tbody id="tableBody">
 
-                    </form>
-            
-            <cfelse>
-                <tr id="roleRow_#id#">
-                    <td>#id#</td>
-                    <td>#role_name#</td>
-                    <td>#description#</td>
-                    <td>
-                        <a href="../../index.cfm?page=dashboard&section=roles&editId=#id#" 
-                           class="btn btn-warning btn-sm">Edit</a>
-                        <button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">
-                         Delete
-                        </button>
-                    </td>
-                </tr>
-            </cfif>    
-            </cfoutput>
-        </tbody>
-    </table>
+<cfoutput query="roles">
+<tr id="roleRow_#id#">
 
-    <cfoutput>
-<div class="mt-4">
+<td>#id#</td>
+<td>#role_name#</td>
+<td>#description#</td>
 
+<td>
+
+<button class="btn btn-warning btn-sm editBtn"
+data-id="#id#"
+data-name="#role_name#"
+data-desc="#description#">Edit</button>
+
+<button class="btn btn-danger btn-sm deleteBtn"
+data-id="#id#">Delete</button>
+
+</td>
+
+</tr>
+</cfoutput>
+
+</tbody>
+
+</table>
+
+<!-- PAGINATION -->
+<div>
+<cfoutput>
 <cfloop from="1" to="#totalPages#" index="i">
-
-    <a href="?page=dashboard&section=roles&p=#i#&search=#url.search#&sort=#url.sort#"
-       class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
-
-        #i#
-
-    </a>
-
+<button class="pageBtn btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+data-page="#i#">#i#</button>
 </cfloop>
-
-</div>
 </cfoutput>
 </div>
+
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script>
 $(document).ready(function(){
 
-$(document).on("submit", ".updateRoleForm", function(e){
-    e.preventDefault();
+function showMsg(res){
+$("#ajaxMessage").html(
+'<div id="msgBox" class="alert alert-' +
+(res.status==="success"?"success":"danger") +
+'">'+res.message+'</div>'
+);
+setTimeout(()=>$("#msgBox").fadeOut(),3000);
+}
 
-    $.ajax({
-        url: "../../controllers/RoleController.cfm",
-        type: "POST",
-        data: $(this).serialize(),
-        dataType: "json",
+// DELETE
+$(document).on("click",".deleteBtn",function(){
 
-        success: function(res){
+let id=$(this).data("id");
 
-                $("#ajaxMessage").html(
-                    '<div id="msgBox" class="alert alert-' +
-                    (res.status === "success" ? "success" : "danger") +
-                    '">' + res.message + '</div>'
-                );
+if(confirm("Delete this role?")){
+$.get("../../controllers/RoleController.cfm",
+{action:"delete",id:id},
+function(res){
+showMsg(res);
+$("#roleRow_"+id).remove();
+},"json");
+}
 
-                setTimeout(function(){
-                    $("#msgBox").fadeOut();
-                }, 5000);
-
-                if(res.status === "success"){
-                    $("#updateUserForm")[0].reset();
-                }
-            },
-
-            error: function(xhr){
-                console.log(xhr.responseText);
-
-                $("#ajaxMessage").html(
-                    '<div id="msgBox" class="alert alert-danger">Something went wrong</div>'
-                );
-
-                setTimeout(function(){
-                    $("#msgBox").fadeOut();
-                }, 5000);
-            }
-    });
 });
 
-$(document).on("click",".deleteBtn", function() {
-        let roleId  = $(this).data("id");
-        if(confirm("Delete this Role?")) {
-            $.ajax({
-                url:"../../controllers/RoleController.cfm",
-                type:"GET",
-                data: {
-                    action:"delete",
-                    id:roleId 
-                },
-                dataType:"json",
+// EDIT OPEN
+$(document).on("click",".editBtn",function(){
 
-                success: function(res) {
-                    $("#userRow_" + res.id).remove()
+let btn=$(this);
+let row=btn.closest("tr");
 
-                    $("#ajaxMessage").html(
-                        '<div class="alert alert-success">' 
-                        + res.message + 
-                        '</div>'
-                    )
-                    setTimeout(function(){
-                    $("#ajaxMessage").fadeOut();
-                },5000);
-                }
-            })
-        }
+$(".editRow").remove();
 
-})
-   
-})
+row.after(`
+<tr class="editRow">
+<td colspan="4">
+
+<form class="updateForm">
+
+<input type="hidden" name="action" value="update">
+<input type="hidden" name="id" value="${btn.data("id")}">
+
+<input name="name" value="${btn.data("name")}" class="form-control mb-1">
+<input name="description" value="${btn.data("desc")}" class="form-control mb-1">
+
+<button class="btn btn-success btn-sm">Save</button>
+<button type="button" class="cancelEdit btn btn-secondary btn-sm">Cancel</button>
+
+</form>
+
+</td>
+</tr>
+`);
+
+});
+
+// CANCEL
+$(document).on("click",".cancelEdit",function(){
+$(".editRow").remove();
+});
+
+// UPDATE
+$(document).on("submit",".updateForm",function(e){
+e.preventDefault();
+
+$.post("../../controllers/RoleController.cfm",
+$(this).serialize(),
+function(res){
+showMsg(res);
+if(res.status==="success"){
+$(".editRow").remove();
+}
+},"json");
+
+});
+
+// SEARCH
+$("#searchForm").submit(function(e){
+
+e.preventDefault();
+
+$.get("../../controllers/RoleController.cfm",
+"action=search&"+$(this).serialize(),
+function(res){
+$("#tableBody").html(res);
+});
+
+});
+
+// PAGINATION
+$(document).on("click",".pageBtn",function(){
+
+let page=$(this).data("page");
+
+$.get("../../controllers/RoleController.cfm",
+"action=search&p="+page+"&"+$("#searchForm").serialize(),
+function(res){
+$("#tableBody").html(res);
+});
+
+});
+
+});
 </script>

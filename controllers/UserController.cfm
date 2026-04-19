@@ -156,3 +156,47 @@
     <cfabort>
 
 </cfif>
+
+<!-- SEARCH -->
+<cfif structKeyExists(url,"action") AND url.action EQ "search">
+
+<cfset userModel = createObject("component","models.User")>
+
+<cfparam name="url.search" default="">
+<cfparam name="url.sort" default="">
+<cfparam name="url.p" default="1">
+
+<cfset users = userModel.getAllUsers(
+    search = trim(url.search),
+    sort = url.sort,
+    page = val(url.p),
+    limit = 2
+)>
+
+<cfoutput query="users">
+
+<tr id="row_#id#">
+<td>#id#</td>
+<td>#first_name# #last_name#</td>
+<td>#email#</td>
+<td>#role_name#</td>
+
+<td>
+<button class="btn btn-warning btn-sm editBtn"
+data-id="#id#"
+data-first="#first_name#"
+data-last="#last_name#"
+data-email="#email#">Edit</button>
+
+<button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">Delete</button>
+</td>
+</tr>
+
+</cfoutput>
+
+<cfif users.recordCount EQ 0>
+<tr><td colspan="5" class="text-center">No data</td></tr>
+</cfif>
+
+<cfabort>
+</cfif>

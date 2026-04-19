@@ -99,33 +99,27 @@
 
    <cffunction name="getUserCount" returntype="numeric">
 
-    <cfargument name="search" default="">
+<cfargument name="search" default="">
 
-    <cfset var searchValue = trim(arguments.search)>
+<cfset var searchValue = trim(arguments.search)>
 
-    <cfquery name="result" datasource="#application.dsn#">
-        SELECT COUNT(*) as total
-        FROM users u
-        WHERE 1=1
+<cfquery name="result" datasource="#application.dsn#">
+SELECT COUNT(*) as total
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE 1=1
 
-        <cfif len(searchValue)>
-            AND (
-                LOWER(u.first_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+<cfif len(searchValue)>
+    AND (
+        LOWER(u.first_name) LIKE <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+        OR LOWER(u.last_name) LIKE <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+        OR LOWER(u.email) LIKE <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+        OR LOWER(r.role_name) LIKE <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+    )
+</cfif>
+</cfquery>
 
-                OR LOWER(u.last_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-
-                OR LOWER(u.email) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-
-                OR LOWER(r.role_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-            )
-        </cfif>
-    </cfquery>
-
-    <cfreturn result.total>
+<cfreturn result.total>
 
 </cffunction>
 

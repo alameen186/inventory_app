@@ -1,10 +1,8 @@
 <cfset userModel = createObject("component", "models.User")>
 
-<cfparam name="url.editId" default="0">
 <cfparam name="url.search" default="">
 <cfparam name="url.sort" default="">
 <cfparam name="url.p" default="1">
-<cfparam name="url.showForm" default="0">
 
 <cfset currentPage = val(url.p)>
 <cfif currentPage LT 1>
@@ -28,298 +26,219 @@
 
 <div class="container mt-4">
 
-<h3 class="mb-3">Users Management</h3>
+<h3>Users Management</h3>
 
-<!-- Alert outside only when not form error -->
-<cfif structKeyExists(url, "message") AND url.showForm NEQ "1">
-    <div id="alertBox" class="alert 
-        <cfif structKeyExists(url, "type") AND url.type EQ "success">
-            alert-success
-        <cfelse>
-            alert-danger
-        </cfif>">
-        <cfoutput>#url.message#</cfoutput>
-    </div>
-</cfif>
+<div id="ajaxMessage"></div>
 
-<!-- Search -->
+<!-- SEARCH -->
 <cfoutput>
-<form method="get" action="../../index.cfm" class="mb-3">
-    <input type="hidden" name="page" value="dashboard">
-    <input type="hidden" name="section" value="users">
+<form id="searchForm" class="mb-3">
 
-    <input type="text" name="search" value="#url.search#" 
-           placeholder="Search user..." 
-           class="form-control w-25 d-inline">
+<input type="text" name="search" value="#url.search#"
+class="form-control w-25 d-inline" placeholder="Search">
 
-    <select name="sort" class="form-control w-25 d-inline">
-        <option value="">Sort</option>
-        <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
-        <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
-    </select>
+<select name="sort" class="form-control w-25 d-inline">
+<option value="">Sort</option>
+<option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
+<option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
+</select>
 
-    <button class="btn btn-primary btn-sm">Apply</button>
+<button class="btn btn-primary btn-sm">Apply</button>
+
 </form>
 </cfoutput>
 
-<!-- Add User Button -->
-<a href="../../index.cfm?page=dashboard&section=users&showForm=1"
-   class="btn btn-primary mb-3">
-   Add User
-</a>
+<!-- ADD BUTTON -->
+<button id="showAddForm" class="btn btn-primary mb-3">Add User</button>
 
-<!-- Add User Form -->
-<div id="ajaxMessage"></div>
+<!-- ADD FORM -->
+<div id="addUserForm" style="display:none;" class="card p-3 mb-3">
 
-<div id="addUserForm"
-style="display:<cfif url.showForm EQ '1'>block<cfelse>none</cfif>;"
-class="card shadow-sm p-4 mb-4">
-
-<h5 class="mb-3">Add New User</h5>
-
-<cfif structKeyExists(url, "message") AND url.showForm EQ "1">
-    <div class="alert alert-danger">
-        <cfoutput>#url.message#</cfoutput>
-    </div>
-</cfif>
-
-<form id="createUserForm" method="post">
+<form id="createUserForm">
 
 <input type="hidden" name="action" value="create">
 
-<input type="text" name="first_name"
-class="form-control mb-2"
-placeholder="First Name" required>
+<input name="first_name" class="form-control mb-2" placeholder="First Name">
+<input name="last_name" class="form-control mb-2" placeholder="Last Name">
+<input name="email" class="form-control mb-2" placeholder="Email">
+<input name="password" class="form-control mb-2" placeholder="Password">
+<input name="confirm" class="form-control mb-2" placeholder="Confirm">
 
-<input type="text" name="last_name"
-class="form-control mb-2"
-placeholder="Last Name" required>
-
-<input type="email" name="email"
-class="form-control mb-2"
-placeholder="Email" required>
-
-<input type="password" name="password"
-class="form-control mb-2"
-placeholder="Password" required>
-
-<input type="password" name="confirm"
-class="form-control mb-2"
-placeholder="Confirm Password" required>
-
-<select name="role_id" class="form-control mb-3">
+<select name="role_id" class="form-control mb-2">
 <option value="2">Customer</option>
-<option value="3">Inventory Manager</option>
+<option value="3">Manager</option>
 </select>
 
-<button type="submit" class="btn btn-success">
-Create User
-</button>
-
-<a href="../../index.cfm?page=dashboard&section=users"
-class="btn btn-secondary">
-Cancel
-</a>
+<button class="btn btn-success">Create</button>
+<button type="button" id="cancelAdd" class="btn btn-secondary">Cancel</button>
 
 </form>
 </div>
 
-<!-- Users Table -->
-<table class="table table-bordered table-striped table-hover shadow-sm mt-3">
-<thead class="table-dark">
+<!-- TABLE -->
+<table class="table table-bordered">
+<thead>
 <tr>
-<th>ID</th>
-<th>First Name</th>
-<th>Last Name</th>
-<th>Email</th>
-<th>Role</th>
-<th>Actions</th>
+<th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Actions</th>
 </tr>
 </thead>
 
-<tbody>
+<tbody id="tableBody">
+
 <cfoutput query="users">
+<tr id="row_#id#">
 
-<cfif url.editId EQ id>
-
-<form class="updateUserForm" method="post">
-<tr id="userRow_#id#">
 <td>#id#</td>
-<td><input type="text" name="first_name" value="#first_name#" class="form-control"></td>
-<td><input type="text" name="last_name" value="#last_name#" class="form-control"></td>
-<td><input type="email" name="email" value="#email#" class="form-control"></td>
-<td>#role_name#</td>
-<td>
-<input type="hidden" name="id" value="#id#">
-<input type="hidden" name="action" value="update">
-
-<button class="btn btn-success btn-sm">Save</button>
-<a href="../../index.cfm?page=dashboard&section=users"
-class="btn btn-secondary btn-sm">Cancel</a>
-</td>
-</tr>
-</form>
-
-<cfelse>
-
-<tr>
-<td>#id#</td>
-<td>#first_name#</td>
-<td>#last_name#</td>
+<td>#first_name# #last_name#</td>
 <td>#email#</td>
 <td>#role_name#</td>
+
 <td>
-<cfif role_id NEQ 1>
-<a href="../../index.cfm?page=dashboard&section=users&editId=#id#"
-class="btn btn-warning btn-sm">Edit</a>
 
-<button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">
-Delete
-</button>
-<cfelse>
-Restricted
-</cfif>
+<button class="btn btn-warning btn-sm editBtn"
+data-id="#id#"
+data-first="#first_name#"
+data-last="#last_name#"
+data-email="#email#">Edit</button>
+
+<button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">Delete</button>
+
 </td>
+
 </tr>
-
-</cfif>
-
 </cfoutput>
+
 </tbody>
 </table>
 
-<!-- Pagination -->
+<!-- PAGINATION -->
+<div>
 <cfoutput>
-<div class="mt-4">
 <cfloop from="1" to="#totalPages#" index="i">
-<a href="?page=dashboard&section=users&p=#i#&search=#url.search#&sort=#url.sort#"
-class="btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>">
-#i#
-</a>
+<button class="pageBtn btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+data-page="#i#">#i#</button>
 </cfloop>
-</div>
 </cfoutput>
+</div>
 
 </div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 <script>
 $(document).ready(function(){
 
-    $("#createUserForm").submit(function(e){
-        e.preventDefault();
+function showMsg(res){
+$("#ajaxMessage").html(
+'<div id="msgBox" class="alert alert-'+
+(res.status==="success"?"success":"danger")+
+'">'+res.message+'</div>'
+);
+setTimeout(()=>$("#msgBox").fadeOut(),3000);
+}
 
-        $.ajax({
-            url: "../../controllers/UserController.cfm",
-            type: "POST",
-            data: $(this).serialize(),
-            dataType: "json",
+// SHOW ADD
+$("#showAddForm").click(()=>$("#addUserForm").show());
+$("#cancelAdd").click(()=>$("#addUserForm").hide());
 
-            success: function(res){
+// CREATE
+$("#createUserForm").submit(function(e){
+e.preventDefault();
 
-                $("#ajaxMessage").html(
-                    '<div id="msgBox" class="alert alert-' +
-                    (res.status === "success" ? "success" : "danger") +
-                    '">' + res.message + '</div>'
-                );
+$.post("../../controllers/UserController.cfm",
+$(this).serialize(),
+function(res){
+showMsg(res);
+if(res.status==="success"){
+$("#addUserForm").hide();
+}
+},"json");
+});
 
-                setTimeout(function(){
-                    $("#msgBox").fadeOut();
-                }, 5000);
+// EDIT OPEN
+$(document).on("click",".editBtn",function(){
 
-                if(res.status === "success"){
-                    $("#createUserForm")[0].reset();
-                    $("#addUserForm").fadeOut();  
-                }
-            },
+let btn=$(this);
+let row=btn.closest("tr");
 
-            error: function(xhr){
-                console.log(xhr.responseText);
+$(".editRow").remove();
 
-                $("#ajaxMessage").html(
-                    '<div id="msgBox" class="alert alert-danger">Something went wrong</div>'
-                );
+row.after(`
+<tr class="editRow">
+<td colspan="5">
 
-                setTimeout(function(){
-                    $("#msgBox").fadeOut();
-                }, 5000);
-            }
-        });
+<form class="updateForm">
 
-    });
+<input type="hidden" name="action" value="update">
+<input type="hidden" name="id" value="${btn.data("id")}">
 
-    $(".updateUserForm").submit(function(e) {
-        e.preventDefault();
+<input name="first_name" value="${btn.data("first")}" class="form-control mb-1">
+<input name="last_name" value="${btn.data("last")}" class="form-control mb-1">
+<input name="email" value="${btn.data("email")}" class="form-control mb-1">
 
-        $.ajax({
-            url:"../../controllers/UserController.cfm",
-            type:"POST",
-            data:$(this).serialize(),
-            dataType:"json",
+<button class="btn btn-success btn-sm">Save</button>
+<button type="button" class="cancelEdit btn btn-secondary btn-sm">Cancel</button>
 
-              success: function(res){
+</form>
 
-                $("#ajaxMessage").html(
-                    '<div id="msgBox" class="alert alert-' +
-                    (res.status === "success" ? "success" : "danger") +
-                    '">' + res.message + '</div>'
-                );
+</td>
+</tr>
+`);
+});
 
-                setTimeout(function(){
-                    $("#msgBox").fadeOut();
-                }, 5000);
+// CANCEL EDIT
+$(document).on("click",".cancelEdit",()=>$(".editRow").remove());
 
-                if(res.status === "success"){
-                    $("#updateUserForm")[0].reset();
-                }
-            },
+// SAVE EDIT
+$(document).on("submit",".updateForm",function(e){
+e.preventDefault();
 
-            error: function(xhr){
-                console.log(xhr.responseText);
+$.post("../../controllers/UserController.cfm",
+$(this).serialize(),
+function(res){
+showMsg(res);
+if(res.status==="success"){
+$(".editRow").remove();
+}
+},"json");
+});
 
-                $("#ajaxMessage").html(
-                    '<div id="msgBox" class="alert alert-danger">Something went wrong</div>'
-                );
+// DELETE
+$(document).on("click",".deleteBtn",function(){
 
-                setTimeout(function(){
-                    $("#msgBox").fadeOut();
-                }, 5000);
-            }
-        })
-    })
+let id=$(this).data("id");
 
-    $(document).on("click", ".deleteBtn", function(){
+if(confirm("Delete?")){
+$.get("../../controllers/UserController.cfm",
+{action:"delete",id:id},
+function(res){
+showMsg(res);
+$("#row_"+id).remove();
+},"json");
+}
+});
 
-    let userId = $(this).data("id");
+// SEARCH
+$("#searchForm").submit(function(e){
+e.preventDefault();
 
-    if(confirm("Delete this user?")){
+$.get("../../controllers/UserController.cfm",
+"action=search&"+$(this).serialize(),
+function(res){
+$("#tableBody").html(res);
+});
+});
 
-        $.ajax({
-            url: "../../controllers/UserController.cfm",
-            type: "GET",
-            data: {
-                action: "delete",
-                id: userId
-            },
-            dataType: "json",
+// PAGINATION
+$(document).on("click",".pageBtn",function(){
 
-            success: function(res){
+let page=$(this).data("page");
 
-                $("#userRow_" + res.id).remove();
-
-                $("#ajaxMessage").html(
-                    '<div class="alert alert-success">' +
-                    res.message +
-                    '</div>'
-                );
-
-                setTimeout(function(){
-                    $("#ajaxMessage").fadeOut();
-                },5000);
-            }
-        });
-
-    }
-
+$.get("../../controllers/UserController.cfm",
+"action=search&p="+page+"&"+$("#searchForm").serialize(),
+function(res){
+$("#tableBody").html(res);
+});
 });
 
 });
