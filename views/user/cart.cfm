@@ -26,6 +26,8 @@ setTimeout(function () {
     <cfabort>
 </cfif>
 
+<div id="ajaxMessage"></div>
+
 <table class="table">
     <tr>
         <th>Product</th>
@@ -41,12 +43,12 @@ setTimeout(function () {
 <cfoutput>
 <cfloop collection="#session.cart#" item="pid">
 
-<tr>
+<tr id="row_#pid#" data-price="#session.cart[pid].price#">
     <td>#session.cart[pid].name#</td>
     <td>#session.cart[pid].price#</td>
 
     <td>
-        <form method="post" action="../../controllers/CartController.cfm">
+        <form class="updateCartForm mb-3" method="post" >
             <input type="hidden" name="action" value="update">
             <input type="hidden" name="product_id" value="#pid#">
 
@@ -64,14 +66,15 @@ setTimeout(function () {
         </cfif>
     </td>
 
-    <td>
+    <td class="rowTotal">
         <cfset total = session.cart[pid].price * session.cart[pid].qty>
         #total#
     </td>
 
     <td>
-        <a href="../../controllers/CartController.cfm?action=remove&id=#pid#" 
-           class="btn btn-danger btn-sm">Remove</a>
+        <button class="btn btn-danger btn-sm removeBtn" data-id="#pid#">
+Remove
+</button>
     </td>
 </tr>
 
@@ -85,7 +88,7 @@ setTimeout(function () {
 <!-- coupon apply -->
 <h5>Apply Coupon</h5>
 
-<form method="post" action="../../controllers/CartController.cfm" class="mb-3">
+<form method="post"  id="couponForm" class="mb-3">
 
     <input type="hidden" name="action" value="applyCoupon">
 
@@ -131,9 +134,9 @@ setTimeout(function () {
 <div class="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
     <cfoutput>
         <div>
-            <h5>Total: #grandTotal#</h5>
-            <h5>Discount: #discount#</h5>
-            <h4>Final: <strong>#finalTotal#</strong></h4>
+            <h5>Total: <span id="grandTotal">#grandTotal#</span></h5>
+            <h5>Discount: <span id="discount">#discount#</span></h5>
+            <h4>Final: <strong id="finalTotal">#finalTotal#</strong></h4>
         </div>
     </cfoutput>
 
@@ -142,3 +145,127 @@ setTimeout(function () {
         <button class="btn btn-success btn-lg">Checkout</button>
     </form>
 </div>
+
+<script>
+$(document).ready(function(){
+
+let coupon = {
+    type: null,
+    value: 0,
+    max: 0
+};
+
+function showMsg(res){
+    $("#ajaxMessage").html(
+    '<div id="msgBox" class="alert alert-' +
+    (res.status==="success"?"success":"danger") +
+    '">' + res.message + '</div>'
+    );
+    setTimeout(()=>$("#msgBox").fadeOut(),3000);
+}
+
+
+// CORE FUNCTION
+function updateUI(){
+
+    let grandTotal = 0;
+
+    $("tr[id^='row_']").each(function(){
+
+        let row = $(this);
+        let price = parseFloat(row.data("price"));
+        let qty = parseInt(row.find("input[name=qty]").val());
+
+        let total = price * qty;
+
+        row.find(".rowTotal").text(total);
+
+        grandTotal += total;
+    });
+
+    // APPLY COUPON
+    let discount = 0;
+
+    if(coupon.type === "percent"){
+        discount = (grandTotal * coupon.value) / 100;
+    } else if(coupon.type === "flat"){
+        discount = coupon.value;
+    }
+
+    if(discount > coupon.max){
+        discount = coupon.max;
+    }
+
+    let finalTotal = grandTotal - discount;
+
+    $("#grandTotal").text(grandTotal);
+    $("#discount").text(discount);
+    $("#finalTotal").text(finalTotal);
+}
+
+
+// UPDATE QTY
+$(document).on("submit",".updateCartForm",function(e){
+    e.preventDefault();
+
+    let form = $(this);
+
+    $.post("../../controllers/CartController.cfm",
+    form.serialize(),
+    function(res){
+
+        showMsg(res);
+
+        updateUI();
+
+    },"json");
+});
+
+
+// REMOVE ITEM
+$(document).on("click",".removeBtn",function(){
+
+    let btn = $(this);
+    let id = btn.data("id");
+
+    $.get("../../controllers/CartController.cfm",{
+        action:"remove",
+        id:id
+    },function(res){
+
+        showMsg(res);
+
+        // REMOVE ROW FROM DOM
+        $("#row_"+id).remove();
+
+        updateUI();
+
+    },"json");
+
+});
+
+
+//APPLY COUPON
+$("#couponForm").submit(function(e){
+    e.preventDefault();
+
+    $.post("../../controllers/CartController.cfm",
+    $(this).serialize(),
+    function(res){
+
+        showMsg(res);
+
+        if(res.status === "success"){
+
+            coupon.type = res.type;
+            coupon.value = parseFloat(res.value);
+            coupon.max = parseFloat(res.max);
+
+            updateUI(); // 🔥 IMPORTANT
+        }
+
+    },"json");
+});
+
+});
+</script>
