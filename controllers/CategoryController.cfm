@@ -123,11 +123,19 @@
 
     <cfset limit = 5>
 
+
+    <cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+        <cfset vendorFilter = session.user_id>
+    <cfelse>
+        <cfset vendorFilter = "">
+    </cfif>
+
     <cfset q = categoryModel.getAllCategories(
         search = trim(url.search),
         sort = url.sort,
         page = page,
-        limit = limit
+        limit = limit,
+        vendor_id = vendorFilter
     )>
 
     <cfoutput query="q">
@@ -148,17 +156,6 @@
                         data-id="#id#" data-status="#is_active#">
                     <cfif is_active EQ 1>Block<cfelse>Unblock</cfif>
                 </button>
-            </td>
-        </tr>
-
-        <tr id="editCategoryRow_#id#" style="display:none;">
-            <td>#id#</td>
-            <td><input value="#category_name#" class="form-control name"></td>
-            <td><input value="#description#" class="form-control desc"></td>
-            <td></td>
-            <td>
-                <button class="saveEdit btn btn-success btn-sm" data-id="#id#">Save</button>
-                <button class="cancelEdit btn btn-secondary btn-sm" data-id="#id#">Cancel</button>
             </td>
         </tr>
     </cfoutput>

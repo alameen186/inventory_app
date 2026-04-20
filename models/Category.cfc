@@ -14,13 +14,30 @@
     SELECT * FROM categories
     WHERE 1=1
 
-   
+
     <cfif isNumeric(arguments.vendor_id)>
         AND vendor_id =
         <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
     </cfif>
 
-    ORDER BY id DESC
+
+    <cfif len(searchValue)>
+        AND (
+            LOWER(category_name) LIKE 
+            <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+            OR LOWER(description) LIKE 
+            <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+        )
+    </cfif>
+
+
+    <cfif arguments.sort EQ "a_z">
+        ORDER BY category_name ASC
+    <cfelseif arguments.sort EQ "z_a">
+        ORDER BY category_name DESC
+    <cfelse>
+        ORDER BY id DESC
+    </cfif>
 
     LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
     OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
