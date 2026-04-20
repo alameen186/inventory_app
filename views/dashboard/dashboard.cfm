@@ -38,40 +38,41 @@
                         <a class="nav-link text-white" href="../../index.cfm?page=dashboard">dashboard</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=users">Users</a>
+                        <a href="#" class="nav-link text-white menuLink" data-section="users">Users</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=roles">Roles</a>
+                     <a href="#" class="nav-link text-white menuLink" data-section="roles">Roles</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=category">Categories</a>
+                        <a href="#" class="nav-link text-white menuLink" data-section="category">Categories</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=products">Products</a>
+                        <a href="#" class="nav-link text-white menuLink" data-section="products">Products</a>
+
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=allorders">Orders</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="allorders">Orders</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=createOrder">Create Order</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="createOrder">Create Order</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=coupons">Coupons</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="coupons">Coupons</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=adminEnquiries">Product Enquiries</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="adminEnquiries">Product Enquiries</a>
                     </li>
                 </ul>
             <cfelse>  
                 <ul class="nav flex-column">
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=productList">Products</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="productList">Products</a>
                     </li>
                     <li class="nav-item mb-2">
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=orders">Orders</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="orders">Orders</a>
                     </li>
                     <li class="nav-item mb-2"> 
-                        <a class="nav-link text-white" href="../../index.cfm?page=dashboard&section=enquiry">My Enquiries</a>
+                         <a href="#" class="nav-link text-white menuLink" data-section="enquiry">My Enquiries</a>
                     </li>
                 </ul>
                      
@@ -126,7 +127,7 @@
             </div>
 
             <!-- CENTER CONTENT -->
-            <div class="p-4 flex-grow-1 overflow-auto">
+            <div id="mainContent" class="p-4 flex-grow-1 overflow-auto">
 
     <cfif section EQ "users">
 
@@ -320,5 +321,32 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function(){
+
+// LOAD SECTION FUNCTION
+function loadSection(section){
+
+    $.get("../../controllers/DashboardController.cfm", {
+        section: section
+    }, function(res){
+
+        $("#mainContent").html(res);
+
+    });
+
+}
+
+// CLICK HANDLER
+$(document).on("click",".menuLink",function(e){
+    e.preventDefault();
+
+    let section = $(this).data("section");
+
+    loadSection(section);
+});
+
+});
+</script>
 </body>
 </html>

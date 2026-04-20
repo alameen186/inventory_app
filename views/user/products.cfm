@@ -89,7 +89,7 @@
 
         <!-- category dropdown -->
         <select name="category_id">
-            <option value="">All</option>
+            <option value="">Select Category</option>
             <cfoutput query="categories">
                 <option value="#id#" <cfif url.category_id EQ id>selected</cfif>>
                     #category_name#
