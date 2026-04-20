@@ -26,15 +26,28 @@
     </Cftry> 
    </cffunction>
 
-   <cffunction name="getUserByEmail" access="public" returntype="query" output="false">
-     <cfargument name="email" type="string" required="true">
-     <cfquery name="userQuery" datasource="#application.dsn#">
-       SELECT * FROM users
-       WHERE email = <cfqueryparam value="#arguments.email#" cfsqltype="cf_sql_varchar">
-     </cfquery>
+  <cffunction name="getUserByEmail" returntype="query">
 
-     <cfreturn userQuery>
-   </cffunction>
+    <cfargument name="email">
+
+    <cfquery name="user" datasource="#application.dsn#">
+        SELECT 
+            u.id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.password,
+            u.role_id,
+            r.role_name
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE u.email = 
+        <cfqueryparam value="#arguments.email#" cfsqltype="cf_sql_varchar">
+    </cfquery>
+
+    <cfreturn user>
+
+</cffunction>
 
    <cffunction name="getUserWithRole" access="public" returnType="query" output="false">
       <cfargument name="user_id" type="numeric" rquired="true">

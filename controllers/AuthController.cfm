@@ -99,6 +99,7 @@
     <cfset session.user_id = result.user.id>
     <cfset session.user_email = result.user.email>
     <cfset session.role_id = result.user.role_id>
+    <cfset session.role_name = result.user.role_name>
 
     <cflocation url="../index.cfm?page=dashboard" addtoken="false">
     <cfabort>

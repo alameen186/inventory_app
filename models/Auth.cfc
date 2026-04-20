@@ -28,10 +28,11 @@
         <cfif verifyPassword(arguments.password,dbPassword)>
            <cfset result.success = true>
            <cfset result.user = {
-                id = arguments.userQuery.id[1],
-                email = arguments.userQuery.email[1],
-                role_id = arguments.userQuery.role_id[1]
-            }>        
+    id = arguments.userQuery.id[1],
+    email = arguments.userQuery.email[1],
+    role_id = arguments.userQuery.role_id[1],
+    role_name = arguments.userQuery.role_name[1]
+}>       
         <cfelse>
          <cfset result.message = "Invalid password">   
         </cfif>

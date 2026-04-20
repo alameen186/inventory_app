@@ -44,6 +44,13 @@
                      <a href="#" class="nav-link text-white menuLink" data-section="roles">Roles</a>
                     </li>
                     <li class="nav-item mb-2">
+                         <a href="#" class="nav-link text-white menuLink" data-section="coupons">Coupons</a>
+                    </li>
+                </ul>
+                 <cfelseif session.role_name EQ  "vendor" >  
+
+                   <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
                         <a href="#" class="nav-link text-white menuLink" data-section="category">Categories</a>
                     </li>
                     <li class="nav-item mb-2">
@@ -57,12 +64,10 @@
                          <a href="#" class="nav-link text-white menuLink" data-section="createOrder">Create Order</a>
                     </li>
                     <li class="nav-item mb-2">
-                         <a href="#" class="nav-link text-white menuLink" data-section="coupons">Coupons</a>
-                    </li>
-                    <li class="nav-item mb-2">
                          <a href="#" class="nav-link text-white menuLink" data-section="adminEnquiries">Product Enquiries</a>
                     </li>
                 </ul>
+                     
             <cfelse>  
                 <ul class="nav flex-column">
                     <li class="nav-item mb-2">

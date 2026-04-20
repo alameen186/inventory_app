@@ -1,61 +1,58 @@
 <cfcomponent output="false">
-   <cffunction name="getAllCategories" access="public" returntype="query" output="false">
-     <cfargument name="search" default="">
-     <cfargument name="sort" default="">
-     <cfargument name="page" default="1">
-     <cfargument name="limit" default="2">
+   <cffunction name="getAllCategories" returntype="query">
 
-     <cfset var searchValue = trim(arguments.search)>
-     <cfset var offset = (arguments.page - 1) * arguments.limit>
+    <cfargument name="search" default="">
+    <cfargument name="sort" default="">
+    <cfargument name="page" default="1">
+    <cfargument name="limit" default="5">
+    <cfargument name="vendor_id" default="">
 
+    <cfset var searchValue = trim(arguments.search)>
+    <cfset var offset = (arguments.page - 1) * arguments.limit>
 
-       <cfquery name="category" datasource="#application.dsn#">
-          SELECT c.* FROM categories c
-          WHERE 1=1
+    <cfquery name="category" datasource="#application.dsn#">
+    SELECT * FROM categories
+    WHERE 1=1
 
-        <cfif len(searchValue)>
-            AND (
-                LOWER(c.category_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+   
+    <cfif isNumeric(arguments.vendor_id)>
+        AND vendor_id =
+        <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+    </cfif>
 
-                OR LOWER(c.description) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-            )
-        </cfif>
+    ORDER BY id DESC
 
-        <cfif arguments.sort EQ "a_z">
-            ORDER BY c.category_name ASC
-        <cfelseif arguments.sort EQ "z_a">
-            ORDER BY c.category_name DESC
-        <cfelse>
-            ORDER BY c.id DESC
-        </cfif>
+    LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+    OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
+</cfquery>
 
-        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
-        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
-       </cfquery>
+    <cfreturn category>
 
-       <cfreturn category>
-   </cffunction>
+</cffunction>
 
    <cffunction name="getCategoryCount" returntype="numeric">
 
     <cfargument name="search" default="">
+    <cfargument name="vendor_id" default="">
 
     <cfset var searchValue = trim(arguments.search)>
 
     <cfquery name="result" datasource="#application.dsn#">
         SELECT COUNT(*) as total
-        FROM categories c
+        FROM categories
         WHERE 1=1
+
+        <cfif isNumeric(arguments.vendor_id)>
+            AND vendor_id =
+            <cfqueryparam value="#arguments.vendor_id#">
+        </cfif>
 
         <cfif len(searchValue)>
             AND (
-                LOWER(c.category_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-
-                OR LOWER(c.description) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+                LOWER(category_name) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%">
+                OR LOWER(description) LIKE 
+                <cfqueryparam value="%#lcase(searchValue)#%">
             )
         </cfif>
     </cfquery>
@@ -75,24 +72,24 @@
        <cfreturn categories>
    </cffunction>
 
-   <cffunction name="addCategory" access="public" returntype="boolean" output="false">
-     <cfargument name="category_name" type="string" required="true">
-     <cfargument name="description" type="string" required="true">
-      <cftry>
-        <cfquery datasource="#application.dsn#">
-           INSERT INTO categories(category_name,description)
-           VALUES (
-            <cfqueryparam value="#arguments.category_name#" cfsqltype="cf_sql_varchar">,
-            <cfqueryparam value="#arguments.description#" cfsqltype="cf_sql_varchar">
-           )
-        </cfquery>
+   <cffunction name="addCategory" returntype="boolean">
 
-        <cfreturn true>
-       <cfcatch>
-         <cfreturn false>
-       </cfcatch>  
-      </cftry>     
-   </cffunction>
+    <cfargument name="category_name">
+    <cfargument name="description">
+    <cfargument name="vendor_id">
+
+    <cfquery datasource="#application.dsn#">
+        INSERT INTO categories(category_name, description, vendor_id)
+        VALUES (
+            <cfqueryparam value="#arguments.category_name#">,
+            <cfqueryparam value="#arguments.description#">,
+            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        )
+    </cfquery>
+
+    <cfreturn true>
+
+</cffunction>
 
    <cffunction name="update_category" access="public" returntype="boolean" output="true">
           <cfargument name="id" type="numeric" required="true">

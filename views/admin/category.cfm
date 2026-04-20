@@ -1,5 +1,11 @@
 <cfset categoryModel = createObject("component", "models.Category")>
 
+<cfif session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
+
 <cfparam name="url.search" default="">
 <cfparam name="url.sort" default="">
 <cfparam name="url.p" default="1">
@@ -13,17 +19,20 @@
 
 <!-- IMPORTANT FIX -->
 <cfset totalRecords = categoryModel.getCategoryCount(
-    search = trim(url.search)
+    search = trim(url.search),
+    vendor_id = vendorFilter
 )>
 <cfset totalPages = ceiling(totalRecords / limit)>
+
+
 
 <cfset category = categoryModel.getAllCategories(
     search = trim(url.search),
     sort = url.sort,
     page = currentPage,
-    limit = limit
+    limit = limit,
+    vendor_id = vendorFilter
 )>
-
 <div class="container mt-4">
 <h3>Category Management</h3>
 

@@ -26,7 +26,13 @@
     </cfif>
 
     <!-- INSERT -->
-    <cfset newId = categoryModel.addCategory(category_name, description)>
+   <cfset vendorId = session.user_id>
+
+<cfset newId = categoryModel.addCategory(
+    category_name,
+    description,
+    vendorId
+)>
 
     <cfcontent type="application/json" reset="true">
     <cfoutput>
