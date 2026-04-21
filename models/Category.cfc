@@ -79,15 +79,24 @@
 </cffunction>
 
 
-   <cffunction name="getAllActiveCategory" access="public" returnType="query" output="false">
-       <cfquery name="categories" datasource="#application.dsn#">
-         SELECT id, category_name
-         FROM categories
-         WHERE is_active=1
-       </cfquery>
+   <cffunction name="getAllActiveCategory" returntype="query">
 
-       <cfreturn categories>
-   </cffunction>
+    <cfargument name="vendor_id" default="">
+
+    <cfquery name="categories" datasource="#application.dsn#">
+        SELECT id, category_name
+        FROM categories
+        WHERE is_active = 1
+
+        <cfif isNumeric(arguments.vendor_id)>
+            AND vendor_id =
+            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        </cfif>
+    </cfquery>
+
+    <cfreturn categories>
+
+</cffunction>
 
    <cffunction name="addCategory" returntype="boolean">
 

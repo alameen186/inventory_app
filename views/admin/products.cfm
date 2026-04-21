@@ -1,8 +1,13 @@
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
+
 <cfset productModel = createObject("component", "models.Product")>
 <cfset categoryModel = createObject("component", "models.Category")>
 
-<cfset categories = categoryModel.getAllActiveCategory()>
-
+<cfset categories = categoryModel.getAllActiveCategory(vendorFilter)>
 <cfparam name="url.search" default="">
 <cfparam name="url.sort" default="">
 <cfparam name="url.p" default="1">
@@ -18,11 +23,16 @@
     sort = url.sort,
     category_id = url.category_id,
     page = currentPage,
-    limit = limit
+    limit = limit,
+    vendor_id = vendorFilter
+
 )>
 
-<cfset totalRecords = productModel.getProductCountAdmin(search=url.search)>
-<cfset totalPages = ceiling(totalRecords / limit)>
+<cfset totalRecords = productModel.getProductCountAdmin(
+    search = url.search,
+    category_id = url.category_id,
+    vendor_id = vendorFilter
+)><cfset totalPages = ceiling(totalRecords / limit)>
 
 <div class="container mt-4">
 <h3>Product Management</h3>
@@ -57,7 +67,7 @@
 <!-- SEARCH -->
 <form id="searchForm" class="mb-3">
 <cfoutput>
-<input name="search" value="#url.search#" class="form-control w-25 d-inline">
+<input name="search" value="#url.search#" class="form-control w-25 d-inline" placeholder="search....">
 </cfoutput>
 <select name="sort" class="form-control w-25 d-inline">
 <option value="">Sort</option>

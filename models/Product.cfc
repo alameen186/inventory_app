@@ -35,15 +35,17 @@
         <cfargument name="stock" type="numeric">
         <cfargument name="category_id" type="numeric" required="true">
         <cfargument name="image" type="string" required="false" default="">
+        <cfargument name="vendor_id" type="numeric" required="true">
         <cftry>
             <cfquery datasource="#application.dsn#">
-    INSERT INTO products(product_name, price, stock, category_id, image)
+    INSERT INTO products(product_name, price, stock, category_id, image, vendor_id)
     VALUES (
         <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
         <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
         <cfqueryparam value="#arguments.stock#" cfsqltype="cf_sql_decimal">,
         <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">,
-        <cfqueryparam value="#arguments.image#" cfsqltype="cf_sql_varchar">
+        <cfqueryparam value="#arguments.image#" cfsqltype="cf_sql_varchar">,
+        <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
     )
     </cfquery>
 
@@ -218,6 +220,7 @@
     <cfargument name="page" default="1">
     <cfargument name="limit" default="10">
     <cfargument name="category_id" default="">
+    <cfargument name="vendor_id" default=""> <!-- ADD -->
 
     <cfset var searchValue = trim(arguments.search)>
     <cfset var offset = (arguments.page - 1) * arguments.limit>
@@ -228,18 +231,22 @@
         JOIN categories c ON p.category_id = c.id
         WHERE 1=1
 
+        <cfif isNumeric(arguments.vendor_id)>
+            AND p.vendor_id =
+            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        </cfif>
+
         <cfif len(searchValue)>
             AND (
                 LOWER(p.product_name) LIKE 
                 <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-
                 OR LOWER(c.category_name) LIKE 
                 <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
             )
         </cfif>
 
         <cfif isNumeric(arguments.category_id)>
-           AND p.category_id = 
+            AND p.category_id = 
             <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
         </cfif>
 
@@ -251,10 +258,6 @@
             ORDER BY p.price ASC
         <cfelseif arguments.sort EQ "price_high">
             ORDER BY p.price DESC
-        <cfelseif arguments.sort EQ "category_a_z">
-            ORDER BY c.category_name ASC
-        <cfelseif arguments.sort EQ "category_z_a">
-            ORDER BY c.category_name DESC
         <cfelse>
             ORDER BY p.id DESC
         </cfif>
@@ -272,7 +275,8 @@
 <cffunction name="getProductCountAdmin" returntype="numeric">
 
     <cfargument name="search" default="">
-     <cfargument name="category_id" default=""> 
+    <cfargument name="category_id" default="">
+    <cfargument name="vendor_id" default=""> <!-- ADD -->
 
     <cfset var searchValue = trim(arguments.search)>
 
@@ -282,19 +286,25 @@
         JOIN categories c ON p.category_id = c.id
         WHERE 1=1
 
+        <cfif isNumeric(arguments.vendor_id)>
+            AND p.vendor_id =
+            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        </cfif>
+
         <cfif len(searchValue)>
             AND (
                 LOWER(p.product_name) LIKE 
                 <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-
                 OR LOWER(c.category_name) LIKE 
                 <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
             )
         </cfif>
+
         <cfif isNumeric(arguments.category_id)>
-           AND p.category_id = 
-        <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
+            AND p.category_id = 
+            <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
         </cfif>
+
     </cfquery>
 
     <cfreturn result.total>

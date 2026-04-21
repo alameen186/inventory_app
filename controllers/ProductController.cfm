@@ -1,4 +1,9 @@
 <!-- ADD PRODUCT -->
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
 <cfif structKeyExists(form, "action") AND form.action EQ "add">
 
 <cfset productModel = createObject("component","models.Product")>
@@ -61,8 +66,22 @@
     <cfset imageName = cffile.serverFile>
 </cfif>
 
-<cfset result = productModel.addProduct(productName, price, stock, category_id, imageName)>
+<!-- SAFETY -->
+<cfif NOT structKeyExists(session, "user_id")>
+    <cfcontent type="application/json" reset="true">
+    <cfoutput>{"status":"error","message":"Session expired"}</cfoutput>
+    <cfabort>
+</cfif>
 
+<!-- INSERT -->
+<cfset result = productModel.addProduct(
+    productName,
+    price,
+    stock,
+    category_id,
+    imageName,
+    session.user_id
+)>
 <cfif result>
     <cfcontent type="application/json" reset="true">
     <cfoutput>{"status":"success","message":"Product added successfully"}</cfoutput>
@@ -184,15 +203,21 @@
     <cfparam name="url.sort" default="">
     <cfparam name="url.category_id" default="">
 
-    <cfset q = productModel.getAllProductsAdmin(
-        search=url.search,
-        sort=url.sort,
-        category_id=url.category_id,
-        page=url.p,
-        limit=3
-    )>
+<cfset page = val(url.p)>
+<cfif page LT 1><cfset page = 1></cfif>
 
-    <cfoutput query="q">
+<cfset limit = 3>
+
+<cfset products = productModel.getAllProductsAdmin(
+    search = trim(url.search),
+    sort = url.sort,
+    category_id = url.category_id,
+    page = page,
+    limit = limit,
+    vendor_id = vendorFilter
+)>
+
+    <cfoutput query="products">
         <tr>
             <td>#id#</td>
             <td>#product_name#</td>
