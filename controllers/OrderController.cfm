@@ -53,23 +53,42 @@
 
 <cfset finalTotal = grandTotal - discount>
 
+<!-- TEMP USER LOGIC -->
+<cfif session.role_name EQ "vendor">
+
+    <cfset tempUserModel = createObject("component","models.TempUser")>
+
+    <cfset tempUserId = tempUserModel.getOrCreateTempUser(
+        vendor_id = session.user_id,
+        first_name = form.first_name,
+        last_name = form.last_name,
+        email = form.email
+    )>
+
+<cfelse>
+
+    <cfset tempUserId = "">
+
+</cfif>
+
 <!-- SAVE ORDER -->
 <cfloop collection="#session.cart#" item="pid">
     <cfset item = session.cart[pid]>
 
     <cfset result = orderModel.addOrder(
-        session.user_id,
-        pid,
-        item.price,
-        item.qty,
-        (item.price * item.qty),
-        orderGroupId,
-        couponCode,
-        discount,
-        finalTotal
-    )>
+    user_id = (session.role_name EQ "vendor" ? "" : session.user_id),
+    temp_user_id = tempUserId,
+    product_id = pid,
+    price = item.price,
+    quantity = item.qty,
+    total = (item.price * item.qty),
+    group_id = orderGroupId,
+    coupon_code = couponCode,
+    discount = discount,
+    final_total = finalTotal
+)>
 
-    <cfif NOT result>
+    <cfif NOT result.success>
         <cfcontent type="application/json">
         <cfoutput>{"status":"error","message":"Order failed"}</cfoutput>
         <cfabort>
@@ -341,5 +360,130 @@ user_id=session.user_id
 </cfif>
 
 <cfabort>
+
+</cfif>
+
+<cfif structKeyExists(form,"action") AND form.action EQ "vendorOrder">
+
+<cftry>
+
+<cfset tempUserModel = createObject("component","models.TempUser")>
+<cfset orderModel = createObject("component","models.Order")>
+<cfset productModel = createObject("component","models.Product")>
+
+<!-- DEBUG -->
+<cfif NOT structKeyExists(form,"cart")>
+    <cfthrow message="Cart missing">
+</cfif>
+
+<!-- PARSE CART -->
+<cfset cartData = deserializeJSON(form.cart)>
+
+<cfif structIsEmpty(cartData)>
+    <cfthrow message="Cart is empty after parse">
+</cfif>
+
+<!-- CREATE TEMP USER -->
+<cfset tempUserId = tempUserModel.getOrCreateTempUser(
+    vendor_id = session.user_id,
+    first_name = form.first_name,
+    last_name = form.last_name,
+    email = form.email
+)>
+
+<cfset orderGroupId = createUUID()>
+
+<!-- LOOP CART -->
+<cfloop collection="#cartData#" item="pid">
+
+    <cfset item = cartData[pid]>
+
+    <!-- DEBUG -->
+    <cfif NOT structKeyExists(item,"price") OR NOT structKeyExists(item,"qty")>
+        <cfthrow message="Cart item structure invalid">
+    </cfif>
+
+    <cfset result = orderModel.addOrder(
+        user_id = "",
+        temp_user_id = tempUserId,
+        product_id = pid,
+        price = item.price,
+        quantity = item.qty,
+        total = item.price * item.qty,
+        group_id = orderGroupId,
+        coupon_code = "",
+        discount = 0,
+        final_total = item.price * item.qty
+    )>
+
+    <!-- HANDLE FAIL -->
+    <cfif isStruct(result) AND NOT result.success>
+        <cfthrow message="#result.message#" detail="#result.detail#">
+    </cfif>
+
+    <cfset productModel.reduceStock(pid, item.qty)>
+
+</cfloop>
+
+<!-- PDF GENERATION FOR VENDOR -->
+<cfset invoiceDir = expandPath("../assets/invoices/")>
+<cfset fileName = "invoice_#orderGroupId#.pdf">
+<cfset invoicePath = invoiceDir & fileName>
+
+<cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
+<cfoutput>
+
+<h2>Invoice</h2>
+<p>Order ID: #orderGroupId#</p>
+<p>Customer: #form.first_name# #form.last_name# (#form.email#)</p>
+
+<table border="1" width="100%">
+<tr>
+    <th>Product</th>
+    <th>Price</th>
+    <th>Qty</th>
+    <th>Total</th>
+</tr>
+
+<cfset grandTotal = 0>
+
+<cfloop collection="#cartData#" item="pid">
+    <cfset item = cartData[pid]>
+    <cfset rowTotal = item.price * item.qty>
+    <cfset grandTotal += rowTotal>
+
+    <tr>
+        <td>#item.name#</td>
+        <td>#item.price#</td>
+        <td>#item.qty#</td>
+        <td>#rowTotal#</td>
+    </tr>
+</cfloop>
+
+</table>
+
+<h3>Total: #grandTotal#</h3>
+
+</cfoutput>
+</cfdocument>
+
+<!-- SUCCESS -->
+<cfcontent type="application/json">
+<cfoutput>{"status":"success"}</cfoutput>
+<cfabort>
+
+<cfcatch>
+    <cfcontent type="application/json">
+    <cfoutput>
+    {
+        "status":"error",
+        "message":"#cfcatch.message#",
+        "detail":"#cfcatch.detail#"
+    }
+    </cfoutput>
+    <cfabort>
+</cfcatch>
+
+</cftry>
 
 </cfif>

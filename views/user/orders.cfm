@@ -42,7 +42,6 @@
 <!-- SEARCH -->
 <cfoutput>
 <form id="searchForm" class="mb-3">
-
 <div class="input-group w-50">
 
 <input type="text" name="search"
@@ -51,15 +50,13 @@ placeholder="Search Order ID"
 class="form-control">
 
 <button type="submit" class="btn btn-primary">Search</button>
-
 <button type="button" id="clearSearch" class="btn btn-secondary">Clear</button>
 
 </div>
-
 </form>
 </cfoutput>
 
-<!-- ORDER LIST -->
+
 <div id="orderContainer">
 
 <cfif orders.recordCount EQ 0>
@@ -86,52 +83,40 @@ class="form-control">
 <div class="card mb-4">
 
 <div class="card-header bg-dark text-white d-flex justify-content-between">
-
 <span>
 Order ID: #order_group_id# |
 #dateFormat(created_at, "dd-mmm-yyyy")#
 </span>
 
 <div>
-
 <cfif status EQ "placed">
 <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
 target="_blank"
 class="btn btn-success btn-sm">PDF</a>
 
 <button class="btn btn-danger btn-sm cancelBtn"
-data-id="#order_group_id#">
-Cancel
-</button>
+data-id="#order_group_id#">Cancel</button>
 
 <cfelseif status EQ "cancel_requested">
 <span class="badge bg-warning">Cancel Requested</span>
-
 <cfelse>
 <span class="badge bg-secondary">Cancelled</span>
 </cfif>
-
 </div>
 </div>
 
-<!-- CANCEL BOX -->
 <div class="p-3 border-top cancelBox"
 id="cancelBox_#order_group_id#"
 style="display:none;">
 
 <textarea class="form-control mb-2 cancelReason"
-data-id="#order_group_id#"
-placeholder="Enter cancel reason"></textarea>
+data-id="#order_group_id#"></textarea>
 
 <button class="btn btn-danger btn-sm confirmCancel"
-data-id="#order_group_id#">
-Confirm Cancel
-</button>
+data-id="#order_group_id#">Confirm Cancel</button>
 
 <button class="btn btn-secondary btn-sm closeCancel"
-data-id="#order_group_id#">
-Close
-</button>
+data-id="#order_group_id#">Close</button>
 
 </div>
 
@@ -149,7 +134,6 @@ Close
 
 <tr>
 <td>#product_name#</td>
-
 <td>
 <cfif len(image)>
 <img src="../../assets/images/products/#image#" width="50">
@@ -157,7 +141,6 @@ Close
 No Image
 </cfif>
 </td>
-
 <td>#price#</td>
 <td>#quantity#</td>
 <td>#total_amount#</td>
@@ -178,9 +161,7 @@ No Image
 
 </cfif>
 
-</div>
 
-<!-- PAGINATION -->
 <cfoutput>
 <div class="mt-4">
 
@@ -189,9 +170,7 @@ No Image
 <button type="button"
 class="btn btn-sm pageBtn <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
 data-page="#i#">
-
 #i#
-
 </button>
 
 </cfloop>
@@ -199,8 +178,9 @@ data-page="#i#">
 </div>
 </cfoutput>
 
-</div>
+</div> 
 
+</div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -209,11 +189,10 @@ $(document).ready(function(){
 
 function showMsg(res){
 $("#ajaxMessage").html(
-'<div id="msgBox" class="alert alert-' +
+'<div class="alert alert-' +
 (res.status==="success"?"success":"danger") +
 '">'+res.message+'</div>'
 );
-setTimeout(()=>$("#msgBox").fadeOut(),3000);
 }
 
 // SEARCH
@@ -238,28 +217,28 @@ $(document).on("click",".pageBtn",function(){
 
 let page=$(this).data("page");
 
+let data=$("#searchForm").serialize().replace(/(&|^)p=\d+/,'');
+
 $.get("../../controllers/OrderController.cfm",
-"action=search&p="+page+"&"+$("#searchForm").serialize(),
+"action=search&p="+page+"&"+data,
 function(res){
 $("#orderContainer").html(res);
 });
 
 });
 
-// OPEN CANCEL
+// CANCEL LOGIC
 $(document).on("click",".cancelBtn",function(){
 let id=$(this).data("id");
 $(".cancelBox").hide();
 $("#cancelBox_"+id).show();
 });
 
-// CLOSE CANCEL
 $(document).on("click",".closeCancel",function(){
 let id=$(this).data("id");
 $("#cancelBox_"+id).hide();
 });
 
-// CONFIRM CANCEL
 $(document).on("click",".confirmCancel",function(){
 
 let id=$(this).data("id");
@@ -272,8 +251,6 @@ reason:reason
 },function(res){
 
 showMsg(res);
-
-// reload list via ajax
 $("#searchForm").submit();
 
 },"json");

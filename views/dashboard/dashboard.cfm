@@ -19,12 +19,11 @@
 
 <body class="bg-light" style="overflow: hidden;">
 
-<div class="container-fluid vh-100">
+<div class="container-fluid vh-100 overflow-hidden">
 <div class="row h-100">
 
 <!-- SIDEBAR -->
-<div class="col-md-2 bg-dark text-white p-3">
-
+<div class="col-md-2 bg-dark text-white p-3 h-100 overflow-auto">
 <h5 class="text-center">Menu</h5>
 <hr class="bg-light">
 
@@ -45,6 +44,7 @@
 <li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="products">Products</a></li>
 <li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="allorders">Orders</a></li>
 <li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="adminEnquiries">Enquiries</a></li>
+<li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="createOrder">Creat Order</a></li>
 </ul>
 
 <cfelse>
@@ -62,8 +62,7 @@
 </div>
 
 <!-- MAIN -->
-<div class="col-md-10 d-flex flex-column">
-
+<div class="col-md-10 d-flex flex-column h-100 overflow-hidden">    
 <!-- HEADER -->
 <div class="d-flex justify-content-between p-3 border-bottom">
 <h4>Inventory Store</h4>
@@ -126,6 +125,9 @@
 
 <cfelseif section EQ "vendorDashboard">
         <cfinclude template="../vendor/dashboard.cfm">
+
+<cfelseif section EQ "createOrder">
+        <cfinclude template="../vendor/createOrder.cfm">
 
 <cfelse>
 

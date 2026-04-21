@@ -15,9 +15,6 @@
 <cfelseif url.section EQ "allorders">
     <cfinclude template="../views/admin/orders.cfm">
 
-<cfelseif url.section EQ "createOrder">
-    <cfinclude template="../views/admin/createOrder.cfm">
-
 <cfelseif url.section EQ "coupons">
     <cfinclude template="../views/admin/coupon.cfm">
 
@@ -38,6 +35,9 @@
 
 <cfelseif url.section EQ "vendorDashboard">
     <cfinclude template="../views/vendor/dashboard.cfm">
+
+<cfelseif url.section EQ "createOrder">
+    <cfinclude template="../views/vendor/createOrder.cfm">
 
 <cfelse>
     <cfoutput>

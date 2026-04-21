@@ -140,10 +140,9 @@ Remove
         </div>
     </cfoutput>
 
-    <form method="post" action="../../controllers/OrderController.cfm">
-        <input type="hidden" name="action" value="checkout">
-        <button class="btn btn-success btn-lg">Checkout</button>
-    </form>
+    <button class="btn btn-success btn-lg" id="checkoutBtn">
+    Checkout
+</button>
 </div>
 
 <script>
@@ -265,6 +264,28 @@ $("#couponForm").submit(function(e){
         }
 
     },"json");
+});
+
+$("#checkoutBtn").click(function(){
+
+    $.post("../../controllers/OrderController.cfm",{
+        action: "checkout"
+    }, function(res){
+
+        if(res.status === "success"){
+
+            // show message
+            alert(res.message);
+
+            // redirect BACK to dashboard (important)
+            window.location.href = "../../index.cfm?page=dashboard&section=orders";
+
+        }else{
+            alert(res.message);
+        }
+
+    },"json");
+
 });
 
 });

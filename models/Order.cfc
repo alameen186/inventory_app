@@ -1,38 +1,55 @@
 <cfcomponent output="false">
    
-    <cffunction name="addOrder" returntype="boolean" output="false">
-        <cfargument name="user_id">
-        <cfargument name="product_id">
-        <cfargument name="price">
-        <cfargument name="quantity">
-        <cfargument name="total">
-        <cfargument name="group_id">
-        <cfargument name="coupon_code" default="">
-        <cfargument name="discount" default="0">
-        <cfargument name="final_total" default="0">
-        <cftry>
-            <cfquery datasource="#application.dsn#">
-                INSERT INTO orders (user_id, product_id, price, quantity, total_amount, order_group_id,
-                coupon_code, discount_amount, final_amount) 
-                VALUES (
-                    <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
-                    <cfqueryparam value="#arguments.quantity#" cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.total#" cfsqltype="cf_sql_decimal">,
-                    <cfqueryparam value="#arguments.group_id#" cfsqltype="cf_sql_varchar">,
-                    <cfqueryparam value="#arguments.coupon_code#" cfsqltype="cf_sql_varchar">,
-                    <cfqueryparam value="#arguments.discount#" cfsqltype="cf_sql_decimal">,
-                    <cfqueryparam value="#arguments.final_total#" cfsqltype="cf_sql_decimal">
-                )
-            </cfquery>
-            <cfreturn true>
-            <cfcatch>
-    <cfdump var="#cfcatch#">
-    <cfabort>
-</cfcatch>
-        </cftry>
-    </cffunction>
+    <cffunction name="addOrder" returntype="struct" output="false">
+
+    <cfargument name="user_id">
+    <cfargument name="temp_user_id" default="">
+    <cfargument name="product_id">
+    <cfargument name="price">
+    <cfargument name="quantity">
+    <cfargument name="total">
+    <cfargument name="group_id">
+    <cfargument name="coupon_code" default="">
+    <cfargument name="discount" default="0">
+    <cfargument name="final_total" default="0">
+
+    <cftry>
+
+        <cfquery datasource="#application.dsn#">
+            INSERT INTO orders (
+                user_id, temp_user_id, product_id, price,
+                quantity, total_amount, order_group_id,
+                coupon_code, discount_amount, final_amount
+            )
+            VALUES (
+                <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer" null="#NOT isNumeric(arguments.user_id)#">,
+                <cfqueryparam value="#arguments.temp_user_id#" cfsqltype="cf_sql_integer" null="#NOT len(arguments.temp_user_id)#">,
+                <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.quantity#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.total#" cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.group_id#" cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.coupon_code#" cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.discount#" cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.final_total#" cfsqltype="cf_sql_decimal">
+            )
+        </cfquery>
+
+        <cfreturn { success = true }>
+
+    <cfcatch>
+
+        <cfreturn {
+            success = false,
+            message = cfcatch.message,
+            detail = cfcatch.detail
+        }>
+
+    </cfcatch>
+
+    </cftry>
+
+</cffunction>
 
    <cffunction name="getAllOrdersWithPagination" returntype="query">
 
