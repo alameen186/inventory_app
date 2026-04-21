@@ -49,6 +49,9 @@
     <cfargument name="status" default="">
     <cfargument name="page" default="1">
     <cfargument name="limit" default="5">
+    <cfargument name="vendor_id" default="">
+    <cfargument name="fromDate" default="">
+    <cfargument name="toDate" default="">
 
     <cfset var offset = (arguments.page - 1) * arguments.limit>
     <cfset var searchValue = trim(arguments.search)>
@@ -73,6 +76,21 @@
         LEFT JOIN categories c ON p.category_id = c.id
 
         WHERE 1=1
+
+<cfif isNumeric(arguments.vendor_id)>
+    AND p.vendor_id =
+    <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+</cfif>
+
+<cfif len(arguments.fromDate)>
+    AND DATE(pe.created_at) >=
+    <cfqueryparam value="#arguments.fromDate#" cfsqltype="cf_sql_date">
+</cfif>
+
+<cfif len(arguments.toDate)>
+    AND DATE(pe.created_at) <=
+    <cfqueryparam value="#arguments.toDate#" cfsqltype="cf_sql_date">
+</cfif>
 
         <cfif len(searchValue)>
             AND (
@@ -124,6 +142,9 @@
 
     <cfargument name="search" default="">
     <cfargument name="status" default="">
+    <cfargument name="vendor_id" default="">
+    <cfargument name="fromDate" default="">
+    <cfargument name="toDate" default="">
 
     <cfset var searchValue = trim(arguments.search)>
 
@@ -135,6 +156,21 @@
         INNER JOIN users u ON pe.user_id = u.id
 
         WHERE 1=1
+
+        <cfif isNumeric(arguments.vendor_id)>
+    AND p.vendor_id =
+    <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+</cfif>
+
+<cfif len(arguments.fromDate)>
+    AND DATE(pe.created_at) >=
+    <cfqueryparam value="#arguments.fromDate#" cfsqltype="cf_sql_date">
+</cfif>
+
+<cfif len(arguments.toDate)>
+    AND DATE(pe.created_at) <=
+    <cfqueryparam value="#arguments.toDate#" cfsqltype="cf_sql_date">
+</cfif>
 
         <cfif len(searchValue)>
             AND (

@@ -1,8 +1,18 @@
-<cfset enquiryModel = createObject("component","models.Enquiry")>
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
 
 <cfparam name="url.search" default="">
 <cfparam name="url.status" default="">
 <cfparam name="url.p" default="1">
+<cfparam name="url.fromDate" default="">
+<cfparam name="url.toDate" default="">
+
+<cfset enquiryModel = createObject("component","models.Enquiry")>
+
+
 
 <cfset currentPage = val(url.p)>
 <cfif currentPage LT 1>
@@ -15,14 +25,19 @@
     search = url.search,
     status = url.status,
     page = currentPage,
-    limit = limit
+    limit = limit,
+    vendor_id = vendorFilter,
+    fromDate = url.fromDate,
+    toDate = url.toDate
 )>
 
 <cfset totalRecords = enquiryModel.getEnquiryCount(
     search = url.search,
-    status = url.status
+    status = url.status,
+    vendor_id = vendorFilter,
+    fromDate = url.fromDate,
+    toDate = url.toDate
 )>
-
 <cfset totalPages = ceiling(totalRecords / limit)>
 
 <div class="container mt-4">
@@ -33,22 +48,41 @@
 
 <!-- SEARCH -->
 <cfoutput>
-<form id="searchForm" class="mb-3">
+<form id="searchForm" method="get" class="row g-2 align-items-end mb-4">
+    
+    <!-- Search Text -->
+    <div class="col-md-3">
+        <input type="text" name="search" value="#url.search#" 
+               placeholder="Product or user..." class="form-control">
+    </div>
 
-<input type="text" name="search" value="#url.search#"
-placeholder="Search product or user"
-class="form-control w-25 d-inline">
+    <!-- Status Dropdown -->
+    <div class="col-md-2">
+        <select name="status" class="form-select">
+            <option value="">All Status</option>
+            <option value="pending" <cfif url.status EQ "pending">selected</cfif>>Pending</option>
+            <option value="fulfilled" <cfif url.status EQ "fulfilled">selected</cfif>>Fulfilled</option>
+        </select>
+    </div>
 
-<select name="status" class="form-control w-25 d-inline">
-<option value="">All Status</option>
-<option value="pending" <cfif url.status EQ "pending">selected</cfif>>Pending</option>
-<option value="fulfilled" <cfif url.status EQ "fulfilled">selected</cfif>>Fulfilled</option>
-</select>
+    <!-- Date Range -->
+    <div class="col-md-4">
+        <div class="input-group">
+            <input type="date" name="fromDate" value="#url.fromDate#" class="form-control">
+            <span class="input-group-text">to</span>
+            <input type="date" name="toDate" value="#url.toDate#" class="form-control">
+        </div>
+    </div>
 
-<button class="btn btn-primary btn-sm">Search</button>
+    <!-- Actions -->
+    <div class="col-md-auto">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <button type="button" id="resetBtn" class="btn btn-outline-secondary">Reset</button>
+    </div>
 
 </form>
 </cfoutput>
+
 
 <!-- TABLE -->
 <table class="table table-bordered mt-3">
@@ -252,6 +286,14 @@ row.find(".restockBtn").remove();
 $("#searchForm").submit(function(e){
 e.preventDefault();
 
+$(document).on("click","#clearSearch",function(){
+    $("input[name='search']").val('');
+    $("input[name='fromDate']").val('');
+    $("input[name='toDate']").val('');
+    $("select[name='status']").val('');
+    $("#searchForm").submit();
+});
+
 $.get("../../controllers/AdminEnquiryController.cfm",
 "action=search&"+$(this).serialize(),
 function(res){
@@ -272,6 +314,21 @@ $("#tableBody").html(res);
 });
 
 });
+$(document).on("click","#resetBtn",function(){
 
+    // clear all fields
+    $("input[name='search']").val('');
+    $("input[name='fromDate']").val('');
+    $("input[name='toDate']").val('');
+    $("select[name='status']").val('');
+
+    $.get("../../controllers/AdminEnquiryController.cfm",
+        "action=search",
+        function(res){
+            $("#tableBody").html(res);
+        }
+    );
+
+});
 });
 </script>

@@ -1,10 +1,18 @@
 <cfif structKeyExists(url,"action") AND url.action EQ "search">
 
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
+
 <cfset enquiryModel = createObject("component","models.Enquiry")>
 
 <cfparam name="url.search" default="">
 <cfparam name="url.status" default="">
 <cfparam name="url.p" default="1">
+<cfparam name="url.fromDate" default="">
+<cfparam name="url.toDate" default="">
 
 <cfset page = val(url.p)>
 <cfif page LT 1>
@@ -19,8 +27,11 @@
     search = url.search,
     status = url.status,
     page = page,
-    limit = limit
-)
+    limit = limit,
+    vendor_id = vendorFilter,
+    fromDate = url.fromDate,
+    toDate = url.toDate
+)>
 
 <cfif enquiries.recordCount EQ 0>
 <tr>
