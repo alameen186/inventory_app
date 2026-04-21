@@ -101,7 +101,6 @@
     OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
 </cfquery>
 
-    <!--  GET FULL DATA -->
     <cfquery name="orders" datasource="#application.dsn#">
         SELECT o.*, p.product_name, p.image, p.price,
                CONCAT(u.first_name, ' ', u.last_name) as user_name

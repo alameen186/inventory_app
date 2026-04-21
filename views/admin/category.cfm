@@ -17,7 +17,6 @@
 
 <cfset limit = 5>
 
-<!-- IMPORTANT FIX -->
 <cfset totalRecords = categoryModel.getCategoryCount(
     search = trim(url.search),
     vendor_id = vendorFilter

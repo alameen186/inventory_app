@@ -230,7 +230,7 @@ user_id=session.user_id
 )>
 <cfset totalPages = ceiling(totalRecords / limit)>
 
-<!-- RETURN ONLY INNER HTML -->
+
 <cfif orders.recordCount EQ 0>
 
     <div class="alert alert-info">
@@ -398,7 +398,7 @@ user_id=session.user_id
 
     <cfset item = cartData[pid]>
 
-    <!-- DEBUG -->
+
     <cfif NOT structKeyExists(item,"price") OR NOT structKeyExists(item,"qty")>
         <cfthrow message="Cart item structure invalid">
     </cfif>

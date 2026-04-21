@@ -32,6 +32,7 @@
 <ul class="nav flex-column">
 <li class="nav-item"><a href="../../index.cfm?page=dashboard" class="nav-link text-white">Dashboard</a></li>
 <li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="users">Users</a></li>
+<li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="vendors">Vendors</a></li>
 <li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="roles">Roles</a></li>
 <li class="nav-item"><a href="#" class="nav-link text-white menuLink" data-section="coupons">Coupons</a></li>
 </ul>
@@ -68,7 +69,6 @@
 <h4>Inventory Store</h4>
 
 <div class="dropdown">
-<!--- Show ONLY if user is NOT an Admin AND NOT a Vendor --->
 <cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
     <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm">Cart</a>
 </cfif>
@@ -128,6 +128,9 @@
 
 <cfelseif section EQ "createOrder">
         <cfinclude template="../vendor/createOrder.cfm">
+
+<cfelseif url.section EQ "vendors">
+    <cfinclude template="../admin/vendors.cfm">
 
 <cfelse>
 

@@ -1,4 +1,3 @@
-<!--- Initialize Models --->
 <cfset userModel = createObject("component", "models.User")>
 <cfset authModel = createObject("component", "models.Auth")>
 
@@ -13,76 +12,82 @@
 
 <!--- SIGNUP --->
 <cfif action EQ "signup">
-  <cfset first_name = trim(form.first_name)>
-  <cfset last_name = trim(form.last_name)>
-  <cfset email = trim(form.email)>
-  <cfset password = trim(form.password)>
-  <cfset confirm = trim(form.confirm_password)>
 
-<!--- Validation --->
-  <cfif len(first_name) LT 3>
-    <cflocation url="../index.cfm?page=auth&message=First name must be at least 3 characters&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#"addtoken="false">
-    <cfabort>
-    <cfelseif len(first_name) GT 100>
-      <cflocation url="../index.cfm?page=auth&message=First name only less than 100 charecters&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-      <cfabort>  
-    <cfelseif len(last_name) LT 1>
-    <cflocation url="../index.cfm?page=auth&message=Last name must be at least 1 charecters&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-    <cfelseif len(last_name) GT 100>  
-    <cflocation url="../index.cfm?page=auth&message=Last name only less than 100 charecters&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-    <cfelseif NOT isValid("email", email)>
-    <cflocation url="../index.cfm?page=auth&message=Invalid email format&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-    <cfelseif len(email) GT 100>
-    <cflocation url="../index.cfm?page=auth&message=mail too long!!&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-    <cfelseif len(password) LT 8 OR len(password) GT 20>
-    <cflocation url="../index.cfm?page=auth&message=Invalid email&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-    <cfelseif NOT reFind("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])", password)>
-    <cflocation url="../index.cfm?page=auth&message=Password must contain uppercase, lowercase, number, and special character&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-    <cfelseif password NEQ confirm>
-    <cflocation url="../index.cfm?page=auth&message=password do not match&type=error&tab=signup&first_name=#urlEncodedFormat(first_name)#&last_name=#urlEncodedFormat(last_name)#&email=#urlEncodedFormat(email)#" addtoken="false">
-    <cfabort>
-      <cfset message = "">
+<cfset first_name = trim(form.first_name)>
+<cfset last_name = trim(form.last_name)>
+<cfset email = trim(form.email)>
+<cfset password = trim(form.password)>
+<cfset confirm = trim(form.confirm_password)>
+<cfset role_id = val(form.role_id)>
+<cfset business_name = structKeyExists(form,"business_name") ? trim(form.business_name) : "">
+<cfset address = structKeyExists(form,"address") ? trim(form.address) : "">
 
-    <cfelse>
-      <cfset existingUser = userModel.getUserByEmail(email)>   
-
-      <cfif existingUser.recordCount GT 0>
-        <cflocation url="../index.cfm?page=auth&message=Email already exists&type=error&tab=signup" addtoken="false">
-        <cfabort>
-
-      <cfelse>
-        
-       <cfset hashedPassword = hash(password, "SHA-256")>
-
-       <cfset isCreated = userModel.create_user(
-        first_name,
-        last_name,
-        email,
-        hashedPassword,
-        2
-       )>
-
-       <cfif isCreated>
-           <cfset success = true>
-           <cflocation url="../index.cfm?page=auth&message=Signup successful&type=success&tab=login" addtoken="false">
+<!-- BASIC VALIDATION -->
+<cfif NOT role_id>
+    <cflocation url="../index.cfm?page=auth&message=Select role&type=error&tab=signup" addtoken="false">
     <cfabort>
-       <cfelse>
-           <cflocation url="../index.cfm?page=auth&message=Something went wrong&type=error" addtoken="false">
-    <cfabort>    
-       </cfif>
-    
+</cfif>
+
+<!-- VENDOR VALIDATION -->
+<cfif business_name EQ "" AND role_id EQ 3>
+    <cflocation url="../index.cfm?page=auth&message=Shop name required&type=error&tab=signup" addtoken="false">
+    <cfabort>
+</cfif>
+
+<!-- EMAIL CHECK -->
+<cfset existingUser = userModel.getUserByEmail(email)>
+
+<cfif existingUser.recordCount GT 0>
+    <cflocation url="../index.cfm?page=auth&message=Email already exists&type=error&tab=signup" addtoken="false">
+    <cfabort>
+</cfif>
+
+<!-- PASSWORD -->
+<cfif password NEQ confirm>
+    <cflocation url="../index.cfm?page=auth&message=Password mismatch&type=error&tab=signup" addtoken="false">
+    <cfabort>
+</cfif>
+
+<cfset hashedPassword = hash(password, "SHA-256")>
+
+<!-- CREATE USER -->
+<cfset isCreated = userModel.create_user(
+    first_name,
+    last_name,
+    email,
+    hashedPassword,
+    role_id,
+    business_name,
+    address
+)>
+
+<cfif isCreated>
+
+    <cfif role_id EQ 3>
+
+        <cfquery datasource="#application.dsn#">
+            INSERT INTO vendor_details (user_id, shop_name)
+            VALUES (
+                (SELECT id FROM users WHERE email = 
+                    <cfqueryparam value="#email#" cfsqltype="cf_sql_varchar">
+                ORDER BY id DESC LIMIT 1),
+                <cfqueryparam value="#shop_name#" cfsqltype="cf_sql_varchar">
+            )
+        </cfquery>
+
     </cfif>
 
-  </cfif>
+    <cflocation url="../index.cfm?page=auth&message=Signup successful&type=success&tab=login" addtoken="false">
+    <cfabort>
+
+<cfelse>
+
+    <cflocation url="../index.cfm?page=auth&message=Signup failed&type=error" addtoken="false">
+    <cfabort>
 
 </cfif>
 
+</cfif>
 
 <!--- login --->
 

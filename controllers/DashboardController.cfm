@@ -39,6 +39,9 @@
 <cfelseif url.section EQ "createOrder">
     <cfinclude template="../views/vendor/createOrder.cfm">
 
+<cfelseif url.section EQ "vendors">
+    <cfinclude template="../views/admin/vendors.cfm">
+
 <cfelse>
     <cfoutput>
         <h4>Welcome Dashboard</h4>

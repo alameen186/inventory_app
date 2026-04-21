@@ -85,4 +85,17 @@
 
 </cffunction>
 
+<cffunction name="getRolesForSignup" returntype="query">
+
+    <cfquery name="roles" datasource="#application.dsn#">
+        SELECT id, role_name
+        FROM roles
+        WHERE role_name IN ('customer','vendor')
+        ORDER BY role_name ASC
+    </cfquery>
+
+    <cfreturn roles>
+
+</cffunction>
+
 </cfcomponent>

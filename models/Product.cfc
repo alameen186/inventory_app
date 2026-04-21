@@ -220,7 +220,7 @@
     <cfargument name="page" default="1">
     <cfargument name="limit" default="10">
     <cfargument name="category_id" default="">
-    <cfargument name="vendor_id" default=""> <!-- ADD -->
+    <cfargument name="vendor_id" default=""> 
 
     <cfset var searchValue = trim(arguments.search)>
     <cfset var offset = (arguments.page - 1) * arguments.limit>
@@ -276,7 +276,7 @@
 
     <cfargument name="search" default="">
     <cfargument name="category_id" default="">
-    <cfargument name="vendor_id" default=""> <!-- ADD -->
+    <cfargument name="vendor_id" default=""> 
 
     <cfset var searchValue = trim(arguments.search)>
 

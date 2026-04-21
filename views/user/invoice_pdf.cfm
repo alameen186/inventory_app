@@ -1,6 +1,5 @@
-<!-- GENERATE PDF (SAVE FILE) -->
+<!-- GENERATE PDF -->
 <cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
-    <!--- Step 1: Add a <style> block for a proper look --->
     <style>
         body { font-family: 'Arial', sans-serif; padding: 20px; color: #333; }
         h2 { border-bottom: 2px solid #444; padding-bottom: 10px; color: #2c3e50; }
@@ -10,7 +9,6 @@
         .total-row { font-weight: bold; background-color: #f1f1f1; }
     </style>
 
-    <!--- Step 2: YOU MUST USE CFOUTPUT TO SHOW DATA --->
     <cfoutput>
         <div style="text-align: right; margin-bottom: 20px;">
             <h2>INVOICEaaaaaaaaaaaaaaaaaa</h2>

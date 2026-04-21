@@ -168,7 +168,7 @@ data-page="#i#">#i#</button>
 </div>
 
 
-<!-- ================= RESTOCK TEMPLATE ================= -->
+<!-- RESTOCK  -->
 <div id="restockTemplate" style="display:none;">
 <div class="card shadow-sm p-4 mt-3">
 

@@ -33,7 +33,6 @@
     page = val(url.p)
 )>
 
-<!-- total count for pagination -->
 <cfset totalRecords = productModel.getProductCount(
     keyword = url.search,
     category_id = isNumeric(url.category_id) ? url.category_id : javacast("null",""),
@@ -68,7 +67,7 @@
         }, 5000);
     </script>
 
-    <!-- search + filters -->
+    <!-- search -->
    <form id="searchForm" method="get" class="mb-4">
 
     <input type="hidden" name="page" value="dashboard">
@@ -132,7 +131,7 @@
 
     </div>
 
-    <!-- Optional Clear Button -->
+    <!--  Clear Button -->
     <div class="mt-2">
         <button type="button" id="clearBtn" class="btn btn-outline-secondary btn-sm">
             Clear Filters
@@ -143,7 +142,6 @@
 
     <h3>Products</h3>
 
-    <!-- KEY FIX: added d-flex flex-wrap so flex context survives AJAX replacement -->
     <div class="row d-flex flex-wrap" id="productContainer">
 
         <cfoutput query="products">

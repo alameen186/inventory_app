@@ -3,7 +3,6 @@
 <head>
     <title>Auth</title>
 
-    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
@@ -74,61 +73,35 @@
 
                         <!-- SIGNUP -->
                         <div class="tab-pane fade <cfif activeTab EQ 'signup'>show active</cfif>" id="signup">
-
+<cfset roleModel = createObject("component","models.Role")>
+<cfset roles = roleModel.getRolesForSignup()>
                             <form method="post" action="../../index.cfm?page=auth">
-                                <input type="hidden" name="action" value="signup">
+<input type="hidden" name="action" value="signup">
 
-                                <div class="mb-2">
-                                    <input 
-                                     type="text" 
-                                     name="first_name" 
-                                     class="form-control" 
-                                     placeholder="First Name" 
-                                     required
-                                     value="<cfif structKeyExists(url,'first_name')><cfoutput>#url.first_name#</cfoutput></cfif>">
-                                     
-                                </div>
+<input type="text" name="first_name" class="form-control mb-2" placeholder="First Name" required>
+<input type="text" name="last_name" class="form-control mb-2" placeholder="Last Name" required>
+<input type="email" name="email" class="form-control mb-2" placeholder="Email" required>
+<input type="password" name="password" class="form-control mb-2" placeholder="Password" required>
+<input type="password" name="confirm_password" class="form-control mb-2" placeholder="Confirm Password" required>
 
-                                <div class="mb-2">
-                                    <input type="text" 
-                                    name="last_name" 
-                                    class="form-control" 
-                                    placeholder="Last Name" 
-                                    required
-                                    value="<cfif structKeyExists(url,'last_name')><cfoutput>#url.last_name#</cfoutput></cfif>">
-                                    
-                                </div>
+<!-- ROLE -->
+<select name="role_id" id="roleSelect" class="form-control mb-2" required>
+<option value="">Select Role</option>
 
-                                <div class="mb-2">
-                                    <input 
-                                    type="email" 
-                                    name="email" 
-                                    class="form-control" 
-                                    placeholder="Email" 
-                                    required 
-                                    value="<cfif structKeyExists(url,'email')><cfoutput>#url.email#</cfoutput></cfif>">
-                                </div>
+<cfoutput query="roles">
+<option value="#id#">#role_name#</option>
+</cfoutput>
 
-                                <div class="mb-2">
-                                    <input 
-                                    type="password" 
-                                    name="password" 
-                                    class="form-control" 
-                                    placeholder="Password" 
-                                    required>
-                                </div>
+</select>
 
-                                <div class="mb-2">
-                                    <input 
-                                    type="password" 
-                                    name="confirm_password" 
-                                    class="form-control" 
-                                    placeholder="Confirm Password" 
-                                    required>
-                                </div>
+<!-- VENDOR FIELD -->
+<div id="vendorFields" style="display:none;">
+    <input type="text" name="business_name" class="form-control mb-2" placeholder="Business Name">
+    <textarea name="address" class="form-control mb-2" placeholder="Address"></textarea>
+</div>
 
-                                <button class="btn btn-success w-100">Signup</button>
-                            </form>
+<button class="btn btn-success w-100">Signup</button>
+</form>
 
                         </div>
 
@@ -141,7 +114,6 @@
     </div>
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     setTimeout(function () {
@@ -150,6 +122,20 @@
             alertBox.style.display = "none";
         }
     }, 5000);   
+
+   
+document.getElementById("roleSelect").addEventListener("change", function(){
+
+    let selectedText = this.options[this.selectedIndex].text.toLowerCase();
+
+    if(selectedText === "vendor"){
+        document.getElementById("vendorFields").style.display = "block";
+    }else{
+        document.getElementById("vendorFields").style.display = "none";
+    }
+
+});
+
 </script>
 </body>
 </html>
