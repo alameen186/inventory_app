@@ -69,36 +69,77 @@
     </script>
 
     <!-- search + filters -->
-    <form id="searchForm" method="get" class="mb-3">
-        <input type="hidden" name="page" value="dashboard">
-        <input type="hidden" name="section" value="productList">
-        <cfoutput>
-            <input type="text" name="search" value="#url.search#" placeholder="Search..." class="form-control w-25 d-inline">
-        </cfoutput>
+   <form id="searchForm" method="get" class="mb-4">
 
-        <input type="number" name="min_price" value="#url.min_price#" placeholder="Min Price">
-        <input type="number" name="max_price" value="#url.max_price#" placeholder="Max Price">
+    <input type="hidden" name="page" value="dashboard">
+    <input type="hidden" name="section" value="productList">
 
-        <select name="sort">
-            <option value="">Sort</option>
-            <option value="price_low" <cfif url.sort EQ "price_low">selected</cfif>>Low to High</option>
-            <option value="price_high" <cfif url.sort EQ "price_high">selected</cfif>>High to Low</option>
-            <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
-            <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
-        </select>
+    <div class="row g-2 align-items-end">
 
-        <!-- category dropdown -->
-        <select name="category_id">
-            <option value="">Select Category</option>
-            <cfoutput query="categories">
-                <option value="#id#" <cfif url.category_id EQ id>selected</cfif>>
-                    #category_name#
-                </option>
+        <!-- Search -->
+        <div class="col-md-3">
+            <cfoutput>
+                <input type="text" name="search"
+                value="#url.search#"
+                placeholder="Search product..."
+                class="form-control">
             </cfoutput>
-        </select>
+        </div>
 
-        <button class="btn btn-primary">Search</button>
-    </form>
+        <!-- Min Price -->
+        <div class="col-md-2">
+            <input type="number" name="min_price"
+            value="#url.min_price#"
+            class="form-control"
+            placeholder="min price">
+        </div>
+
+        <!-- Max Price -->
+        <div class="col-md-2">
+            <input type="number" name="max_price"
+            value="#url.max_price#"
+            class="form-control"
+            placeholder="max price">
+        </div>
+
+        <!-- Sort -->
+        <div class="col-md-2">
+            <select name="sort" class="form-select">
+                <option value="">Select</option>
+                <option value="price_low" <cfif url.sort EQ "price_low">selected</cfif>>Price: Low → High</option>
+                <option value="price_high" <cfif url.sort EQ "price_high">selected</cfif>>Price: High → Low</option>
+                <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A → Z</option>
+                <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z → A</option>
+            </select>
+        </div>
+
+        <!-- Category -->
+        <div class="col-md-2">
+            <select name="category_id" class="form-select">
+                <option value="">All</option>
+                <cfoutput query="categories">
+                    <option value="#id#" <cfif url.category_id EQ id>selected</cfif>>
+                        #category_name#
+                    </option>
+                </cfoutput>
+            </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="col-md-1 d-grid">
+            <button class="btn btn-primary">Search</button>
+        </div>
+
+    </div>
+
+    <!-- Optional Clear Button -->
+    <div class="mt-2">
+        <button type="button" id="clearBtn" class="btn btn-outline-secondary btn-sm">
+            Clear Filters
+        </button>
+    </div>
+
+</form>
 
     <h3>Products</h3>
 
@@ -216,6 +257,9 @@ $(document).ready(function(){
             }, "json"
         );
     });
+$("#clearBtn").click(function(){
+    $("#searchForm")[0].reset();
 
+});
 });
 </script>
