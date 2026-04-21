@@ -1,5 +1,9 @@
 <cfset orderModel = createObject("component","models.Order")>
-
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
 <cfparam name="url.search" default="">
 <cfparam name="url.p" default="1">
 
@@ -10,10 +14,14 @@
 <cfset orders = orderModel.getAllOrdersWithPagination(
     search=searchValue,
     page=currentPage,
-    limit=limit
+    limit=limit,
+    vendor_id=vendorFilter
 )>
 
-<cfset totalRecords = orderModel.getOrderCount(search=searchValue)>
+<cfset totalRecords = orderModel.getOrderCount(
+    search=searchValue,
+    vendor_id=vendorFilter
+)>
 <cfset totalPages = ceiling(totalRecords / limit)>
 
 <div class="container mt-4">
@@ -21,21 +29,25 @@
 <!-- MESSAGE -->
 <div id="ajaxMessage"></div>
 
-<!-- SEARCH -->
 <form id="orderSearchForm" class="mb-3">
-    <div class="input-group w-50">
-    <cfoutput>
-        <input type="text" name="search"
-               value="#encodeForHTMLAttribute(searchValue)#"
-               placeholder="Search Order ID or Username"
-               class="form-control">
+    <div class="input-group w-75">
 
-    </cfoutput>
-        <button class="btn btn-primary">Search</button>
+        <cfoutput>
+            <input type="text" name="search"
+                   value="#encodeForHTMLAttribute(searchValue)#"
+                   placeholder="Search Order ID or Username"
+                   class="form-control">
+
+            <input type="date" name="fromDate" class="form-control">
+            <input type="date" name="toDate" class="form-control">
+        </cfoutput>
+
+        <button class="btn btn-primary">Apply</button>
 
         <cfif len(searchValue)>
             <button type="button" id="clearSearch" class="btn btn-outline-secondary">Clear</button>
         </cfif>
+
     </div>
 </form>
 

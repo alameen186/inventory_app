@@ -1,6 +1,10 @@
 <!-- checkout-->
 <cfif structKeyExists(form, "action") AND form.action EQ "checkout">
-
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
 <cfif NOT structKeyExists(session, "cart") OR structIsEmpty(session.cart)>
     <cfcontent type="application/json" reset="true">
     <cfoutput>{"status":"error","message":"Cart empty"}</cfoutput>
@@ -172,25 +176,39 @@ user_id=session.user_id
 
 </cfif>
 
-<!-- ================= SEARCH + PAGINATION ================= -->
+<!-- SEARCH  -->
 <cfif structKeyExists(url,"action") AND url.action EQ "search">
 
 <cfset orderModel = createObject("component","models.Order")>
 
 <cfparam name="url.search" default="">
 <cfparam name="url.p" default="1">
+<cfparam name="url.fromDate" default="">
+<cfparam name="url.toDate" default="">
 
 <cfset searchValue = trim(url.search)>
 <cfset currentPage = val(url.p) GT 0 ? val(url.p) : 1>
 <cfset limit = 2>
-
+<cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
+    <cfset vendorFilter = session.user_id>
+<cfelse>
+    <cfset vendorFilter = "">
+</cfif>
 <cfset orders = orderModel.getAllOrdersWithPagination(
     search=searchValue,
     page=currentPage,
-    limit=limit
+    limit=limit,
+    vendor_id=vendorFilter,
+    fromDate=url.fromDate,
+    toDate=url.toDate
 )>
 
-<cfset totalRecords = orderModel.getOrderCount(search=searchValue)>
+<cfset totalRecords = orderModel.getOrderCount(
+    search=searchValue,
+    vendor_id=vendorFilter,
+    fromDate=url.fromDate,
+    toDate=url.toDate
+)>
 <cfset totalPages = ceiling(totalRecords / limit)>
 
 <!-- RETURN ONLY INNER HTML -->

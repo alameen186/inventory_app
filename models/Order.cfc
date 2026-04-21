@@ -34,55 +34,118 @@
         </cftry>
     </cffunction>
 
-    <cffunction name="getAllOrdersWithPagination" returntype="query">
-        <cfargument name="search" default="">
-        <cfargument name="page" default="1">
-        <cfargument name="limit" default="5">
+   <cffunction name="getAllOrdersWithPagination" returntype="query">
 
-        <cfset var searchValue = trim(arguments.search)>
-        <cfset var offset = (max(val(arguments.page), 1) - 1) * arguments.limit>
+    <cfargument name="search" default="">
+    <cfargument name="page" default="1">
+    <cfargument name="limit" default="5">
+    <cfargument name="vendor_id" default="">
+    <cfargument name="fromDate" default="">
+    <cfargument name="toDate" default="">
 
-        <cfquery name="orders" datasource="#application.dsn#">
-            SELECT o.order_group_id, o.created_at, o.quantity, o.total_amount, o.status, o.cancel_reason,
-                   p.product_name, p.image, p.price,
-                   CONCAT(u.first_name, ' ', u.last_name) as user_name
-            FROM orders o
-            JOIN products p ON o.product_id = p.id
-            LEFT JOIN users u ON o.user_id = u.id
-            WHERE 1=1
-            <cfif len(searchValue)>
-    AND (
-        o.order_group_id LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-        OR u.first_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-        OR u.last_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-        OR CONCAT(u.first_name, ' ', u.last_name) LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-    )
+    <cfset var searchValue = trim(arguments.search)>
+    <cfset var offset = (max(val(arguments.page), 1) - 1) * arguments.limit>
+
+    <!-- GET GROUP IDS -->
+   <cfquery name="orderGroups" datasource="#application.dsn#">
+    SELECT o.order_group_id, MAX(o.created_at) as created_at
+    FROM orders o
+    JOIN products p ON o.product_id = p.id
+    LEFT JOIN users u ON o.user_id = u.id
+    WHERE 1=1
+
+    <cfif len(arguments.fromDate)>
+    AND DATE(o.created_at) >= 
+    <cfqueryparam value="#arguments.fromDate#" cfsqltype="cf_sql_date">
 </cfif>
-            ORDER BY o.id DESC
-            LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
-            OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
-        </cfquery>
-        <cfreturn orders>
-    </cffunction>
+
+<cfif len(arguments.toDate)>
+    AND DATE(o.created_at) <= 
+    <cfqueryparam value="#arguments.toDate#" cfsqltype="cf_sql_date">
+</cfif>
+
+    <cfif isNumeric(arguments.vendor_id)>
+        AND p.vendor_id =
+        <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+    </cfif>
+
+    <cfif len(searchValue)>
+        AND (
+            o.order_group_id LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+            OR u.first_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+            OR u.last_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+        )
+    </cfif>
+
+    GROUP BY o.order_group_id
+    ORDER BY created_at DESC
+
+    LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+    OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
+</cfquery>
+
+    <!--  GET FULL DATA -->
+    <cfquery name="orders" datasource="#application.dsn#">
+        SELECT o.*, p.product_name, p.image, p.price,
+               CONCAT(u.first_name, ' ', u.last_name) as user_name
+        FROM orders o
+        JOIN products p ON o.product_id = p.id
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.order_group_id IN (
+            <cfqueryparam value="#valueList(orderGroups.order_group_id)#"
+                          cfsqltype="cf_sql_varchar" list="true">
+        )
+        ORDER BY o.created_at DESC
+    </cfquery>
+
+    <cfreturn orders>
+
+</cffunction>
 
     <cffunction name="getOrderCount" returntype="numeric">
-        <cfargument name="search" default="">
-        <cfset var searchValue = trim(arguments.search)>
-        <cfquery name="result" datasource="#application.dsn#">
-            SELECT COUNT(o.id) as total
-            FROM orders o
-            LEFT JOIN users u ON o.user_id = u.id
-            WHERE 1=1
-            <cfif len(searchValue)>
-                AND (
-                    o.order_group_id LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-                    OR u.first_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-                    OR u.last_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
-                )
-            </cfif>
-        </cfquery>
-        <cfreturn val(result.total)>
-    </cffunction>
+
+    <cfargument name="search" default="">
+    <cfargument name="vendor_id" default="">
+    <cfargument name="fromDate" default="">
+    <cfargument name="toDate" default="">
+
+    <cfset var searchValue = trim(arguments.search)>
+
+    <cfquery name="result" datasource="#application.dsn#">
+        SELECT COUNT(DISTINCT o.order_group_id) as total
+        FROM orders o
+        JOIN products p ON o.product_id = p.id
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE 1=1
+
+        <cfif len(arguments.fromDate)>
+    AND DATE(o.created_at) >= 
+    <cfqueryparam value="#arguments.fromDate#" cfsqltype="cf_sql_date">
+</cfif>
+
+<cfif len(arguments.toDate)>
+    AND DATE(o.created_at) <= 
+    <cfqueryparam value="#arguments.toDate#" cfsqltype="cf_sql_date">
+</cfif>
+
+        <cfif isNumeric(arguments.vendor_id)>
+            AND p.vendor_id =
+            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        </cfif>
+
+        <cfif len(searchValue)>
+            AND (
+                o.order_group_id LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+                OR u.first_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+                OR u.last_name LIKE <cfqueryparam value="%#searchValue#%" cfsqltype="cf_sql_varchar">
+            )
+        </cfif>
+
+    </cfquery>
+
+    <cfreturn result.total>
+
+</cffunction>
 
 
     <cffunction name="getUserOrders" returntype="query" output="false">
