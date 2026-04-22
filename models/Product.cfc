@@ -12,17 +12,19 @@
     <cffunction name="getAllActiveProducts" returntype="query" output="false">
 
         <cfquery name="products" datasource="#application.dsn#">
-            SELECT 
-                p.id,
-                p.product_name,
-                p.price,
-                p.stock,
-                p.image,   
-                c.category_name
-            FROM products p
-            JOIN categories c ON p.category_id = c.id
-            WHERE p.is_active = 1
-            AND c.is_active = 1
+           SELECT 
+    p.id,
+    p.product_name,
+    p.price,
+    p.stock,
+    p.image,   
+    c.category_name,
+    u.business_name
+FROM products p
+JOIN categories c ON p.category_id = c.id
+LEFT JOIN users u ON p.vendor_id = u.id
+WHERE p.is_active = 1
+AND c.is_active = 1
         </cfquery>
 
         <cfreturn products>
@@ -143,9 +145,13 @@
 <cfset offset = (safePage - 1) * arguments.limit>
 
     <cfquery name="products" datasource="#application.dsn#">
-        SELECT P.*, c.category_name
-        FROM products P
-        JOIN categories c ON p.category_id = c.id
+        SELECT 
+    p.*,
+    c.category_name,
+    u.business_name
+FROM products p
+JOIN categories c ON p.category_id = c.id
+LEFT JOIN users u ON p.vendor_id = u.id
         WHERE p.is_active = 1
         AND c.is_active = 1
 
@@ -382,6 +388,28 @@
             <cfreturn false>
         </cfcatch>
     </cftry>
+</cffunction>
+
+<cffunction name="getProductsWithVendorByIds" returntype="query" output="false">
+    <cfargument name="productIds" required="true"> 
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT 
+            p.id,
+            p.product_name,
+            p.price,
+            u.business_name,
+            u.address
+        FROM products p
+        JOIN users u ON p.vendor_id = u.id
+        WHERE p.id IN (
+            <cfqueryparam value="#arguments.productIds#" 
+                          list="true" 
+                          cfsqltype="cf_sql_integer">
+        )
+    </cfquery>
+
+    <cfreturn q>
 </cffunction>
 
 </cfcomponent>

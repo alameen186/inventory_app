@@ -273,18 +273,18 @@ $("#checkoutBtn").click(function(){
     }, function(res){
 
         if(res.status === "success"){
-
-            // show message
             alert(res.message);
-
-            // redirect BACK to dashboard (important)
             window.location.href = "../../index.cfm?page=dashboard&section=orders";
-
         }else{
             alert(res.message);
         }
 
-    },"json");
+    },"json")
+
+    .fail(function(xhr){
+        console.log("FULL ERROR:", xhr.responseText);
+        alert("Server crashed. Check console.");
+    });
 
 });
 

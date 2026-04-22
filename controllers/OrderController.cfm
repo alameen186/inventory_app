@@ -102,29 +102,144 @@
 <cfset fileName = "invoice_#orderGroupId#.pdf">
 <cfset invoicePath = invoiceDir & fileName>
 
+<cfset userModel = createObject("component","models.User")>
+<cfset productIds = structKeyList(session.cart)>
+<cfset vendorData = userModel.getUserWithRole(session.user_id)>
+<cfset productData = productModel.getProductsWithVendorByIds(productIds)>
+
 <cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
 <cfoutput>
-<h2>Invoice</h2>
-<p>Order ID: #orderGroupId#</p>
 
-<table border="1" width="100%">
-<tr><th>Product</th><th>Price</th><th>Qty</th><th>Total</th></tr>
+<style>
+body { font-family: Arial; font-size: 12px; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
-<cfloop collection="#session.cart#" item="pid">
-<cfset item = session.cart[pid]>
+.header {
+    border-bottom: 2px solid ##000;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th {
+    background: ##f2f2f2;
+    border: 1px solid ##ccc;
+    padding: 8px;
+}
+
+.table td {
+    border: 1px solid ##ccc;
+    padding: 8px;
+}
+
+.total-box {
+    width: 40%;
+    float: right;
+    margin-top: 10px;
+}
+
+.footer {
+    margin-top: 40px;
+    font-size: 10px;
+    text-align: center;
+    color: ##777;
+}
+</style>
+
+<div>
+
+<!-- HEADER -->
+<div class="header text-center">
+    <h2>INVENTORY STORE</h2>
+
+
+<!-- INVOICE INFO -->
+<table width="100%">
 <tr>
-<td>#item.name#</td>
-<td>#item.price#</td>
-<td>#item.qty#</td>
-<td>#item.price * item.qty#</td>
+<td>
+    <strong>Invoice ID:</strong> #orderGroupId#<br>
+    <strong>Date:</strong> #dateFormat(now(),"dd-mmm-yyyy")#
+</td>
 </tr>
-</cfloop>
-
 </table>
 
-<p>Total: #grandTotal#</p>
-<p>Discount: #discount#</p>
-<h3>Final: #finalTotal#</h3>
+<!-- ITEMS -->
+<table class="table">
+<tr>
+    <th>Product</th>
+    <th>Price</th>
+    <th>Qty</th>
+    <th>Vendor</th>
+    <th>Total</th>
+</tr>
+
+<cfset grandTotal = 0>
+
+<cfloop collection="#session.cart#" item="pid">
+
+    <cfset item = session.cart[pid]>
+
+   <cfset vendorName = "Unknown Vendor">
+<cfset vendorAddress = "">
+
+<cfloop query="productData">
+    <cfif productData.id EQ pid>
+        <cfset vendorName = productData.business_name>
+        <cfset vendorAddress = productData.address>
+    </cfif>
+</cfloop>
+
+    <cfset rowTotal = item.price * item.qty>
+    <cfset grandTotal += rowTotal>
+
+    <tr>
+        <td>#item.name#</td>
+        <td> #item.price#</td>
+        <td>#item.qty#</td>
+        <td>
+            <strong>#vendorName#</strong><br>
+            <small>#vendorAddress#</small>
+        </td>
+        <td> #rowTotal#</td>
+    </tr>
+
+</cfloop>
+</table>
+
+<!-- TOTAL -->
+<table class="total-box">
+<tr>
+    <td>Subtotal</td>
+    <td class="text-right"> #grandTotal#</td>
+</tr>
+
+<tr>
+    <td>GST (0%)</td>
+    <td class="text-right"> 0</td>
+</tr>
+
+<tr>
+    <td><strong>Final Total</strong></td>
+    <td class="text-right"><strong>#finalTotal#</strong></td>
+</tr>
+</table>
+
+<div style="clear:both;"></div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <p>This is a system generated invoice.</p>
+    <p>No signature required.</p>
+</div>
+
+</div>
+
 </cfoutput>
 </cfdocument>
 
@@ -433,11 +548,81 @@ user_id=session.user_id
 <cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
 <cfoutput>
 
-<h2>Invoice</h2>
-<p>Order ID: #orderGroupId#</p>
-<p>Customer: #form.first_name# #form.last_name# (#form.email#)</p>
+<style>
+body { font-family: Arial; font-size: 12px; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
-<table border="1" width="100%">
+.header {
+    border-bottom: 2px solid ##000;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th {
+    background: ##f2f2f2;
+    border: 1px solid ##ccc;
+    padding: 8px;
+}
+
+.table td {
+    border: 1px solid ##ccc;
+    padding: 8px;
+}
+
+.total-box {
+    width: 40%;
+    float: right;
+    margin-top: 10px;
+}
+
+.footer {
+    margin-top: 40px;
+    font-size: 10px;
+    text-align: center;
+    color: ##777;
+}
+</style>
+
+<div>
+
+<!-- HEADER -->
+<div class="header text-center">
+    <h2>INVENTORY STORE</h2>
+
+    <cfif len(vendorData.business_name)>
+        <h4>#vendorData.business_name#</h4>
+    </cfif>
+
+    <cfif len(vendorData.address)>
+        <p>#vendorData.address#</p>
+    </cfif>
+
+</div>
+
+<!-- INVOICE INFO -->
+<table width="100%">
+<tr>
+<td>
+    <strong>Invoice ID:</strong> #orderGroupId#<br>
+    <strong>Date:</strong> #dateFormat(now(),"dd-mmm-yyyy")#
+</td>
+
+<td class="text-right">
+    <strong>Vendor:</strong><br>
+    #vendorData.business_name#
+</td>
+</tr>
+</table>
+
+<!-- ITEMS -->
+<table class="table">
 <tr>
     <th>Product</th>
     <th>Price</th>
@@ -447,22 +632,48 @@ user_id=session.user_id
 
 <cfset grandTotal = 0>
 
-<cfloop collection="#cartData#" item="pid">
-    <cfset item = cartData[pid]>
+<cfloop collection="#session.cart#" item="pid">
+    <cfset item = session.cart[pid]>
     <cfset rowTotal = item.price * item.qty>
     <cfset grandTotal += rowTotal>
 
-    <tr>
-        <td>#item.name#</td>
-        <td>#item.price#</td>
-        <td>#item.qty#</td>
-        <td>#rowTotal#</td>
-    </tr>
+<tr>
+    <td>#item.name#</td>
+    <td>#item.price#</td>
+    <td>#item.qty#</td>
+    <td> #rowTotal#</td>
+</tr>
 </cfloop>
 
 </table>
 
-<h3>Total: #grandTotal#</h3>
+<!-- TOTAL -->
+<table class="total-box">
+<tr>
+    <td>Subtotal</td>
+    <td class="text-right"> #grandTotal#</td>
+</tr>
+
+<tr>
+    <td>GST (0%)</td>
+    <td class="text-right"> 0</td>
+</tr>
+
+<tr>
+    <td><strong>Final Total</strong></td>
+    <td class="text-right"><strong>₹ #finalTotal#</strong></td>
+</tr>
+</table>
+
+<div style="clear:both;"></div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <p>This is a system generated invoice.</p>
+    <p>No signature required.</p>
+</div>
+
+</div>
 
 </cfoutput>
 </cfdocument>

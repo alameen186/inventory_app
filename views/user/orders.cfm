@@ -15,7 +15,7 @@
     <cfset currentPage = 1>
 </cfif>
 
-<cfset limit = 2>
+<cfset limit = 5>
 
 <!-- fetch orders -->
 <cfset orders = orderModel.getUserOrdersWithPagination(

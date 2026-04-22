@@ -145,6 +145,7 @@
     <div class="row d-flex flex-wrap" id="productContainer">
 
         <cfoutput query="products">
+
             <div class="col-md-3 mb-3 d-flex">
                 <div class="card w-100">
 
@@ -158,8 +159,12 @@
                     <div class="card-body text-center d-flex flex-column justify-content-between">
                         <div>
                             <h5 class="card-title">#product_name#</h5>
+                            <p class="small text-muted mb-1">
+    Sold by: <strong>#business_name#</strong>
+</p>
                             <p class="mb-1">#category_name#</p>
-                            <p class="mb-2">#price#</p>
+                            <p class="mb-2">#price# /-</p>
+                            
                         </div>
 
                         <div>
