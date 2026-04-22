@@ -217,7 +217,7 @@
 <script>
 $(document).ready(function(){
 
-    // SEARCH
+  
     $("#searchForm").submit(function(e){
         e.preventDefault();
         $.get("../../controllers/ProductController.cfm",
@@ -228,7 +228,6 @@ $(document).ready(function(){
         );
     });
 
-    // PAGINATION
     $(document).on("click", ".pageBtn", function(){
         let page = $(this).data("page");
         $.get("../../controllers/ProductController.cfm",
@@ -239,7 +238,7 @@ $(document).ready(function(){
         );
     });
 
-    // ADD TO CART
+  
     $(document).on("submit", ".addToCartForm", function(e){
         e.preventDefault();
         $.post("../../controllers/CartController.cfm",
@@ -250,7 +249,7 @@ $(document).ready(function(){
         );
     });
 
-    // ENQUIRY
+    
     $(document).on("submit", ".enquiryForm", function(e){
         e.preventDefault();
         $.post("../../controllers/EnquiryController.cfm",

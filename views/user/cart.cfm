@@ -1,291 +1,322 @@
 <cfset couponModel = createObject("component","models.Coupon")>
 <cfset coupons = couponModel.getActiveCoupons()>
 
+<!-- ALERT -->
 <cfif structKeyExists(url, "message")>
-    <div id="alertBox" class="alert 
-    <cfif structKeyExists(url, "type") AND url.type EQ 'success'>
-         alert-success
-    <cfelse>
-         alert-danger
-    </cfif>">
-         <cfoutput>#url.message#</cfoutput> 
-    </div>
+<div id="alertBox" class="alert 
+<cfif structKeyExists(url, "type") AND url.type EQ 'success'>
+alert-success
+<cfelse>
+alert-danger
+</cfif> text-center">
+<cfoutput>#url.message#</cfoutput>
+</div>
 </cfif>
 
 <script>
-setTimeout(function () {
-    var alertBox = document.getElementById("alertBox");
-    if (alertBox) {
-        alertBox.style.display = "none";
-    }
-}, 5000);   
+setTimeout(()=>$("#alertBox").fadeOut(),4000);
 </script>
 
+<!-- EMPTY -->
 <cfif NOT structKeyExists(session, "cart") OR structIsEmpty(session.cart)>
-    <h4>Your cart is empty</h4>
-    <cfabort>
+<h4 class="text-center mt-4">Your cart is empty</h4>
+<cfabort>
 </cfif>
 
 <div id="ajaxMessage"></div>
 
-<table class="table">
-    <tr>
-        <th>Product</th>
-        <th>Price</th>
-        <th>Qty</th>
-        <th>Image</th>
-        <th>Total</th>
-        <th>Action</th>
-    </tr>
+<!--  DESKTOP TABLE  -->
+<div class="d-none d-md-block">
+<div class="table-responsive">
+<table class="table table-bordered align-middle text-center">
 
+<thead class="table-dark">
+<tr>
+<th>Product</th>
+<th>Price</th>
+<th>Qty</th>
+<th>Image</th>
+<th>Total</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
 <cfset grandTotal = 0>
 
 <cfoutput>
 <cfloop collection="#session.cart#" item="pid">
 
 <tr id="row_#pid#" data-price="#session.cart[pid].price#">
-    <td>#session.cart[pid].name#</td>
-    <td>#session.cart[pid].price#</td>
 
-    <td>
-        <form class="updateCartForm mb-3" method="post" >
-            <input type="hidden" name="action" value="update">
-            <input type="hidden" name="product_id" value="#pid#">
+<td class="text-start">#session.cart[pid].name#</td>
+<td>#session.cart[pid].price#</td>
 
-            <input type="number" name="qty" value="#session.cart[pid].qty#" min="1" max="3">
+<td>
+<form class="updateCartForm d-flex gap-2 justify-content-center">
+<input type="hidden" name="action" value="update">
+<input type="hidden" name="product_id" value="#pid#">
 
-            <button class="btn btn-sm btn-primary">Update</button>
-        </form>
-    </td>
+<input type="number" name="qty"
+class="form-control form-control-sm"
+style="max-width:80px;"
+value="#session.cart[pid].qty#">
 
-    <td>
-        <cfif len(session.cart[pid].image)>
-            <img src="../../assets/images/products/#session.cart[pid].image#" 
-                 class="img-thumbnail" 
-                 style="width: 60px; height: 60px; object-fit: cover;">
-        </cfif>
-    </td>
+<button class="btn btn-primary btn-sm">Update</button>
+</form>
+</td>
 
-    <td class="rowTotal">
-        <cfset total = session.cart[pid].price * session.cart[pid].qty>
-        #total#
-    </td>
+<td>
+<img src="../../assets/images/products/#session.cart[pid].image#"
+class="img-fluid rounded" style="max-width:60px;">
+</td>
 
-    <td>
-        <button class="btn btn-danger btn-sm removeBtn" data-id="#pid#">
-Remove
-</button>
-    </td>
+<td class="rowTotal">
+<cfset total = session.cart[pid].price * session.cart[pid].qty>
+#total#
+</td>
+
+<td>
+<button class="btn btn-danger btn-sm removeBtn" data-id="#pid#">Remove</button>
+</td>
+
 </tr>
 
 <cfset grandTotal += total>
+</cfloop>
+</cfoutput>
+
+</tbody>
+</table>
+</div>
+</div>
+
+<!--  MOBILE CARDS  -->
+<div class="d-md-none">
+
+<cfset grandTotal = 0>
+
+<cfoutput>
+<cfloop collection="#session.cart#" item="pid">
+
+<cfset item = session.cart[pid]>
+<cfset total = item.price * item.qty>
+<cfset grandTotal += total>
+
+<div class="card mb-3 shadow-sm" id="row_#pid#" data-price="#item.price#">
+
+<div class="card-body">
+
+<div class="d-flex gap-3">
+<img src="../../assets/images/products/#item.image#"
+class="rounded" style="width:70px;height:70px;object-fit:cover;">
+
+<div class="flex-grow-1">
+<h6 class="mb-1">#item.name#</h6>
+<small>Price: #item.price#</small><br>
+<strong class="rowTotal">Total: #total#</strong>
+</div>
+</div>
+
+<form class="updateCartForm mt-2 d-flex gap-2">
+<input type="hidden" name="action" value="update">
+<input type="hidden" name="product_id" value="#pid#">
+
+<input type="number" name="qty"
+class="form-control form-control-sm"
+value="#item.qty#">
+
+<button class="btn btn-primary btn-sm">Update</button>
+</form>
+
+<button class="btn btn-danger btn-sm w-100 mt-2 removeBtn" data-id="#pid#">
+Remove
+</button>
+
+</div>
+</div>
 
 </cfloop>
 </cfoutput>
 
-</table>
+</div>
 
-<!-- coupon apply -->
-<h5>Apply Coupon</h5>
+<!--  COUPON  -->
+<div class="card mt-4 shadow-sm">
+<div class="card-body">
 
-<form method="post"  id="couponForm" class="mb-3">
+<h6>Apply Coupon</h6>
 
-    <input type="hidden" name="action" value="applyCoupon">
+<form id="couponForm" class="row g-2">
 
-    <select name="coupon_code" class="form-control mb-2" required>
-        <option value="">Select Coupon</option>
+<input type="hidden" name="action" value="applyCoupon">
 
-        <cfoutput query="coupons">
-            <option value="#code#">
-                #code# - 
-                <cfif discount_type EQ "percent">
-                    #discount_value#% OFF
-                <cfelse>
-                    Rs:#discount_value# OFF
-                </cfif>
-                (Min: #min_amount#)
-            </option>
-        </cfoutput>
+<div class="col-12">
+<select name="coupon_code" class="form-select">
+<option value="">Select Coupon</option>
 
-    </select>
+<cfoutput query="coupons">
+<option value="#code#">
+#code# - 
+<cfif discount_type EQ "percent">
+#discount_value#% OFF
+<cfelse>
+Rs:#discount_value# OFF
+</cfif>
+</option>
+</cfoutput>
 
-    <button class="btn btn-primary btn-sm">Apply</button>
+</select>
+</div>
+
+<div class="col-12 d-grid">
+<button class="btn btn-outline-primary">Apply Coupon</button>
+</div>
+
 </form>
 
-<!-- discount calc -->
+</div>
+</div>
+
+<!--  TOTAL / CHECKOUT  -->
 <cfset discount = 0>
-
 <cfif structKeyExists(session, "coupon")>
-
-    <cfif session.coupon.type EQ "percent">
-        <cfset discount = (grandTotal * session.coupon.value) / 100>
-    <cfelse>
-        <cfset discount = session.coupon.value>
-    </cfif>
-
-    <cfif discount GT session.coupon.max>
-        <cfset discount = session.coupon.max>
-    </cfif>
-
+<cfif session.coupon.type EQ "percent">
+<cfset discount = (grandTotal * session.coupon.value) / 100>
+<cfelse>
+<cfset discount = session.coupon.value>
+</cfif>
 </cfif>
 
 <cfset finalTotal = grandTotal - discount>
 
-<div class="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
-    <cfoutput>
-        <div>
-            <h5>Total: <span id="grandTotal">#grandTotal#</span></h5>
-            <h5>Discount: <span id="discount">#discount#</span></h5>
-            <h4>Final: <strong id="finalTotal">#finalTotal#</strong></h4>
-        </div>
-    </cfoutput>
+<div class="card mt-4 shadow">
 
-    <button class="btn btn-success btn-lg" id="checkoutBtn">
-    Checkout
+<div class="card-body">
+
+<cfoutput>
+<div class="d-flex justify-content-between">
+<span>Total</span>
+<strong id="grandTotal">#grandTotal#</strong>
+</div>
+
+<div class="d-flex justify-content-between">
+<span>Discount</span>
+<strong id="discount">#discount#</strong>
+</div>
+
+<hr>
+
+<div class="d-flex justify-content-between fs-5">
+<strong>Final</strong>
+<strong id="finalTotal">#finalTotal#</strong>
+</div>
+</cfoutput>
+
+<button class="btn btn-success w-100 mt-3 py-2" id="checkoutBtn">
+Proceed to Checkout
 </button>
+
+</div>
 </div>
 
 <script>
-$(document).ready(function(){
+$(function(){
 
-let coupon = {
-    type: null,
-    value: 0,
-    max: 0
-};
+let coupon={type:null,value:0,max:0};
 
 function showMsg(res){
-    $("#ajaxMessage").html(
-    '<div id="msgBox" class="alert alert-' +
-    (res.status==="success"?"success":"danger") +
-    '">' + res.message + '</div>'
-    );
-    setTimeout(()=>$("#msgBox").fadeOut(),3000);
+$("#ajaxMessage").html(
+`<div class="alert alert-${res.status==="success"?"success":"danger"}">
+${res.message}</div>`
+);
 }
 
-
-// CORE FUNCTION
+// UPDATE UI
 function updateUI(){
+let grandTotal=0;
 
-    let grandTotal = 0;
+$("[id^='row_']").each(function(){
+let price=parseFloat($(this).data("price"));
+let qty=parseInt($(this).find("input[name=qty]").val());
 
-    $("tr[id^='row_']").each(function(){
+let total=price*qty;
+$(this).find(".rowTotal").text(total);
 
-        let row = $(this);
-        let price = parseFloat(row.data("price"));
-        let qty = parseInt(row.find("input[name=qty]").val());
+grandTotal+=total;
+});
 
-        let total = price * qty;
+let discount=0;
 
-        row.find(".rowTotal").text(total);
-
-        grandTotal += total;
-    });
-
-    // APPLY COUPON
-    let discount = 0;
-
-    if(coupon.type === "percent"){
-        discount = (grandTotal * coupon.value) / 100;
-    } else if(coupon.type === "flat"){
-        discount = coupon.value;
-    }
-
-    if(discount > coupon.max){
-        discount = coupon.max;
-    }
-
-    let finalTotal = grandTotal - discount;
-
-    $("#grandTotal").text(grandTotal);
-    $("#discount").text(discount);
-    $("#finalTotal").text(finalTotal);
+if(coupon.type==="percent"){
+discount=(grandTotal*coupon.value)/100;
+}else if(coupon.type==="flat"){
+discount=coupon.value;
 }
 
+if(discount>coupon.max) discount=coupon.max;
 
-// UPDATE QTY
+let finalTotal=grandTotal-discount;
+
+$("#grandTotal").text(grandTotal);
+$("#discount").text(discount);
+$("#finalTotal").text(finalTotal);
+}
+
+// UPDATE
 $(document).on("submit",".updateCartForm",function(e){
-    e.preventDefault();
+e.preventDefault();
 
-    let form = $(this);
-
-    $.post("../../controllers/CartController.cfm",
-    form.serialize(),
-    function(res){
-
-        showMsg(res);
-
-        updateUI();
-
-    },"json");
+$.post("../../controllers/CartController.cfm",
+$(this).serialize(),
+function(res){
+showMsg(res);
+updateUI();
+},"json");
 });
 
-
-// REMOVE ITEM
+// REMOVE
 $(document).on("click",".removeBtn",function(){
+let id=$(this).data("id");
 
-    let btn = $(this);
-    let id = btn.data("id");
-
-    $.get("../../controllers/CartController.cfm",{
-        action:"remove",
-        id:id
-    },function(res){
-
-        showMsg(res);
-
-        // REMOVE ROW FROM DOM
-        $("#row_"+id).remove();
-
-        updateUI();
-
-    },"json");
-
+$.get("../../controllers/CartController.cfm",
+{action:"remove",id:id},
+function(res){
+showMsg(res);
+$("#row_"+id).remove();
+updateUI();
+},"json");
 });
 
-
-//APPLY COUPON
+// COUPON
 $("#couponForm").submit(function(e){
-    e.preventDefault();
+e.preventDefault();
 
-    $.post("../../controllers/CartController.cfm",
-    $(this).serialize(),
-    function(res){
+$.post("../../controllers/CartController.cfm",
+$(this).serialize(),
+function(res){
+showMsg(res);
 
-        showMsg(res);
-
-        if(res.status === "success"){
-
-            coupon.type = res.type;
-            coupon.value = parseFloat(res.value);
-            coupon.max = parseFloat(res.max);
-
-            updateUI(); // 🔥 IMPORTANT
-        }
-
-    },"json");
+if(res.status==="success"){
+coupon.type=res.type;
+coupon.value=parseFloat(res.value);
+coupon.max=parseFloat(res.max);
+updateUI();
+}
+},"json");
 });
 
+// CHECKOUT
 $("#checkoutBtn").click(function(){
-
-    $.post("../../controllers/OrderController.cfm",{
-        action: "checkout"
-    }, function(res){
-
-        if(res.status === "success"){
-            alert(res.message);
-            window.location.href = "../../index.cfm?page=dashboard&section=orders";
-        }else{
-            alert(res.message);
-        }
-
-    },"json")
-
-    .fail(function(xhr){
-        console.log("FULL ERROR:", xhr.responseText);
-        alert("Server crashed. Check console.");
-    });
-
+$.post("../../controllers/OrderController.cfm",{action:"checkout"},
+function(res){
+if(res.status==="success"){
+alert(res.message);
+window.location.href="../../index.cfm?page=dashboard&section=orders";
+}else{
+alert(res.message);
+}
+},"json");
 });
 
 });

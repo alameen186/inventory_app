@@ -1,23 +1,17 @@
-<!-- check login -->
 <cfif NOT structKeyExists(session, "user_id")>
     <cfabort>
 </cfif>
 
 <cfset orderModel = createObject("component","models.Order")>
 
-<!-- params -->
 <cfparam name="url.search" default="">
 <cfparam name="url.p" default="1">
 
 <cfset searchValue = trim(url.search)>
-<cfset currentPage = val(url.p)>
-<cfif currentPage LT 1>
-    <cfset currentPage = 1>
-</cfif>
-
+<cfset currentPage = max(val(url.p),1)>
 <cfset limit = 5>
 
-<!-- fetch orders -->
+<!-- FETCH -->
 <cfset orders = orderModel.getUserOrdersWithPagination(
     user_id = session.user_id,
     search = searchValue,
@@ -25,7 +19,6 @@
     limit = limit
 )>
 
-<!-- count -->
 <cfset totalRecords = orderModel.getUserOrderCount(
     user_id = session.user_id,
     search = searchValue
@@ -35,7 +28,7 @@
 
 <div class="container mt-4">
 
-<h3 class="mb-3">Your Orders</h3>
+<h4 class="mb-3">Your Orders</h4>
 
 <div id="ajaxMessage"></div>
 
@@ -44,119 +37,124 @@
 <form id="searchForm" class="mb-3">
 <div class="row g-2">
 
-    <div class="col-12 col-md-6">
-        <input type="text" name="search"
-        value="#encodeForHTMLAttribute(searchValue)#"
-        placeholder="Search Order ID"
-        class="form-control">
-    </div>
+<div class="col-12 col-md-6">
+<input type="text" name="search"
+value="#encodeForHTMLAttribute(searchValue)#"
+placeholder="Search Order ID"
+class="form-control">
+</div>
 
-    <div class="col-6 col-md-3 d-grid">
-        <button type="submit" class="btn btn-primary">Search</button>
-    </div>
+<div class="col-6 col-md-3 d-grid">
+<button class="btn btn-primary">Search</button>
+</div>
 
-    <div class="col-6 col-md-3 d-grid">
-        <button type="button" id="clearSearch" class="btn btn-secondary">Clear</button>
-    </div>
+<div class="col-6 col-md-3 d-grid">
+<button type="button" id="clearSearch" class="btn btn-secondary">Clear</button>
+</div>
 
 </div>
 </form>
 </cfoutput>
 
-
 <div id="orderContainer">
 
 <cfif orders.recordCount EQ 0>
-    <div class="alert alert-info text-center">No orders found</div>
+
+<div class="alert alert-info text-center">
+No orders found
+</div>
+
 <cfelse>
 
-<cfset currentGroup = "">
-<cfset gTotal = 0>
+<cfset orderGroupTracker = "">
+<cfset groupTotal = 0>
 
 <cfoutput query="orders">
 
-<cfif currentGroup NEQ order_group_id>
+<!-- NEW ORDER GROUP -->
+<cfif orderGroupTracker NEQ order_group_id>
 
-<cfif currentGroup NEQ "">
-<div class="text-end p-2 border-top bg-light">
-<strong>Total: #gTotal#</strong>
-</div>
-</table>
-</div>
-<cfset gTotal = 0>
-</cfif>
+    <!-- CLOSE PREVIOUS -->
+    <cfif orderGroupTracker NEQ "">
+        <tr class="table-light">
+            <td colspan="4" class="text-end"><strong>Total:</strong></td>
+            <td><strong>#groupTotal#</strong></td>
+        </tr>
+        </table>
+        </div>
+        </div>
+        <cfset groupTotal = 0>
+    </cfif>
 
-<div class="card mb-4 shadow-sm">
+    <!-- CARD START -->
+    <div class="card mb-4 shadow-sm">
 
-<!-- HEADER -->
-<div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
 
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+        <div>
+            <strong>#order_group_id#</strong><br>
+            <small>#dateFormat(created_at,"dd-mmm-yyyy")#</small>
+        </div>
 
-    <div class="mb-2 mb-md-0">
-        <strong>#order_group_id#</strong><br class="d-md-none">
-        <small>#dateFormat(created_at, "dd-mmm-yyyy")#</small>
+        <div class="d-flex gap-2 flex-wrap">
+
+            <cfif status EQ "placed">
+                <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
+                target="_blank"
+                class="btn btn-success btn-sm">PDF</a>
+
+                <button class="btn btn-danger btn-sm cancelBtn"
+                data-id="#order_group_id#">Cancel</button>
+
+            <cfelseif status EQ "cancel_requested">
+                <span class="badge bg-warning">Requested</span>
+
+            <cfelse>
+                <span class="badge bg-secondary">Cancelled</span>
+            </cfif>
+
+        </div>
+
     </div>
 
-    <div class="d-flex flex-wrap gap-2">
+    <!-- CANCEL BOX -->
+    <div class="p-3 border-top cancelBox d-none"
+    id="cancelBox_#order_group_id#">
 
-        <cfif status EQ "placed">
-            <a href="../../assets/invoices/invoice_#order_group_id#.pdf"
-            target="_blank"
-            class="btn btn-success btn-sm">PDF</a>
+    <textarea class="form-control mb-2 cancelReason"
+    data-id="#order_group_id#"
+    placeholder="Enter cancel reason"></textarea>
 
-            <button class="btn btn-danger btn-sm cancelBtn"
-            data-id="#order_group_id#">Cancel</button>
+    <div class="d-flex gap-2">
+    <button class="btn btn-danger btn-sm confirmCancel"
+    data-id="#order_group_id#">Confirm</button>
 
-        <cfelseif status EQ "cancel_requested">
-            <span class="badge bg-warning">Requested</span>
-
-        <cfelse>
-            <span class="badge bg-secondary">Cancelled</span>
-        </cfif>
+    <button class="btn btn-secondary btn-sm closeCancel"
+    data-id="#order_group_id#">Close</button>
+    </div>
 
     </div>
 
-</div>
+    <!-- TABLE -->
+    <div class="table-responsive">
+    <table class="table mb-0">
 
-</div>
+    <tr>
+    <th>Product</th>
+    <th>Image</th>
+    <th>Price</th>
+    <th>Qty</th>
+    <th>Total</th>
+    </tr>
 
-<!-- CANCEL BOX -->
-<div class="p-3 border-top cancelBox"
-id="cancelBox_#order_group_id#"
-style="display:none;">
+    <cfset orderGroupTracker = order_group_id>
 
-<textarea class="form-control mb-2 cancelReason"
-data-id="#order_group_id#"
-placeholder="Reason"></textarea>
-
-<div class="d-flex gap-2">
-<button class="btn btn-danger btn-sm confirmCancel"
-data-id="#order_group_id#">Confirm</button>
-
-<button class="btn btn-secondary btn-sm closeCancel"
-data-id="#order_group_id#">Close</button>
-</div>
-
-</div>
-
-<!-- TABLE -->
-<div class="table-responsive">
-<table class="table mb-0">
-
-<tr>
-<th>Product</th>
-<th>Image</th>
-<th>Price</th>
-<th>Qty</th>
-<th>Total</th>
-</tr>
-
-<cfset currentGroup = order_group_id>
 </cfif>
 
+<!-- ROW -->
 <tr>
 <td>#product_name#</td>
+
 <td>
 <cfif len(image)>
 <img src="../../assets/images/products/#image#" class="img-fluid" style="max-width:50px;">
@@ -164,19 +162,22 @@ data-id="#order_group_id#">Close</button>
 No Image
 </cfif>
 </td>
+
 <td>#price#</td>
 <td>#quantity#</td>
 <td>#total_amount#</td>
 </tr>
 
-<cfset gTotal += total_amount>
+<cfset groupTotal += total_amount>
 
+<!-- LAST RECORD -->
 <cfif currentRow EQ recordCount>
 <tr class="table-light">
 <td colspan="4" class="text-end"><strong>Total:</strong></td>
-<td><strong>#gTotal#</strong></td>
+<td><strong>#groupTotal#</strong></td>
 </tr>
 </table>
+</div>
 </div>
 </div>
 </cfif>
@@ -185,61 +186,51 @@ No Image
 
 </cfif>
 
-<!-- PAGINATION -->
+<!-- ================= PAGINATION ================= -->
 
 <cfset groupSize = 4>
-<cfset currentGroup = ceiling(currentPage / groupSize)>
+<cfset pageGroup = ceiling(currentPage / groupSize)>
 
-<cfset startPage = (currentGroup - 1) * groupSize + 1>
-<cfset endPage = startPage + groupSize - 1>
+<cfset startPage = (pageGroup - 1) * groupSize + 1>
+<cfset endPage = min(startPage + groupSize - 1, totalPages)>
 
-<cfif endPage GT totalPages>
-    <cfset endPage = totalPages>
-</cfif>
+<div class="mt-4 d-flex justify-content-center gap-2 flex-wrap">
 
-<div class="mt-4 d-flex justify-content-center flex-wrap gap-2">
+<cfoutput>
 
 <!-- PREV -->
 <cfif startPage GT 1>
-    <cfoutput>
-    <button class="btn btn-outline-primary btn-sm pageBtn"
-        data-page="#startPage - 1#">Prev</button>
-    </cfoutput>
+<button class="btn btn-outline-primary btn-sm pageBtn"
+data-page="#startPage - 1#">Prev</button>
 </cfif>
 
 <!-- NUMBERS -->
 <cfloop from="#startPage#" to="#endPage#" index="i">
-    <cfoutput>
-    <button class="btn btn-sm pageBtn 
-        #i EQ currentPage ? 'btn-primary' : 'btn-outline-primary'#"
-        data-page="#i#">#i#</button>
-    </cfoutput>
+<button class="btn btn-sm pageBtn 
+#i EQ currentPage ? 'btn-primary' : 'btn-outline-primary'#"
+data-page="#i#">#i#</button>
 </cfloop>
 
 <!-- NEXT -->
 <cfif endPage LT totalPages>
-    <cfoutput>
-    <button class="btn btn-outline-primary btn-sm pageBtn"
-        data-page="#endPage + 1#">Next</button>
-    </cfoutput>
+<button class="btn btn-outline-primary btn-sm pageBtn"
+data-page="#endPage + 1#">Next</button>
 </cfif>
 
+</cfoutput>
+
 </div>
 
-
-</div> 
 </div>
-
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</div>
 
 <script>
-$(document).ready(function(){
+$(function(){
 
 function showMsg(res){
 $("#ajaxMessage").html(
-'<div class="alert alert-' +
-(res.status==="success"?"success":"danger") +
+'<div class="alert alert-'+
+(res.status==="success"?"success":"danger")+
 '">'+res.message+'</div>'
 );
 }
@@ -247,6 +238,8 @@ $("#ajaxMessage").html(
 // SEARCH
 $("#searchForm").submit(function(e){
 e.preventDefault();
+
+$("#orderContainer").html("<div class='text-center'>Loading...</div>");
 
 $.get("../../controllers/OrderController.cfm",
 "action=search&"+$(this).serialize(),
@@ -261,17 +254,16 @@ $("#searchForm")[0].reset();
 $("#searchForm").submit();
 });
 
-
-// CANCEL UI
+// CANCEL TOGGLE
 $(document).on("click",".cancelBtn",function(){
 let id=$(this).data("id");
-$(".cancelBox").hide();
-$("#cancelBox_"+id).show();
+$(".cancelBox").addClass("d-none");
+$("#cancelBox_"+id).removeClass("d-none");
 });
 
 $(document).on("click",".closeCancel",function(){
 let id=$(this).data("id");
-$("#cancelBox_"+id).hide();
+$("#cancelBox_"+id).addClass("d-none");
 });
 
 // CONFIRM CANCEL
@@ -279,6 +271,11 @@ $(document).on("click",".confirmCancel",function(){
 
 let id=$(this).data("id");
 let reason = $(".cancelReason[data-id='"+id+"']").val();
+
+if(!reason.trim()){
+alert("Please enter reason");
+return;
+}
 
 $.post("../../controllers/OrderController.cfm",{
 action:"cancel",
@@ -293,16 +290,21 @@ $("#searchForm").submit();
 
 });
 
+// PAGINATION
 $(document).on("click",".pageBtn",function(){
-    let page=$(this).data("page");
 
-    let data=$("#searchForm").serialize().replace(/(&|^)p=\d+/,'');
+let page=$(this).data("page");
 
-    $.get("../../controllers/OrderController.cfm",
-    "action=search&p="+page+"&"+data,
-    function(res){
-        $("#orderContainer").html(res);
-    });
+let data=$("#searchForm").serialize().replace(/(&|^)p=\d+/,"");
+
+$("#orderContainer").html("<div class='text-center'>Loading...</div>");
+
+$.get("../../controllers/OrderController.cfm",
+"action=search&p="+page+"&"+data,
+function(res){
+$("#orderContainer").html(res);
+});
+
 });
 
 });
