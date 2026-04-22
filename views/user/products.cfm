@@ -41,7 +41,7 @@
 )>
 
 <!-- pagination math -->
-<cfset limit = 2>
+<cfset limit = 5>
 <cfset totalPages = ceiling(totalRecords / limit)>
 <cfset currentPage = val(url.p)>
 
@@ -73,10 +73,10 @@
     <input type="hidden" name="page" value="dashboard">
     <input type="hidden" name="section" value="productList">
 
-    <div class="row g-2 align-items-end">
+    <div class="row g-2 align-items-center">
 
         <!-- Search -->
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
             <cfoutput>
                 <input type="text" name="search"
                 value="#url.search#"
@@ -86,7 +86,7 @@
         </div>
 
         <!-- Min Price -->
-        <div class="col-md-2">
+        <div class="col-6 col-md-2">
             <input type="number" name="min_price"
             value="#url.min_price#"
             class="form-control"
@@ -94,7 +94,7 @@
         </div>
 
         <!-- Max Price -->
-        <div class="col-md-2">
+        <div class="col-6 col-md-2">
             <input type="number" name="max_price"
             value="#url.max_price#"
             class="form-control"
@@ -102,7 +102,7 @@
         </div>
 
         <!-- Sort -->
-        <div class="col-md-2">
+        <div class="col-6 col-md-2">
             <select name="sort" class="form-select">
                 <option value="">Select</option>
                 <option value="price_low" <cfif url.sort EQ "price_low">selected</cfif>>Price: Low → High</option>
@@ -113,7 +113,7 @@
         </div>
 
         <!-- Category -->
-        <div class="col-md-2">
+        <div class="col-6 col-md-2">
             <select name="category_id" class="form-select">
                 <option value="">All</option>
                 <cfoutput query="categories">
@@ -125,14 +125,14 @@
         </div>
 
         <!-- Buttons -->
-        <div class="col-md-1 d-grid">
+        <div class="col-12 col-md-1 d-grid">
             <button class="btn btn-primary">Search</button>
         </div>
 
     </div>
 
     <!--  Clear Button -->
-    <div class="mt-2">
+    <div class="mt-2 ">
         <button type="button" id="clearBtn" class="btn btn-outline-secondary btn-sm">
             Clear Filters
         </button>
@@ -146,17 +146,17 @@
 
         <cfoutput query="products">
 
-            <div class="col-md-3 mb-3 d-flex">
+            <div class="col-6 col-md-4 col-lg-3 mb-3 d-flex">
                 <div class="card w-100">
 
                     <!-- image -->
                     <cfif len(image)>
-                        <img src="../../assets/images/products/#image#" class="card-img-top" style="height:200px; object-fit:cover;">
+                        <img src="../../assets/images/products/#image#" class="img-fluid" style="height:180px; object-fit:cover;" object-fit:cover;">
                     <cfelse>
                         <img src="https://via.placeholder.com/200" class="card-img-top" style="height:200px; object-fit:cover;">
                     </cfif>
 
-                    <div class="card-body text-center d-flex flex-column justify-content-between">
+                    <div class="card-body text-center d-flex flex-column justify-content-between p-2">
                         <div>
                             <h5 class="card-title">#product_name#</h5>
                             <p class="small text-muted mb-1">
@@ -200,7 +200,7 @@
     </div>
 
     <cfoutput>
-    <div class="mt-3">
+    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
         <cfloop from="1" to="#totalPages#" index="i">
             <button
                 type="button"

@@ -451,26 +451,46 @@ user_id=session.user_id
 
 </cfoutput>
 
-<!-- PAGINATION -->
-<nav class="mt-4">
-<ul class="pagination">
+<cfset groupSize = 4>
+<cfset pageGroup = ceiling(currentPage / groupSize)>
+<cfset startPage = (pageGroup  - 1) * groupSize + 1>
+<cfset endPage = startPage + groupSize - 1>
 
+<cfif endPage GT totalPages>
+    <cfset endPage = totalPages>
+</cfif>
 <cfoutput>
-<cfloop from="1" to="#totalPages#" index="i">
+<div class="mt-4 d-flex justify-content-center flex-wrap gap-2">
 
-<li class="page-item # (i eq currentPage ? 'active' : '') #">
+<!-- PREV -->
+<cfif startPage GT 1>
+    <button class="btn btn-outline-primary btn-sm pageBtn"
+        data-page="#startPage - 1#">
+        Prev
+    </button>
+</cfif>
 
-<button class="page-link pageBtn" data-page="#i#">
-#i#
-</button>
+<!-- NUMBERS -->
+<cfloop from="#startPage#" to="#endPage#" index="i">
 
-</li>
+    <button class="btn btn-sm pageBtn 
+        <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+        data-page="#i#">
+        #i#
+    </button>
 
 </cfloop>
-</cfoutput>
 
-</ul>
-</nav>
+<!-- NEXT -->
+<cfif endPage LT totalPages>
+    <button class="btn btn-outline-primary btn-sm pageBtn"
+        data-page="#endPage + 1#">
+        Next
+    </button>
+</cfif>
+
+</div>
+</cfoutput>
 
 </cfif>
 
