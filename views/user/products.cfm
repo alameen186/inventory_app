@@ -30,7 +30,8 @@
     min_price = isNumeric(url.min_price) ? url.min_price : javacast("null", ""),
     max_price = isNumeric(url.max_price) ? url.max_price : javacast("null", ""),
     sort = url.sort,
-    page = val(url.p)
+    page = val(url.p),
+    limit = 3
 )>
 
 <cfset totalRecords = productModel.getProductCount(
@@ -41,9 +42,17 @@
 )>
 
 <!-- pagination math -->
-<cfset limit = 5>
+<cfset limit = 3>
 <cfset totalPages = ceiling(totalRecords / limit)>
 <cfset currentPage = val(url.p)>
+
+<cfset groupSize = 4>
+<cfset startPage = ((currentPage-1) \ groupSize) * groupSize + 1>
+<cfset endPage = startPage + groupSize - 1>
+
+<cfif endPage GT totalPages>
+    <cfset endPage = totalPages>
+</cfif>
 
 <div class="container mt-4">
 
@@ -200,17 +209,31 @@
     </div>
 
     <cfoutput>
-    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
-        <cfloop from="1" to="#totalPages#" index="i">
-            <button
-                type="button"
-                class="btn btn-sm pageBtn <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
-                data-page="#i#">
-                #i#
-            </button>
-        </cfloop>
-    </div>
-    </cfoutput>
+<div class="d-flex gap-2 justify-content-center mt-3">
+
+    <!-- PREV -->
+    <cfif startPage GT 1>
+        <button class="pageBtn btn btn-outline-primary"
+            data-page="#startPage-1#">Prev</button>
+    </cfif>
+
+    <!-- PAGE NUMBERS -->
+    <cfloop from="#startPage#" to="#endPage#" index="i">
+        <button class="pageBtn btn btn-sm 
+            <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+            data-page="#i#">
+            #i#
+        </button>
+    </cfloop>
+
+    <!-- NEXT -->
+    <cfif endPage LT totalPages>
+        <button class="pageBtn btn btn-outline-primary"
+            data-page="#endPage+1#">Next</button>
+    </cfif>
+
+</div>
+</cfoutput>
 
 </div>
 
@@ -228,15 +251,20 @@ $(document).ready(function(){
         );
     });
 
-    $(document).on("click", ".pageBtn", function(){
-        let page = $(this).data("page");
-        $.get("../../controllers/ProductController.cfm",
-            "action=userSearch&p=" + page + "&" + $("#searchForm").serialize(),
-            function(res){
-                $("#productContainer").html(res);
-            }
-        );
-    });
+   $(document).on("click", ".pageBtn", function(){
+    let page = $(this).data("page");
+
+  
+    $(".pageBtn").removeClass("btn-primary").addClass("btn-outline-primary");
+    $(this).removeClass("btn-outline-primary").addClass("btn-primary");
+
+    $.get("../../controllers/ProductController.cfm",
+        "action=userSearch&p=" + page + "&" + $("#searchForm").serialize(),
+        function(res){
+            $("#productContainer").html(res);
+        }
+    );
+});
 
   
     $(document).on("submit", ".addToCartForm", function(e){

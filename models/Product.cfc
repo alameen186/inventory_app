@@ -134,7 +134,7 @@ AND c.is_active = 1
     <cfargument name="category_id" type="numeric" required="false">
     <cfargument name="sort" type="string" required="false" default="">
     <cfargument name="page" type="numeric" required="false" default="1">
-    <cfargument name="limit" type="numeric" required="false" default="2">
+    <cfargument name="limit" type="numeric" required="false" default="3">
 
     <cfset safePage = arguments.page>
 
@@ -200,7 +200,7 @@ LEFT JOIN users u ON p.vendor_id = u.id
 </cffunction>
 
 
-         <cffunction name="getProductCount" returntype="numeric">
+        <cffunction name="getProductCount" returntype="numeric">
     <cfargument name="keyword" default="">
     <cfargument name="category_id">
     <cfargument name="min_price">
@@ -208,10 +208,30 @@ LEFT JOIN users u ON p.vendor_id = u.id
 
     <cfquery name="result" datasource="#application.dsn#">
         SELECT COUNT(*) as total
-        FROM products P
+        FROM products p
         JOIN categories c ON p.category_id = c.id
         WHERE p.is_active = 1
         AND c.is_active = 1
+
+        <cfif len(arguments.keyword)>
+            AND (
+                p.product_name LIKE <cfqueryparam value="%#arguments.keyword#%">
+                OR c.category_name LIKE <cfqueryparam value="%#arguments.keyword#%">
+            )
+        </cfif>
+
+        <cfif isNumeric(arguments.category_id)>
+            AND p.category_id = <cfqueryparam value="#arguments.category_id#">
+        </cfif>
+
+        <cfif isNumeric(arguments.min_price)>
+            AND p.price >= <cfqueryparam value="#arguments.min_price#">
+        </cfif>
+
+        <cfif isNumeric(arguments.max_price)>
+            AND p.price <= <cfqueryparam value="#arguments.max_price#">
+        </cfif>
+
     </cfquery>
 
     <cfreturn result.total>
