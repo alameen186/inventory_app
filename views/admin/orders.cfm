@@ -74,7 +74,7 @@
     </div>
 </form>
 
-<!-- ORDER CONTAINER -->
+<!-- ORDER CONTAINER -->                
 <div id="orderContainer">
 
 <cfif orders.recordCount EQ 0>
@@ -180,7 +180,10 @@
 
 </cfoutput>
 
+</cfif>
+
 <!-- PAGINATION -->
+<cfif totalPages GT 1>
 <cfset groupSize = 4>
 <cfset pageGroup = ceiling(currentPage / groupSize)>
 <cfset startPage = (pageGroup - 1) * groupSize + 1>
@@ -206,11 +209,11 @@
 
 </div>
 </cfoutput>
-
 </cfif>
 
-</div>
-</div>
+</div> 
+
+</div> 
 
 
 <script>
