@@ -206,18 +206,16 @@
 <!--  ADMIN SEARCH  -->
 <cfif structKeyExists(url,"action") AND url.action EQ "search">
 
-    <cfparam name="url.p" default="1">
-    <cfparam name="url.search" default="">
-    <cfparam name="url.sort" default="">
+    <cfparam name="url.p"           default="1">
+    <cfparam name="url.search"      default="">
+    <cfparam name="url.sort"        default="">
     <cfparam name="url.category_id" default="">
 
-    <cfset page = val(url.p)>
-    <cfif page LT 1><cfset page = 1></cfif>
-
-    <cfset limit = 3>
+    <cfset page  = val(url.p) GT 0 ? val(url.p) : 1>
+    <cfset limit = 2>
 
     <cfset categoryModel = createObject("component","models.Category")>
-    <cfset categories = categoryModel.getAllActiveCategory(vendorFilter)>
+    <cfset categories    = categoryModel.getAllActiveCategory(vendorFilter)>
 
     <cfset products = productModel.getAllProductsAdmin(
         search      = trim(url.search),
@@ -228,7 +226,24 @@
         vendor_id   = vendorFilter
     )>
 
-    <!--- RETURN FULL VIEW + EDIT ROWS --->
+    <!--- GET TOTAL FOR PAGINATION --->
+    <cfset totalRecords = productModel.getProductCountAdmin(
+        search      = trim(url.search),
+        category_id = url.category_id,
+        vendor_id   = vendorFilter
+    )>
+    <cfset totalPages = ceiling(totalRecords / limit)>
+
+    <!--- PAGINATION MATH --->
+    <cfset groupSize = 4>
+    <cfset pageGroup = ceiling(page / groupSize)>
+    <cfset startPage = (pageGroup - 1) * groupSize + 1>
+    <cfset endPage   = min(startPage + groupSize - 1, totalPages)>
+    <cfset prevPage  = startPage - 1>
+    <cfset nextPage  = endPage + 1>
+
+    <!--- ROWS HTML --->
+    <cfsavecontent variable="rowsHTML">
     <cfoutput query="products">
 
         <!--- VIEW ROW --->
@@ -238,7 +253,7 @@
             <td>#price#</td>
             <td>#stock#</td>
             <td>#category_name#</td>
-            <td><cfif len(trim(expiry_date))>#dateFormat(expiry_date, "dd-mmm-yyyy")#<cfelse>-</cfif></td>
+            <td><cfif len(trim(expiry_date))>#dateFormat(expiry_date,"dd-mmm-yyyy")#<cfelse>-</cfif></td>
             <td>
                 <cfif len(image)>
                     <img src="../../assets/images/products/#image#" width="50">
@@ -296,8 +311,43 @@
         </tr>
 
     </cfoutput>
+    </cfsavecontent>
 
+    <!--- PAGINATION HTML --->
+    <cfsavecontent variable="paginationHTML">
+    <cfoutput>
+    <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+
+        <cfif startPage GT 1>
+            <button class="pageBtn btn btn-outline-primary btn-sm"
+                data-page="#prevPage#">&laquo; Prev</button>
+        </cfif>
+
+        <cfloop from="#startPage#" to="#endPage#" index="i">
+            <button class="pageBtn btn btn-sm
+                <cfif i EQ page>btn-primary<cfelse>btn-outline-primary</cfif>"
+                data-page="#i#">#i#</button>
+        </cfloop>
+
+        <cfif endPage LT totalPages>
+            <button class="pageBtn btn btn-outline-primary btn-sm"
+                data-page="#nextPage#">Next &raquo;</button>
+        </cfif>
+
+    </div>
+    </cfoutput>
+    </cfsavecontent>
+
+    <!--- RETURN JSON WITH ROWS AND PAGINATION --->
+    <cfcontent type="application/json">
+    <cfoutput>
+    {
+        "rows": #serializeJSON(rowsHTML)#,
+        "pagination": #serializeJSON(paginationHTML)#
+    }
+    </cfoutput>
     <cfabort>
+
 </cfif>
 
 

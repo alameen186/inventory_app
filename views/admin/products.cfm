@@ -17,7 +17,7 @@
 <cfset currentPage = val(url.p)>
 <cfif currentPage LT 1><cfset currentPage = 1></cfif>
 
-<cfset limit = 3>
+<cfset limit = 2>
 
 <cfset products = productModel.getAllProductsAdmin(
     search = url.search,
@@ -214,14 +214,35 @@
 </div>
 
 <!-- PAGINATION -->
+<cfset groupSize = 4>
+<cfset pageGroup = ceiling(currentPage / groupSize)>
+<cfset startPage = (pageGroup - 1) * groupSize + 1>
+<cfset endPage   = min(startPage + groupSize - 1, totalPages)>
+<cfset prevPage  = startPage - 1>
+<cfset nextPage  = endPage + 1>
+
 <cfoutput>
 <div id="paginationArea" class="d-flex justify-content-center flex-wrap gap-2 mt-3">
-    <cfif totalPages GT 0>
-        <cfloop from="1" to="#totalPages#" index="i">
-            <button class="pageBtn btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
-                data-page="#i#">#i#</button>
-        </cfloop>
+
+    <!--- PREV --->
+    <cfif startPage GT 1>
+        <button class="pageBtn btn btn-outline-primary btn-sm"
+            data-page="#prevPage#">&laquo; Prev</button>
     </cfif>
+
+    <!--- PAGE NUMBERS --->
+    <cfloop from="#startPage#" to="#endPage#" index="i">
+        <button class="pageBtn btn btn-sm
+            <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+            data-page="#i#">#i#</button>
+    </cfloop>
+
+    <!--- NEXT --->
+    <cfif endPage LT totalPages>
+        <button class="pageBtn btn btn-outline-primary btn-sm"
+            data-page="#nextPage#">Next &raquo;</button>
+    </cfif>
+
 </div>
 </cfoutput>
 
@@ -313,27 +334,29 @@ $(function(){
         },"json");
     });
 
-    // SEARCH
-    $("#searchForm").submit(function(e){
-        e.preventDefault();
-        $.get("../../controllers/ProductController.cfm",
-            "action=search&p=1&"+$(this).serialize(),
-            function(res){
-                $("#productTableBody").html(res);
-                setActivePage(1);
-            });
-    });
+   // SEARCH
+$("#searchForm").submit(function(e){
+    e.preventDefault();
+    $.get("../../controllers/ProductController.cfm",
+        "action=search&p=1&" + $(this).serialize(),
+        function(res){
+            $("#productTableBody").html(res.rows);
+            $("#paginationArea").html(res.pagination);
+        }, "json"
+    );
+});
 
-    // PAGINATION
-    $(document).on("click",".pageBtn",function(){
-        let page=$(this).data("page");
-        setActivePage(page);
-        $.get("../../controllers/ProductController.cfm",
-            "action=search&p="+page+"&"+$("#searchForm").serialize(),
-            function(res){
-                $("#productTableBody").html(res);
-            });
-    });
+// PAGINATION
+$(document).on("click", ".pageBtn", function(){
+    let page = $(this).data("page");
+    $.get("../../controllers/ProductController.cfm",
+        "action=search&p=" + page + "&" + $("#searchForm").serialize(),
+        function(res){
+            $("#productTableBody").html(res.rows);
+            $("#paginationArea").html(res.pagination);
+        }, "json"
+    );
+});
 
     function setActivePage(page){
         $(".pageBtn").removeClass("btn-primary").addClass("btn-outline-primary");

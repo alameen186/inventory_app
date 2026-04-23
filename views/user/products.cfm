@@ -116,15 +116,15 @@
             placeholder="max price">
         </div>
         <!-- Expiry Range -->
-<div class="col-6 col-md-2">
-    <select name="expiry_months" class="form-select">
-        <option value="">All Expiry</option>
-        <option value="1" <cfif url.expiry_months EQ "1">selected</cfif>>Within 1 Month</option>
-        <option value="2" <cfif url.expiry_months EQ "2">selected</cfif>>Within 2 Months</option>
-        <option value="3" <cfif url.expiry_months EQ "3">selected</cfif>>Within 3 Months</option>
-        <option value="6" <cfif url.expiry_months EQ "6">selected</cfif>>Within 6 Months</option>
-    </select>
-</div>
+        <div class="col-6 col-md-2">
+            <select name="expiry_months" class="form-select">
+                <option value="">All Expiry</option>
+                <option value="1" <cfif url.expiry_months EQ "1">selected</cfif>>Within 1 Month</option>
+                <option value="2" <cfif url.expiry_months EQ "2">selected</cfif>>Within 2 Months</option>
+                <option value="3" <cfif url.expiry_months EQ "3">selected</cfif>>Within 3 Months</option>
+                <option value="6" <cfif url.expiry_months EQ "6">selected</cfif>>Within 6 Months</option>
+            </select>
+        </div>
 
         <!-- Sort -->
         <div class="col-6 col-md-2">
@@ -154,14 +154,16 @@
             <button class="btn btn-primary">Search</button>
         </div>
 
+        <!--  Clear Button -->
+        <div class="col-12 col-md-1 d-grid ">
+            <button type="button" id="clearBtn" class="btn btn-secondary">
+                Clear 
+            </button>
+        </div>
+
     </div>
 
-    <!--  Clear Button -->
-    <div class="mt-2 ">
-        <button type="button" id="clearBtn" class="btn btn-outline-secondary btn-sm">
-            Clear Filters
-        </button>
-    </div>
+    
 
 </form>
 
