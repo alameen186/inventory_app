@@ -24,32 +24,42 @@
 
 <cfset totalPages = ceiling(totalRecords / limit)>
 
-<div class="container mt-4">
+<div class="container-fluid mt-4">
 
-<h3>Users Management</h3>
+<h4 class="mb-3">Users Management</h4>
 
 <div id="ajaxMessage"></div>
 
 <!-- SEARCH -->
 <cfoutput>
 <form id="searchForm" class="mb-3">
+<div class="row g-2">
 
+<div class="col-12 col-md-4">
 <input type="text" name="search" value="#url.search#"
-class="form-control w-25 d-inline" placeholder="Search">
+class="form-control" placeholder="Search">
+</div>
 
-<select name="sort" class="form-control w-25 d-inline">
+<div class="col-12 col-md-4">
+<select name="sort" class="form-control">
 <option value="">Sort</option>
 <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A-Z</option>
 <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z-A</option>
 </select>
+</div>
 
-<button class="btn btn-primary btn-sm">Apply</button>
+<div class="col-12 col-md-4 d-grid">
+<button class="btn btn-primary">Apply</button>
+</div>
 
+</div>
 </form>
 </cfoutput>
 
 <!-- ADD BUTTON -->
-<button id="showAddForm" class="btn btn-primary mb-3">Add User</button>
+<button id="showAddForm" class="btn btn-primary mb-3 w-100 w-md-auto">
+Add User
+</button>
 
 <!-- ADD FORM -->
 <div id="addUserForm" style="display:none;" class="card p-3 mb-3">
@@ -58,28 +68,55 @@ class="form-control w-25 d-inline" placeholder="Search">
 
 <input type="hidden" name="action" value="create">
 
-<input name="first_name" class="form-control mb-2" placeholder="First Name">
-<input name="last_name" class="form-control mb-2" placeholder="Last Name">
-<input name="email" class="form-control mb-2" placeholder="Email">
-<input name="password" class="form-control mb-2" placeholder="Password">
-<input name="confirm" class="form-control mb-2" placeholder="Confirm">
+<div class="row g-2">
 
-<select name="role_id" class="form-control mb-2">
+<div class="col-12 col-md-6">
+<input name="first_name" class="form-control" placeholder="First Name">
+</div>
+
+<div class="col-12 col-md-6">
+<input name="last_name" class="form-control" placeholder="Last Name">
+</div>
+
+<div class="col-12">
+<input name="email" class="form-control" placeholder="Email">
+</div>
+
+<div class="col-12 col-md-6">
+<input name="password" class="form-control" placeholder="Password">
+</div>
+
+<div class="col-12 col-md-6">
+<input name="confirm" class="form-control" placeholder="Confirm">
+</div>
+
+<div class="col-12">
+<select name="role_id" class="form-control">
 <option value="2">Customer</option>
 <option value="3">Manager</option>
 </select>
+</div>
 
-<button class="btn btn-success">Create</button>
-<button type="button" id="cancelAdd" class="btn btn-secondary">Cancel</button>
+<div class="col-12 d-flex gap-2">
+<button class="btn btn-success w-100">Create</button>
+<button type="button" id="cancelAdd" class="btn btn-secondary w-100">Cancel</button>
+</div>
+
+</div>
 
 </form>
 </div>
 
 <!-- TABLE -->
-<table class="table table-bordered">
-<thead>
+<div class="table-responsive">
+<table class="table table-bordered align-middle text-nowrap">
+<thead class="table-dark">
 <tr>
-<th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Actions</th>
+<th>ID</th>
+<th>Name</th>
+<th>Email</th>
+<th>Role</th>
+<th>Actions</th>
 </tr>
 </thead>
 
@@ -90,11 +127,10 @@ class="form-control w-25 d-inline" placeholder="Search">
 
 <td>#id#</td>
 <td>#first_name# #last_name#</td>
-<td>#email#</td>
+<td class="text-break">#email#</td>
 <td>#role_name#</td>
 
-<td>
-
+<td class="d-flex flex-wrap gap-1">
 <button class="btn btn-warning btn-sm editBtn"
 data-id="#id#"
 data-first="#first_name#"
@@ -102,7 +138,6 @@ data-last="#last_name#"
 data-email="#email#">Edit</button>
 
 <button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">Delete</button>
-
 </td>
 
 </tr>
@@ -110,12 +145,14 @@ data-email="#email#">Edit</button>
 
 </tbody>
 </table>
+</div>
 
 <!-- PAGINATION -->
-<div>
+<div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
 <cfoutput>
 <cfloop from="1" to="#totalPages#" index="i">
-<button class="pageBtn btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+<button class="pageBtn btn btn-sm 
+<cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
 data-page="#i#">#i#</button>
 </cfloop>
 </cfoutput>
@@ -137,9 +174,9 @@ $("#ajaxMessage").html(
 setTimeout(()=>$("#msgBox").fadeOut(),3000);
 }
 
-// SHOW ADD
-$("#showAddForm").click(()=>$("#addUserForm").show());
-$("#cancelAdd").click(()=>$("#addUserForm").hide());
+// ADD FORM
+$("#showAddForm").click(()=>$("#addUserForm").slideDown());
+$("#cancelAdd").click(()=>$("#addUserForm").slideUp());
 
 // CREATE
 $("#createUserForm").submit(function(e){
@@ -150,12 +187,12 @@ $(this).serialize(),
 function(res){
 showMsg(res);
 if(res.status==="success"){
-$("#addUserForm").hide();
+$("#addUserForm").slideUp();
 }
 },"json");
 });
 
-// EDIT OPEN
+// EDIT
 $(document).on("click",".editBtn",function(){
 
 let btn=$(this);
@@ -172,12 +209,26 @@ row.after(`
 <input type="hidden" name="action" value="update">
 <input type="hidden" name="id" value="${btn.data("id")}">
 
-<input name="first_name" value="${btn.data("first")}" class="form-control mb-1">
-<input name="last_name" value="${btn.data("last")}" class="form-control mb-1">
-<input name="email" value="${btn.data("email")}" class="form-control mb-1">
+<div class="row g-2">
 
-<button class="btn btn-success btn-sm">Save</button>
-<button type="button" class="cancelEdit btn btn-secondary btn-sm">Cancel</button>
+<div class="col-12 col-md-4">
+<input name="first_name" value="${btn.data("first")}" class="form-control">
+</div>
+
+<div class="col-12 col-md-4">
+<input name="last_name" value="${btn.data("last")}" class="form-control">
+</div>
+
+<div class="col-12 col-md-4">
+<input name="email" value="${btn.data("email")}" class="form-control">
+</div>
+
+<div class="col-12 d-flex gap-2">
+<button class="btn btn-success btn-sm w-100">Save</button>
+<button type="button" class="cancelEdit btn btn-secondary btn-sm w-100">Cancel</button>
+</div>
+
+</div>
 
 </form>
 
@@ -186,10 +237,9 @@ row.after(`
 `);
 });
 
-// CANCEL EDIT
 $(document).on("click",".cancelEdit",()=>$(".editRow").remove());
 
-// SAVE EDIT
+// UPDATE
 $(document).on("submit",".updateForm",function(e){
 e.preventDefault();
 

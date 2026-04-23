@@ -26,7 +26,7 @@
     background-color: rgba(255,255,255,0.1);
 }
 
-/* ACTIVE STYLE */
+
 .menuLink.active {
     background-color: #0d6efd !important;
     color: #fff !important;
@@ -151,7 +151,8 @@ style="width:50px;height:50px;">
 
 <h6 class="mb-0 fw-bold">#userData.first_name# #userData.last_name#</h6>
 <small class="text-muted d-block mb-2">#userData.email#</small>
-<span class="badge bg-dark mb-2">#userData.role_name#</span>
+<small><span class="badge bg-dark mb-2">#userData.role_name#</span></small>
+
 
 <hr>
 

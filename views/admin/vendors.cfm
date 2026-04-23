@@ -19,44 +19,49 @@
 <cfset totalRecords = userModel.getVendorCount(search=trim(url.search))>
 <cfset totalPages = ceiling(totalRecords / limit)>
 
-<div class="container mt-4">
+<div class="container-fluid mt-4">
 
-<h3>Vendor Management</h3>
+<h4>Vendor Management</h4>
 
-<!-- SEARCH -->
 <form id="vendorSearchForm" class="mb-3">
 
-<div class="row g-2">
+    <input type="hidden" name="sort" id="sortValue" value="">
 
-<div class="col-md-4">
-<cfoutput>
-<input type="text" name="search"
-value="#url.search#"
-placeholder="Search vendors..."
-class="form-control">
-</cfoutput>
-</div>
+    <div class="row g-2">
 
-<div class="col-md-3">
-<select name="sort" class="form-select">
-<option value="">Sort</option>
-<option value="a_z">A-Z</option>
-<option value="z_a">Z-A</option>
-</select>
-</div>
+        <div class="col-12 col-md-4">
+            <input type="text" name="search" value="#url.search#"
+            class="form-control" placeholder="Search vendors">
+        </div>
 
-<div class="col-md-2">
-<button class="btn btn-primary">Search</button>
-</div>
+        <div class="col-12 col-md-4">
+            <div class="dropdown w-100">
+                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
+                        type="button"
+                        id="sortDropdown"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    Sort
+                </button>
+                <ul class="dropdown-menu w-100" aria-labelledby="sortDropdown">
+                    <li><a class="dropdown-item sort-option" href="#" data-value="">Sort</a></li>
+                    <li><a class="dropdown-item sort-option" href="#" data-value="a_z">A-Z</a></li>
+                    <li><a class="dropdown-item sort-option" href="#" data-value="z_a">Z-A</a></li>
+                </ul>
+            </div>
+        </div>
 
-</div>
+        <div class="col-12 col-md-4 d-grid">
+            <button class="btn btn-primary">Search</button>
+        </div>
 
+    </div>
 </form>
 
-<!-- TABLE -->
-<table class="table table-bordered">
+<div class="table-responsive">
+<table class="table table-bordered align-middle">
 
-<thead>
+<thead class="table-dark">
 <tr>
 <th>ID</th>
 <th>Name</th>
@@ -74,22 +79,20 @@ class="form-control">
 <td>#first_name# #last_name#</td>
 <td>#email#</td>
 <td>#role_name#</td>
-
 <td>
-<button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">Delete</button>
+    <button class="btn btn-danger btn-sm deleteBtn" data-id="#id#">Delete</button>
 </td>
 </tr>
 </cfoutput>
 
 </tbody>
-
 </table>
+</div>
 
-<!-- PAGINATION -->
-<div>
+<div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
 <cfoutput>
 <cfloop from="1" to="#totalPages#" index="i">
-<button class="btn btn-sm pageBtn 
+<button class="btn btn-sm pageBtn
 <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
 data-page="#i#">#i#</button>
 </cfloop>
@@ -99,24 +102,33 @@ data-page="#i#">#i#</button>
 </div>
 
 <script>
-$(document).on("submit","#vendorSearchForm",function(e){
-    e.preventDefault();
+$(document).ready(function(){
 
-    $.get("../../controllers/UserController.cfm",
-    "action=vendorSearch&"+$(this).serialize(),
-    function(res){
-        $("#vendorTable").html(res);
+    // SORT OPTION CLICK
+    $(document).on("click", ".sort-option", function(e){
+        e.preventDefault();
+        $("#sortValue").val($(this).data("value"));
+        $("#sortDropdown").text($(this).text());
     });
-});
 
-$(document).on("click",".pageBtn",function(){
+    // SEARCH
+    $(document).on("submit","#vendorSearchForm",function(e){
+        e.preventDefault();
+        $.get("../../controllers/UserController.cfm",
+        "action=vendorSearch&"+$(this).serialize(),
+        function(res){
+            $("#vendorTable").html(res);
+        });
+    });
 
-    let page=$(this).data("page");
-
-    $.get("../../controllers/UserController.cfm",
-    "action=vendorSearch&p="+page+"&"+$("#vendorSearchForm").serialize(),
-    function(res){
-        $("#vendorTable").html(res);
+    // PAGINATION
+    $(document).on("click",".pageBtn",function(){
+        let page=$(this).data("page");
+        $.get("../../controllers/UserController.cfm",
+        "action=vendorSearch&p="+page+"&"+$("#vendorSearchForm").serialize(),
+        function(res){
+            $("#vendorTable").html(res);
+        });
     });
 
 });
