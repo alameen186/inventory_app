@@ -1,3 +1,5 @@
+<!--user porduct page-->
+
 <!-- check login -->
 <cfif NOT structKeyExists(session, "user_id")>
     <cflocation url="../../index.cfm?page=auth&message=Please login&type=error" addtoken="false">
@@ -15,6 +17,7 @@
 <cfparam name="url.max_price" default="">
 <cfparam name="url.sort" default="">
 <cfparam name="url.p" default="1">
+<cfparam name="url.expiry_months" default="">
 
 <!-- models -->
 <cfset productModel = createObject("component", "models.Product")>
@@ -31,28 +34,31 @@
     max_price = isNumeric(url.max_price) ? url.max_price : javacast("null", ""),
     sort = url.sort,
     page = val(url.p),
-    limit = 3
+    limit = 3,
+    expiry_months = isNumeric(url.expiry_months) ? url.expiry_months : ""
 )>
 
 <cfset totalRecords = productModel.getProductCount(
     keyword = url.search,
     category_id = isNumeric(url.category_id) ? url.category_id : javacast("null",""),
     min_price = isNumeric(url.min_price) ? url.min_price : javacast("null",""),
-    max_price = isNumeric(url.max_price) ? url.max_price : javacast("null","")
+    max_price = isNumeric(url.max_price) ? url.max_price : javacast("null",""),
+    expiry_months = isNumeric(url.expiry_months) ? url.expiry_months : ""
 )>
 
-<!-- pagination math -->
+<!-- pagination  -->
 <cfset limit = 3>
 <cfset totalPages = ceiling(totalRecords / limit)>
-<cfset currentPage = val(url.p)>
+<cfset currentPage = val(url.p) GT 0 ? val(url.p) : 1>
 
 <cfset groupSize = 4>
-<cfset startPage = ((currentPage-1) \ groupSize) * groupSize + 1>
+<cfset startPage = ((currentPage - 1) \ groupSize) * groupSize + 1>
 <cfset endPage = startPage + groupSize - 1>
-
 <cfif endPage GT totalPages>
     <cfset endPage = totalPages>
 </cfif>
+<cfset prevPage = startPage - 1>
+<cfset nextPage = endPage + 1>
 
 <div class="container mt-4">
 
@@ -84,7 +90,7 @@
 
     <div class="row g-2 align-items-center">
 
-        <!-- Search -->
+
         <div class="col-12 col-md-3">
             <cfoutput>
                 <input type="text" name="search"
@@ -109,6 +115,16 @@
             class="form-control"
             placeholder="max price">
         </div>
+        <!-- Expiry Range -->
+<div class="col-6 col-md-2">
+    <select name="expiry_months" class="form-select">
+        <option value="">All Expiry</option>
+        <option value="1" <cfif url.expiry_months EQ "1">selected</cfif>>Within 1 Month</option>
+        <option value="2" <cfif url.expiry_months EQ "2">selected</cfif>>Within 2 Months</option>
+        <option value="3" <cfif url.expiry_months EQ "3">selected</cfif>>Within 3 Months</option>
+        <option value="6" <cfif url.expiry_months EQ "6">selected</cfif>>Within 6 Months</option>
+    </select>
+</div>
 
         <!-- Sort -->
         <div class="col-6 col-md-2">
@@ -171,6 +187,9 @@
                             <p class="small text-muted mb-1">
     Sold by: <strong>#business_name#</strong>
 </p>
+<cfif len(trim(expiry_date))>
+    <p class="small text-muted mb-1">Expires: #dateFormat(expiry_date,"dd-mmm-yyyy")#</p>
+</cfif>
                             <p class="mb-1">#category_name#</p>
                             <p class="mb-2">#price# /-</p>
                             
@@ -207,19 +226,19 @@
         </cfoutput>
 
     </div>
-
-    <cfoutput>
+<div id="paginationContainer">
+   <cfoutput>
 <div class="d-flex gap-2 justify-content-center mt-3">
 
     <!-- PREV -->
     <cfif startPage GT 1>
         <button class="pageBtn btn btn-outline-primary"
-            data-page="#startPage-1#">Prev</button>
+            data-page="#prevPage#">Prev</button>
     </cfif>
 
     <!-- PAGE NUMBERS -->
     <cfloop from="#startPage#" to="#endPage#" index="i">
-        <button class="pageBtn btn btn-sm 
+        <button class="pageBtn btn btn-sm
             <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
             data-page="#i#">
             #i#
@@ -229,44 +248,40 @@
     <!-- NEXT -->
     <cfif endPage LT totalPages>
         <button class="pageBtn btn btn-outline-primary"
-            data-page="#endPage+1#">Next</button>
+            data-page="#nextPage#">Next</button>
     </cfif>
 
 </div>
 </cfoutput>
+</div>
 
 </div>
 
 <script>
 $(document).ready(function(){
 
-  
+    function doSearch(page){
+        $.get("../../controllers/ProductController.cfm",
+            "action=userSearch&p=" + page + "&" + $("#searchForm").serialize(),
+            function(res){
+                $("#productContainer").html(res.products);
+                $("#paginationContainer").html(res.pagination);
+            }, "json"
+        );
+    }
+
+    // SEARCH
     $("#searchForm").submit(function(e){
         e.preventDefault();
-        $.get("../../controllers/ProductController.cfm",
-            "action=userSearch&" + $(this).serialize(),
-            function(res){
-                $("#productContainer").html(res);
-            }
-        );
+        doSearch(1);
     });
 
-   $(document).on("click", ".pageBtn", function(){
-    let page = $(this).data("page");
+    // PAGINATION
+    $(document).on("click", ".pageBtn", function(){
+        doSearch($(this).data("page"));
+    });
 
-  
-    $(".pageBtn").removeClass("btn-primary").addClass("btn-outline-primary");
-    $(this).removeClass("btn-outline-primary").addClass("btn-primary");
-
-    $.get("../../controllers/ProductController.cfm",
-        "action=userSearch&p=" + page + "&" + $("#searchForm").serialize(),
-        function(res){
-            $("#productContainer").html(res);
-        }
-    );
-});
-
-  
+    // ADD TO CART
     $(document).on("submit", ".addToCartForm", function(e){
         e.preventDefault();
         $.post("../../controllers/CartController.cfm",
@@ -277,7 +292,7 @@ $(document).ready(function(){
         );
     });
 
-    
+    // ENQUIRY
     $(document).on("submit", ".enquiryForm", function(e){
         e.preventDefault();
         $.post("../../controllers/EnquiryController.cfm",
@@ -287,9 +302,11 @@ $(document).ready(function(){
             }, "json"
         );
     });
-$("#clearBtn").click(function(){
-    $("#searchForm")[0].reset();
 
-});
+    // CLEAR
+    $("#clearBtn").click(function(){
+        $("#searchForm")[0].reset();
+    });
+
 });
 </script>

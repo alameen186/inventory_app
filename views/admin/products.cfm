@@ -1,3 +1,4 @@
+<!--admin porduct page-->
 <cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
     <cfset vendorFilter = session.user_id>
 <cfelse>
@@ -62,6 +63,9 @@
                     </cfoutput>
                 </select>
             </div>
+            <div class="col-6 col-md-2">
+    <input type="date" name="expiry_date" class="form-control" placeholder="Expiry Date">
+</div>
             <div class="col-12 col-md-2">
                 <input type="file" name="product_image" class="form-control">
             </div>
@@ -134,7 +138,7 @@
     <thead>
         <tr>
             <th>ID</th><th>Name</th><th>Price</th><th>Stock</th>
-            <th>Category</th><th>Image</th><th>Status</th><th>Action</th>
+            <th>Category</th><th>Expiry</th><th>Image</th><th>Status</th><th>Action</th>
         </tr>
     </thead>
 
@@ -147,6 +151,7 @@
             <td>#price#</td>
             <td>#stock#</td>
             <td>#category_name#</td>
+            <td><cfif len(trim(expiry_date))>#dateFormat(expiry_date, "dd-mmm-yyyy")#<cfelse>-</cfif></td>
             <td>
                 <cfif len(image)>
                     <img src="../../assets/images/products/#image#" width="50">
@@ -186,6 +191,7 @@
                     </cfloop>
                 </select>
             </td>
+            <td><input type="date" value="#expiry_date#" class="form-control expiry"></td>
             <td><input type="file" class="form-control image" style="min-width:120px;"></td>
             <td>
                 <cfif is_active EQ 1>
@@ -281,6 +287,7 @@ $(function(){
         fd.append("price",row.find(".price").val());
         fd.append("stock",row.find(".stock").val());
         fd.append("category_id",row.find(".category").val());
+        fd.append("expiry_date",row.find(".expiry").val()); 
         let file=row.find(".image")[0].files[0];
         if(file) fd.append("product_image",file);
         $.ajax({
