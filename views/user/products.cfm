@@ -211,12 +211,12 @@
                                        class="btn btn-success btn-sm w-100">Go to Cart</a>
                                 <cfelse>
                                     <form class="addToCartForm" method="post">
-                                        <input type="hidden" name="action" value="add">
+                                     
                                         <input type="hidden" name="product_id" value="#id#">
                                         <input type="hidden" name="product_name" value="#product_name#">
                                         <input type="hidden" name="price" value="#price#">
                                         <input type="hidden" name="image" value="#image#">
-                                        <button class="btn btn-success btn-sm w-100">Add</button>
+                                        <button type="submit" class="btn btn-success btn-sm w-100">Add</button>
                                     </form>
                                 </cfif>
                             </cfif>
@@ -314,6 +314,7 @@ $(document).ready(function(){
             data     : $(this).serialize(),
             dataType : "json",
             success  : function(res) {
+             console.log(res); 
                 alert(res.message);
             },
             error : function(xhr) {

@@ -19,8 +19,14 @@ setTimeout(()=>$("#alertBox").fadeOut(),4000);
 
 <!-- EMPTY -->
 <cfif NOT structKeyExists(session, "cart") OR structIsEmpty(session.cart)>
-<h4 class="text-center mt-4">Your cart is empty</h4>
-<cfabort>
+    <div class="text-center mt-4">
+        <h4>Your cart is empty</h4>
+        <a href="../../index.cfm?page=dashboard&section=productList"
+           class="btn btn-primary mt-2">
+           Continue Shopping
+        </a>
+    </div>
+    <cfreturn>
 </cfif>
 
 <div id="ajaxMessage"></div>
@@ -57,7 +63,7 @@ setTimeout(()=>$("#alertBox").fadeOut(),4000);
 <input type="hidden" name="action" value="update">
 <input type="hidden" name="product_id" value="#pid#">
 
-<input type="number" name="qty"
+<input type="number" name="qty" max="3" min="1"
 class="form-control form-control-sm"
 style="max-width:80px;"
 value="#session.cart[pid].qty#">
@@ -224,12 +230,14 @@ Proceed to Checkout
 $(function(){
 
 let coupon={type:null,value:0,max:0};
+const CART_CTRL = "../../controllers/CartController.cfc";
 
 function showMsg(res){
 $("#ajaxMessage").html(
 `<div class="alert alert-${res.status==="success"?"success":"danger"}">
 ${res.message}</div>`
 );
+ setTimeout(function(){ $("#ajaxMessage").fadeOut(); }, 3000);
 }
 
 // UPDATE UI
@@ -267,22 +275,25 @@ $("#finalTotal").text(finalTotal);
 $(document).on("submit",".updateCartForm",function(e){
 e.preventDefault();
 
-$.post("../../controllers/CartController.cfm",
+$.post(CART_CTRL+"?method=update",
 $(this).serialize(),
 function(res){
 showMsg(res);
+location.reload();
 updateUI();
 },"json");
+
 });
 
 // REMOVE
 $(document).on("click",".removeBtn",function(){
 let id=$(this).data("id");
 
-$.get("../../controllers/CartController.cfm",
-{action:"remove",id:id},
+$.get(CART_CTRL+"?method=remove",
+{id:id},
 function(res){
 showMsg(res);
+ location.reload();
 $("#row_"+id).remove();
 updateUI();
 },"json");
@@ -292,10 +303,11 @@ updateUI();
 $("#couponForm").submit(function(e){
 e.preventDefault();
 
-$.post("../../controllers/CartController.cfm",
+$.post(CART_CTRL+"?method=applyCoupon",
 $(this).serialize(),
 function(res){
 showMsg(res);
+ location.reload();
 
 if(res.status==="success"){
 coupon.type=res.type;
@@ -306,7 +318,7 @@ updateUI();
 },"json");
 });
 
-// CHECKOUT
+// CHECKOUT (unchanged)
 $("#checkoutBtn").click(function(){
 $.post("../../controllers/OrderController.cfm",{action:"checkout"},
 function(res){
