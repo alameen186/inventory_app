@@ -40,9 +40,9 @@
 
 <cfset totalRecords = productModel.getProductCount(
     keyword = url.search,
-    category_id = isNumeric(url.category_id) ? url.category_id : javacast("null",""),
-    min_price = isNumeric(url.min_price) ? url.min_price : javacast("null",""),
-    max_price = isNumeric(url.max_price) ? url.max_price : javacast("null",""),
+    category_id = isNumeric(url.category_id) ? url.category_id : "",
+    min_price   = isNumeric(url.min_price) ? url.min_price : "",
+    max_price   = isNumeric(url.max_price) ? url.max_price : "",
     expiry_months = isNumeric(url.expiry_months) ? url.expiry_months : ""
 )>
 
@@ -83,7 +83,7 @@
     </script>
 
     <!-- search -->
-   <form id="searchForm" method="get" class="mb-4">
+   <form id="searchForm" class="mb-4">
 
     <input type="hidden" name="page" value="dashboard">
     <input type="hidden" name="section" value="productList">
@@ -130,17 +130,17 @@
         <div class="col-6 col-md-2">
             <select name="sort" class="form-select">
                 <option value="">Select</option>
-                <option value="price_low" <cfif url.sort EQ "price_low">selected</cfif>>Price: Low → High</option>
-                <option value="price_high" <cfif url.sort EQ "price_high">selected</cfif>>Price: High → Low</option>
-                <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A → Z</option>
-                <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z → A</option>
+                <option value="price_low" <cfif url.sort EQ "price_low">selected</cfif>>Price: Low - High</option>
+                <option value="price_high" <cfif url.sort EQ "price_high">selected</cfif>>Price: High - Low</option>
+                <option value="a_z" <cfif url.sort EQ "a_z">selected</cfif>>A - Z</option>
+                <option value="z_a" <cfif url.sort EQ "z_a">selected</cfif>>Z - A</option>
             </select>
         </div>
 
         <!-- Category -->
         <div class="col-6 col-md-2">
             <select name="category_id" class="form-select">
-                <option value="">All</option>
+                <option value="">Category</option>
                 <cfoutput query="categories">
                     <option value="#id#" <cfif url.category_id EQ id>selected</cfif>>
                         #category_name#
@@ -262,52 +262,87 @@
 <script>
 $(document).ready(function(){
 
-    function doSearch(page){
-        $.get("../../controllers/ProductController.cfm",
-            "action=userSearch&p=" + page + "&" + $("#searchForm").serialize(),
-            function(res){
-                $("#productContainer").html(res.products);
-                $("#paginationContainer").html(res.pagination);
-            }, "json"
-        );
+    var USER_CTRL = "../../controllers/product/UserProductController.cfc";
+    var CART_CTRL = "../../controllers/CartController.cfc";
+    var ENQ_CTRL  = "../../controllers/EnquiryController.cfc";
+
+    // ── serialize only the filter fields, exclude page/section hidden inputs ──
+    function getFilterParams() {
+        return $("#searchForm").find(
+            "input[name=search], input[name=min_price], input[name=max_price], " +
+            "select[name=sort], select[name=category_id], select[name=expiry_months]"
+        ).serialize();
     }
 
-    // SEARCH
-    $("#searchForm").submit(function(e){
+    function doSearch(page) {
+        $.ajax({
+            url      : USER_CTRL,
+            type     : "GET",
+            data     : "method=search&p=" + page + "&" + getFilterParams(),
+            dataType : "json",
+            success  : function(res) {
+                if (res.success) {
+                    $("#productContainer").html(res.data.products);
+                    $("#paginationContainer").html(res.data.pagination);
+                } else {
+                    alert(res.message);
+                }
+            },
+            error : function(xhr) {
+                console.log("Search error:", xhr.responseText);
+            }
+        });
+    }
+
+    // ── Search submit ──
+    $("#searchForm").on("submit", function(e) {
         e.preventDefault();
         doSearch(1);
     });
 
-    // PAGINATION
-    $(document).on("click", ".pageBtn", function(){
+    // ── Pagination ──
+    $(document).on("click", ".pageBtn", function() {
         doSearch($(this).data("page"));
     });
 
-    // ADD TO CART
-    $(document).on("submit", ".addToCartForm", function(e){
+    // ── Add to Cart ──
+    $(document).on("submit", ".addToCartForm", function(e) {
         e.preventDefault();
-        $.post("../../controllers/CartController.cfm",
-            $(this).serialize(),
-            function(res){
+        $.ajax({
+            url      : CART_CTRL + "?method=add",
+            type     : "POST",
+            data     : $(this).serialize(),
+            dataType : "json",
+            success  : function(res) {
                 alert(res.message);
-            }, "json"
-        );
+            },
+            error : function(xhr) {
+                console.log("Cart error:", xhr.responseText);
+            }
+        });
     });
 
-    // ENQUIRY
-    $(document).on("submit", ".enquiryForm", function(e){
+    // ── Enquiry ──
+    $(document).on("submit", ".enquiryForm", function(e) {
         e.preventDefault();
-        $.post("../../controllers/EnquiryController.cfm",
-            $(this).serialize(),
-            function(res){
+        $.ajax({
+            url      : ENQ_CTRL + "?method=add",
+            type     : "POST",
+            data     : $(this).serialize(),
+            dataType : "json",
+            success  : function(res) {
                 alert(res.message);
-            }, "json"
-        );
+            },
+            error : function(xhr) {
+                console.log("Enquiry error:", xhr.responseText);
+            }
+        });
     });
 
-    // CLEAR
-    $("#clearBtn").click(function(){
+    // ── Clear ──
+    $("#clearBtn").on("click", function() {
         $("#searchForm")[0].reset();
+        doSearch(1);
     });
 
 });

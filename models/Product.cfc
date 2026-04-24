@@ -136,9 +136,9 @@ AND c.is_active = 1
 
      <cffunction name="searchProducts" returntype="query">
     <cfargument name="keyword" type="string" required="false" default="">
-    <cfargument name="min_price" type="numeric" required="false">
-    <cfargument name="max_price" type="numeric" required="false">
-    <cfargument name="category_id" type="numeric" required="false">
+    <cfargument name="min_price" required="false" default="">
+    <cfargument name="max_price" required="false" default="">
+    <cfargument name="category_id" required="false" default="">
     <cfargument name="sort" type="string" required="false" default="">
     <cfargument name="page" type="numeric" required="false" default="1">
     <cfargument name="limit" type="numeric" required="false" default="3">
@@ -178,19 +178,19 @@ LEFT JOIN users u ON p.vendor_id = u.id
             )
         </cfif>
 
-         <cfif structKeyExists(arguments, "min_price") AND arguments.min_price NEQ "">
-            AND p.price >= 
+         <cfif isNumeric(arguments.min_price)>
+              AND p.price >= 
             <cfqueryparam value="#arguments.min_price#" cfsqltype="cf_sql_decimal">
+         </cfif>
+
+        <cfif isNumeric(arguments.max_price)>
+             AND p.price <= 
+          <cfqueryparam value="#arguments.max_price#" cfsqltype="cf_sql_decimal">
         </cfif>
 
-        <cfif structKeyExists(arguments, "max_price") AND arguments.max_price NEQ "">
-            AND p.price <= 
-            <cfqueryparam value="#arguments.max_price#" cfsqltype="cf_sql_decimal">
-        </cfif>
-
-         <cfif structKeyExists(arguments, "category_id") AND arguments.category_id NEQ "">
-            AND p.category_id = 
-            <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
+        <cfif isNumeric(arguments.category_id)>
+             AND p.category_id = 
+          <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
         </cfif>
 
          ORDER BY

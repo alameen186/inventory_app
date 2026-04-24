@@ -127,8 +127,13 @@
             </div>
         </div>
 
-        <div class="col-12 col-md-3 d-grid">
+        <div class="col-12 col-md-1 d-grid ">
             <button class="btn btn-primary">Apply</button>
+        </div>
+         <div class="col-12 col-md-1 d-grid ">
+            <button type="button" id="clearBtn" class="btn btn-secondary">
+                Clear 
+            </button>
         </div>
     </div>
 </form>
@@ -251,117 +256,137 @@
 <script>
 $(function(){
 
-    // SORT DROPDOWN
+    var ADMIN_CTRL = "../../controllers/product/AdminProductController.cfc";
+
     $(document).on("click", ".sort-option", function(e){
         e.preventDefault();
         $("#sortValue").val($(this).data("value"));
         $("#sortDropdown").text($(this).text());
     });
 
-    // CATEGORY DROPDOWN
     $(document).on("click", ".category-option", function(e){
         e.preventDefault();
         $("#categoryValue").val($(this).data("value"));
         $("#categoryDropdown").text($(this).text());
     });
 
-    function msg(res){
+    function msg(res) {
+        var type = res.success ? "success" : "danger";
         $("#ajaxMessage").html(
-            '<div class="alert alert-'+(res.status=="success"?"success":"danger")+'">'+res.message+'</div>'
+            '<div class="alert alert-' + type + '">' + res.message + '</div>'
         );
-        setTimeout(()=>$("#ajaxMessage").fadeOut(),3000);
+        setTimeout(function(){ $("#ajaxMessage").fadeOut(); }, 3000);
     }
 
     // ADD
     $("#createProductForm").submit(function(e){
         e.preventDefault();
-        let fd = new FormData(this);
+        var fd = new FormData(this);
         $.ajax({
-            url:"../../controllers/ProductController.cfm",
-            type:"POST", data:fd,
-            processData:false, contentType:false, dataType:"json",
-            success:(res)=>{ msg(res); if(res.status=="success") location.reload(); }
+            url         : ADMIN_CTRL + "?method=add",
+            type        : "POST",
+            data        : fd,
+            processData : false,
+            contentType : false,
+            dataType    : "json",
+            success     : function(res){
+                msg(res);
+                if(res.success) location.reload();
+            }
         });
     });
 
     // EDIT TOGGLE
-    $(document).on("click",".editBtn",function(){
-        let id=$(this).data("id");
-        $("#viewRow_"+id).hide();
-        $("#editRow_"+id).show();
+    $(document).on("click", ".editBtn", function(){
+        var id = $(this).data("id");
+        $("#viewRow_" + id).hide();
+        $("#editRow_" + id).show();
     });
 
-    $(document).on("click",".cancelBtn",function(){
-        let id=$(this).data("id");
-        $("#editRow_"+id).hide();
-        $("#viewRow_"+id).show();
+    $(document).on("click", ".cancelBtn", function(){
+        var id = $(this).data("id");
+        $("#editRow_" + id).hide();
+        $("#viewRow_" + id).show();
     });
 
     // SAVE EDIT
-    $(document).on("click",".saveBtn",function(){
-        let id=$(this).data("id");
-        let row=$("#editRow_"+id);
-        let fd=new FormData();
-        fd.append("action","update");
-        fd.append("id",id);
-        fd.append("product_name",row.find(".name").val());
-        fd.append("price",row.find(".price").val());
-        fd.append("stock",row.find(".stock").val());
-        fd.append("category_id",row.find(".category").val());
-        fd.append("expiry_date",row.find(".expiry").val()); 
-        let file=row.find(".image")[0].files[0];
-        if(file) fd.append("product_image",file);
+    $(document).on("click", ".saveBtn", function(){
+        var id  = $(this).data("id");
+        var row = $("#editRow_" + id);
+        var fd  = new FormData();
+        fd.append("id",           id);
+        fd.append("product_name", row.find(".name").val());
+        fd.append("price",        row.find(".price").val());
+        fd.append("stock",        row.find(".stock").val());
+        fd.append("category_id",  row.find(".category").val());
+        fd.append("expiry_date",  row.find(".expiry").val());
+        var file = row.find(".image")[0].files[0];
+        if(file) fd.append("product_image", file);
+
         $.ajax({
-            url:"../../controllers/ProductController.cfm",
-            type:"POST", data:fd,
-            processData:false, contentType:false, dataType:"json",
-            success:(res)=>{ msg(res); if(res.status=="success") location.reload(); }
+            url         : ADMIN_CTRL + "?method=update",
+            type        : "POST",
+            data        : fd,
+            processData : false,
+            contentType : false,
+            dataType    : "json",
+            success     : function(res){
+                msg(res);
+                if(res.success) location.reload();
+            }
         });
     });
 
     // TOGGLE STATUS
-    $(document).on("click",".toggleBtn",function(){
-        let btn=$(this);
-        $.get("../../controllers/ProductController.cfm",{
-            action:"block", id:btn.data("id"), currentStatus:btn.data("status")
-        },function(res){
-            msg(res);
-            if(res.status!="success") return;
-            let s=res.newStatus;
-            btn.data("status",s);
-            btn.text(s==1?"Block":"Unblock");
-            btn.removeClass("btn-danger btn-success").addClass(s==1?"btn-danger":"btn-success");
-        },"json");
+    $(document).on("click", ".toggleBtn", function(){
+        var btn = $(this);
+        $.ajax({
+            url      : ADMIN_CTRL,
+            type     : "GET",
+            data     : { method: "toggleStatus", id: btn.data("id"), currentStatus: btn.data("status") },
+            dataType : "json",
+            success  : function(res){
+                msg(res);
+                if(!res.success) return;
+                var s = res.data.newStatus;
+                btn.data("status", s);
+                btn.text(s == 1 ? "Block" : "Unblock");
+                btn.removeClass("btn-danger btn-success")
+                   .addClass(s == 1 ? "btn-danger" : "btn-success");
+            }
+        });
     });
 
-   // SEARCH
-$("#searchForm").submit(function(e){
-    e.preventDefault();
-    $.get("../../controllers/ProductController.cfm",
-        "action=search&p=1&" + $(this).serialize(),
-        function(res){
-            $("#productTableBody").html(res.rows);
-            $("#paginationArea").html(res.pagination);
-        }, "json"
-    );
-});
-
-// PAGINATION
-$(document).on("click", ".pageBtn", function(){
-    let page = $(this).data("page");
-    $.get("../../controllers/ProductController.cfm",
-        "action=search&p=" + page + "&" + $("#searchForm").serialize(),
-        function(res){
-            $("#productTableBody").html(res.rows);
-            $("#paginationArea").html(res.pagination);
-        }, "json"
-    );
-});
-
-    function setActivePage(page){
-        $(".pageBtn").removeClass("btn-primary").addClass("btn-outline-primary");
-        $(".pageBtn[data-page='"+page+"']").removeClass("btn-outline-primary").addClass("btn-primary");
+    // SEARCH
+    function doSearch(page) {
+        $.ajax({
+            url      : ADMIN_CTRL,
+            type     : "GET",
+            data     : "method=search&p=" + page + "&" + $("#searchForm").serialize(),
+            dataType : "json",
+            success  : function(res){
+                if(res.success){
+                    $("#productTableBody").html(res.data.rows);
+                    $("#paginationArea").html(res.data.pagination);
+                }
+            }
+        });
     }
+
+    $("#searchForm").submit(function(e){
+        e.preventDefault();
+        doSearch(1);
+    });
+
+    $(document).on("click", ".pageBtn", function(){
+        doSearch($(this).data("page"));
+    });
+
+      // CLEAR
+    $("#clearBtn").click(function(){
+        $("#searchForm")[0].reset();
+        doSearch(1);
+    });
 
 });
 </script>
