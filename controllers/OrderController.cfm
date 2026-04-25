@@ -1,3 +1,5 @@
+<!---
+
 <!---ADMIN--->
 <cfif structKeyExists(form, "action") AND form.action EQ "checkout">
 
@@ -563,3 +565,5 @@ body { font-family: Arial; font-size: 12px; }
 <cfabort>
 
 </cfif>
+
+--->

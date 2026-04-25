@@ -194,7 +194,7 @@ No Image
 <cfset startPage = (pageGroup - 1) * groupSize + 1>
 <cfset endPage = min(startPage + groupSize - 1, totalPages)>
 
-<div class="mt-4 d-flex justify-content-center gap-2 flex-wrap">
+<div id="paginationContainer">
 
 <cfoutput>
 
@@ -227,85 +227,116 @@ data-page="#endPage + 1#">Next</button>
 <script>
 $(function(){
 
+var ORDER_CTRL = "../../controllers/orders/UserOrderController.cfc";
+
+// ───────────── MESSAGE ─────────────
 function showMsg(res){
-$("#ajaxMessage").html(
-'<div class="alert alert-'+
-(res.status==="success"?"success":"danger")+
-'">'+res.message+'</div>'
-);
+    $("#ajaxMessage").html(
+        '<div class="alert alert-'+
+        (res.status==="success"?"success":"danger")+
+        '">'+(res.message || "")+'</div>'
+    );
 }
 
-// SEARCH
+// ───────────── LOAD ORDERS ─────────────
+function loadOrders(page){
+
+
+    let formData = $("#searchForm").serialize();
+
+
+formData = formData.replace(/(&|^)p=\d+/,"");
+
+let finalData = "method=searchOrders&p=" + page;
+
+if(formData){
+    finalData += "&" + formData;
+}
+
+    $.ajax({
+        url      : ORDER_CTRL,
+        type     : "GET",
+        data     : finalData,
+        dataType : "json",
+
+        success: function(res){
+
+
+            if(res.status === "success"){
+                $("#orderContainer").html(res.html);
+                $("#paginationContainer").html(res.pagination);
+            } else {
+                showMsg(res);
+            }
+        },
+
+        error : function(xhr){
+            console.log("Order load error:", xhr.responseText);
+        }
+    });
+}
+
+// ───────────── SEARCH ─────────────
 $("#searchForm").submit(function(e){
-e.preventDefault();
-
-$("#orderContainer").html("<div class='text-center'>Loading...</div>");
-
-$.get("../../controllers/OrderController.cfm",
-"action=search&"+$(this).serialize(),
-function(res){
-$("#orderContainer").html(res);
-});
+    e.preventDefault();
+    loadOrders(1);
 });
 
-// CLEAR
-$("#clearSearch").click(function(){
-$("#searchForm")[0].reset();
-$("#searchForm").submit();
+
+// ───────────── PAGINATION ─────────────
+$(document).on("click",".pageBtn",function(){
+    loadOrders($(this).data("page"));
 });
 
-// CANCEL TOGGLE
+// ───────────── CANCEL TOGGLE ─────────────
 $(document).on("click",".cancelBtn",function(){
-let id=$(this).data("id");
-$(".cancelBox").addClass("d-none");
-$("#cancelBox_"+id).removeClass("d-none");
+    let id=$(this).data("id");
+    $(".cancelBox").addClass("d-none");
+    $("#cancelBox_"+id).removeClass("d-none");
 });
 
 $(document).on("click",".closeCancel",function(){
-let id=$(this).data("id");
-$("#cancelBox_"+id).addClass("d-none");
+    let id=$(this).data("id");
+    $("#cancelBox_"+id).addClass("d-none");
 });
 
-// CONFIRM CANCEL
+// ───────────── CONFIRM CANCEL ─────────────
 $(document).on("click",".confirmCancel",function(){
 
-let id=$(this).data("id");
-let reason = $(".cancelReason[data-id='"+id+"']").val();
+    let id = $(this).data("id");
+    let reason = $(".cancelReason[data-id='"+id+"']").val();
 
-if(!reason.trim()){
-alert("Please enter reason");
-return;
-}
+    if(!reason.trim()){
+        alert("Please enter reason");
+        return;
+    }
 
-$.post("../../controllers/OrderController.cfm",{
-action:"cancel",
-order_group_id:id,
-reason:reason
-},function(res){
-
-showMsg(res);
-$("#searchForm").submit();
-
-},"json");
-
-});
-
-// PAGINATION
-$(document).on("click",".pageBtn",function(){
-
-let page=$(this).data("page");
-
-let data=$("#searchForm").serialize().replace(/(&|^)p=\d+/,"");
-
-$("#orderContainer").html("<div class='text-center'>Loading...</div>");
-
-$.get("../../controllers/OrderController.cfm",
-"action=search&p="+page+"&"+data,
-function(res){
-$("#orderContainer").html(res);
-});
+    $.ajax({
+        url      : ORDER_CTRL + "?method=cancelOrder",
+        type     : "POST",
+        data     : {
+            order_group_id : id,
+            reason         : reason
+        },
+        dataType : "json",
+        success  : function(res){
+            showMsg(res);
+            loadOrders(1); // reload list
+        },
+        error : function(xhr){
+            console.log("Cancel error:", xhr.responseText);
+        }
+    });
 
 });
+
+$("#clearBtn").click(function(){
+        $("#searchForm")[0].reset();
+        doSearch(1);
+    });
+
+// ───────────── INITIAL LOAD ─────────────
+loadOrders(1);
 
 });
 </script>
