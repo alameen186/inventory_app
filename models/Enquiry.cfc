@@ -24,22 +24,49 @@
 </cffunction>
 
 <cffunction name="getUserEnquiries" returntype="query" output="false">
-       <cfargument name="user_id" required="true">
-       <cfquery name="q" datasource="#application.dsn#">
-           SELECT 
-                pe.id,
-                pe.status,
-                pe.created_at,
-                p.product_name,
-                p.price,
-                p.image
-            FROM product_enquiries pe
-            INNER JOIN products p ON pe.product_id = p.id
-            WHERE pe.user_id = 
-            <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
-            ORDER BY pe.id DESC
-       </cfquery>
-       <cfreturn q>
+    <cfargument name="user_id" required="true">
+    <cfargument name="page"    type="numeric" default="1">
+    <cfargument name="limit"   type="numeric" default="5">
+    <cfset var offset = (arguments.page - 1) * arguments.limit>
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT
+            pe.id,
+            pe.status,
+            pe.created_at,
+            p.product_name,
+            p.price,
+            p.image
+        FROM product_enquiries pe
+        INNER JOIN products p ON pe.product_id = p.id
+        WHERE pe.user_id = <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
+        ORDER BY pe.id DESC
+        LIMIT  <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+        OFFSET <cfqueryparam value="#offset#"          cfsqltype="cf_sql_integer">
+    </cfquery>
+    <cfreturn q>
+</cffunction>
+
+<cffunction name="getUserEnquiryCount" returntype="numeric" output="false">
+    <cfargument name="user_id" required="true">
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT COUNT(*) AS total
+        FROM   product_enquiries
+        WHERE  user_id = <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+    <cfreturn q.total>
+</cffunction>
+
+<cffunction name="enquiryExists" returntype="boolean" output="false">
+    <cfargument name="user_id"    required="true">
+    <cfargument name="product_id" required="true">
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT COUNT(*) AS cnt
+        FROM   product_enquiries
+        WHERE  user_id    = <cfqueryparam value="#arguments.user_id#"    cfsqltype="cf_sql_integer">
+        AND    product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+        AND    status     = 'pending'
+    </cfquery>
+    <cfreturn q.cnt GT 0>
 </cffunction>
 
 
@@ -114,6 +141,31 @@
 
     <cfreturn q>
 
+</cffunction>
+
+<cffunction name="restockProduct" returntype="boolean" output="false">
+    <cfargument name="product_id" required="true">
+    <cfargument name="add_stock"  type="numeric" required="true">
+    <cftry>
+        <!--- UPDATE PRODUCT STOCK --->
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET    stock = stock + <cfqueryparam value="#arguments.add_stock#" cfsqltype="cf_sql_integer">
+            WHERE  id    = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+
+        <cfquery datasource="#application.dsn#">
+            UPDATE product_enquiries
+            SET    status = 'fulfilled'
+            WHERE  product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+            AND    status     = 'pending'
+        </cfquery>
+
+        <cfreturn true>
+    <cfcatch>
+        <cfreturn false>
+    </cfcatch>
+    </cftry>
 </cffunction>
 
 

@@ -200,11 +200,13 @@
                         <div>
                             <cfif stock LTE 0>
                                 <p class="text-danger fw-bold mb-2">Out of Stock</p>
-                                <form class="enquiryForm" method="post">
-                                    <input type="hidden" name="action" value="addEnquiry">
-                                    <input type="hidden" name="product_id" value="#id#">
-                                    <button class="btn btn-warning btn-sm w-100">Request Product</button>
-                                </form>
+                                <div id="enqMsg_#id#"></div>
+                                <div id="enqBtnArea_#id#">
+                                    <form class="enquiryForm" method="post">
+                                        <input type="hidden" name="product_id" value="#id#">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100">Request Product</button>
+                                    </form>
+                                </div>
                             <cfelse>
                                 <cfif structKeyExists(session.cart, id)>
                                     <a href="../../index.cfm?page=dashboard&section=cart"
@@ -323,28 +325,44 @@ $(document).ready(function(){
         });
     });
 
-    // ── Enquiry ──
-    $(document).on("submit", ".enquiryForm", function(e) {
-        e.preventDefault();
-        $.ajax({
-            url      : ENQ_CTRL + "?method=add",
-            type     : "POST",
-            data     : $(this).serialize(),
-            dataType : "json",
-            success  : function(res) {
-                alert(res.message);
-            },
-            error : function(xhr) {
-                console.log("Enquiry error:", xhr.responseText);
-            }
-        });
-    });
-
     // ── Clear ──
     $("#clearBtn").on("click", function() {
         $("#searchForm")[0].reset();
         doSearch(1);
     });
+
+    // ENQUIRY
+// ENQUIRY
+$(document).on("submit", ".enquiryForm", function(e){
+    e.preventDefault();
+    var form      = $(this);
+    var productId = form.find("input[name='product_id']").val();
+
+    $.ajax({
+        url      : ENQ_CTRL + "?method=addEnquiry",
+        type     : "POST",
+        data     : { product_id: productId },
+        dataType : "json",
+        success  : function(res){
+            if(res.status === "success"){
+                $("#enqMsg_"+productId).html(
+                    '<div class="alert alert-success p-1 small">'+res.message+'</div>'
+                );
+                $("#enqBtnArea_"+productId).html(
+                    '<a href="../../index.cfm?page=dashboard&section=myEnquiries" '+
+                    'class="btn btn-info btn-sm w-100">View Enquiries</a>'
+                );
+            } else {
+                $("#enqMsg_"+productId).html(
+                    '<div class="alert alert-danger p-1 small">'+res.message+'</div>'
+                );
+            }
+        },
+        error : function(xhr){
+            console.log("Enquiry error:", xhr.responseText);
+        }
+    });
+});
 
 });
 </script>
