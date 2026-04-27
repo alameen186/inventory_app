@@ -161,9 +161,9 @@ $(document).on("click",".removeBtn",function(){
 
 $("#placeOrderBtn").click(function(){
 
-    let first_name=$("#first_name").val();
-    let last_name=$("#last_name").val();
-    let email=$("#email").val();
+    let first_name = $("#first_name").val();
+    let last_name  = $("#last_name").val();
+    let email      = $("#email").val();
 
     if(!first_name || !email){
         alert("Customer info required");
@@ -171,31 +171,32 @@ $("#placeOrderBtn").click(function(){
     }
 
     if(Object.keys(cart).length === 0){
-        alert("Add products");
+        alert("Add products to cart");
         return;
     }
 
-    $.post("../../controllers/OrderController.cfm",{
-        action:"vendorOrder",
-        first_name:first_name,
-        last_name:last_name,
-        email:email,
-        cart:JSON.stringify(cart)
-    },function(res){
-
-        console.log(res);
-
-        if(res.status==="success"){
-            alert("Order Created");
-            location.reload();
-        }else{
-            alert(res.message);
+    $.ajax({
+        url      : "../../controllers/AdminCreateOrderController.cfc?method=vendorOrder",
+        type     : "POST",
+        data     : {
+            first_name : first_name,
+            last_name  : last_name,
+            email      : email,
+            cart       : JSON.stringify(cart)
+        },
+        dataType : "json",
+        success  : function(res){
+            if(res.status === "success"){
+                alert("Order Created Successfully");
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        },
+        error : function(xhr){
+            console.log("Full error:", xhr.responseText);
+            alert("Server error. Check console.");
         }
-
-    },"json")
-    .fail(function(xhr){
-        console.log("FULL ERROR:", xhr.responseText);
-        alert("Server error. Check console.");
     });
 
 });
