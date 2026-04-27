@@ -3,7 +3,7 @@
     <cffunction name="sendJSON" access="private" returntype="void" output="true">
         <cfargument name="data" type="struct" required="true">
         <cfcontent type="application/json; charset=utf-8" reset="true">
-        <cfset var map = createObject("java","java.util.LinkedHashMap").init()>
+        <cfset var map = structNew("ordered")>
         <cfloop collection="#arguments.data#" item="k">
             <cfset map[lcase(k)] = arguments.data[k]>
         </cfloop>
