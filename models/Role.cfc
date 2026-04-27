@@ -97,5 +97,17 @@
     <cfreturn roles>
 
 </cffunction>
+<cffunction name="createRole" access="public" returntype="void" output="false">
+    <cfargument name="name"        type="string" required="true">
+    <cfargument name="description" type="string" required="true">
+    <cfquery datasource="#application.dsn#">
+        INSERT INTO roles (role_name, description)
+        VALUES (
+            <cfqueryparam value="#trim(arguments.name)#"        cfsqltype="cf_sql_varchar">,
+            <cfqueryparam value="#trim(arguments.description)#" cfsqltype="cf_sql_varchar">
+        )
+    </cfquery>
+</cffunction>
+
 
 </cfcomponent>
