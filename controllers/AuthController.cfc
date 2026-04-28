@@ -92,10 +92,21 @@
                 <cfset session.role_id    = result.user.role_id>
                 <cfset session.role_name  = result.user.role_name>
 
+                <!--- ADD: GENERATE JWT TOKEN --->
+            <cfset var jwtObj = createObject("component", "models.jwt").init(application.jwtSecret)>
+            <cfset var payload = {
+                "userid"    : result.user.id,
+                "email"     : result.user.email,
+                "role_id"   : result.user.role_id,
+                "role_name" : result.user.role_name,
+                "exp"       : DateDiff("s", CreateDate(1970,1,1), DateAdd("h", 2, Now()))
+            }>
+            <cfset var token = jwtObj.encode(payload)>
+
                 <cfreturn jsonResponse(
                     true,
                     "Login successful",
-                    "",
+                    { "token": token },
                     "index.cfm?page=dashboard"
                 )>
             <cfelse>

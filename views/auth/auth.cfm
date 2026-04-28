@@ -115,6 +115,10 @@
             success  : function(res) {
                 if (res.success) {
                     showAlert(res.message, "success");
+
+                     if (res.data && res.data.token) {
+            localStorage.setItem("inv_token", res.data.token);
+        }
                     if (res.redirect) {
                         setTimeout(function() {
                             window.location.href = res.redirect;

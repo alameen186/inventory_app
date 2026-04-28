@@ -224,27 +224,37 @@ Logout
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-$(document).on("click",".menuLink",function(e){
-e.preventDefault();
 
-let section = $(this).data("section");
+    // ── JWT HELPER ── add this once here, available to all pages ──
+    function getAuthHeaders() {
+        var token = localStorage.getItem("inv_token");
+        return token ? { "Authorization": "Bearer " + token } : {};
+    }
 
+    // ── MENU CLICK ── your existing code, unchanged ──
+    $(document).on("click", ".menuLink", function(e){
+        e.preventDefault();
 
-$(".menuLink").removeClass("active");
+        let section = $(this).data("section");
 
+        $(".menuLink").removeClass("active");
+        $(".menuLink[data-section='" + section + "']").addClass("active");
 
-$(".menuLink[data-section='"+section+"']").addClass("active");
+        window.history.pushState(null, "", "?page=dashboard&section=" + section);
 
+        $.get(
+            "../../controllers/DashboardController.cfm",
+            { section: section },
+            function(res){
+                $("#mainContent").html(res);
+            }
+        );
+    });
 
-window.history.pushState(null,"","?page=dashboard&section="+section);
-
-
-$.get("../../controllers/DashboardController.cfm",
-{section:section},
-function(res){
-$("#mainContent").html(res);
+    $(document).on("click", "a[href*='LogoutController']", function(){
+    localStorage.removeItem("inv_token");
 });
-});
+
 </script>
 
 </body>

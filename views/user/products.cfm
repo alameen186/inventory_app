@@ -263,7 +263,7 @@
 
 <script>
 $(document).ready(function(){
-
+console.log("Token:", getAuthHeaders());
     var USER_CTRL = "../../controllers/product/UserProductController.cfc";
     var CART_CTRL = "../../controllers/CartController.cfc";
     var ENQ_CTRL  = "../../controllers/EnquiryController.cfc";
@@ -281,6 +281,7 @@ $(document).ready(function(){
             url      : USER_CTRL,
             type     : "GET",
             data     : "method=search&p=" + page + "&" + getFilterParams(),
+            headers  : getAuthHeaders(),
             dataType : "json",
             success  : function(res) {
                 if (res.success) {
@@ -342,6 +343,7 @@ $(document).on("submit", ".enquiryForm", function(e){
         url      : ENQ_CTRL + "?method=addEnquiry",
         type     : "POST",
         data     : { product_id: productId },
+        headers  : getAuthHeaders(),
         dataType : "json",
         success  : function(res){
             if(res.status === "success"){
