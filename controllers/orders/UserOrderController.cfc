@@ -1,31 +1,21 @@
 <cfcomponent output="false">
 
     <cffunction name="sendJSON" access="private" returntype="void" output="true">
-    <cfargument name="data" type="struct" required="true">
-    <cfcontent type="application/json; charset=utf-8" reset="true">
-    <cfset var map = createObject("java","java.util.LinkedHashMap").init()>
-    <cfloop collection="#arguments.data#" item="k">
-        <cfset map[lcase(k)] = arguments.data[k]>
-    </cfloop>
-    <cfset var jsonStr = serializeJSON(map)>
-    <cfoutput>#jsonStr#</cfoutput>
-    <cfabort>
-</cffunction>
-
-    <cffunction name="requireAuth" access="private" returntype="void" output="false">
-        <cfif NOT structKeyExists(session,"user_id")>
-            <cfset sendJSON({
-                status:"error",
-                message:"Unauthorized",
-                html:"",
-                pagination:""
-            })>
-        </cfif>
+       <cfargument name="data" type="struct" required="true">
+       <cfcontent type="application/json; charset=utf-8" reset="true">
+       <cfset var map = createObject("java","java.util.LinkedHashMap").init()>
+       <cfloop collection="#arguments.data#" item="k">
+           <cfset map[lcase(k)] = arguments.data[k]>
+       </cfloop>
+       <cfset var jsonStr = serializeJSON(map)>
+       <cfoutput>#jsonStr#</cfoutput>
+       <cfabort>
     </cffunction>
+
 
     <!--- SEARCH ORDERS --->
     <cffunction name="searchOrders" access="remote" returntype="void" output="true" httpmethod="GET">
-        <cfset requireAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cftry>
             <cfset var orderModel  = createObject("component","models.Order")>
             <cfset var srch        = structKeyExists(url,"search") ? trim(url.search) : "">
@@ -170,7 +160,7 @@
 
     <!--- CANCEL ORDER --->
     <cffunction name="cancelOrder" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset requireAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfif NOT structKeyExists(form,"order_group_id") OR NOT len(trim(form.order_group_id))>
             <cfset sendJSON({status:"error", message:"Order ID required",html:"",pagination:""})>
         </cfif>

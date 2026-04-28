@@ -11,12 +11,6 @@
         <cfabort>
     </cffunction>
 
-    <cffunction name="requireAuth" access="private" returntype="void" output="false">
-        <cfif NOT structKeyExists(session,"user_id")>
-            <cfset sendJSON({status:"error", message:"Unauthorized", html:"", pagination:""})>
-        </cfif>
-    </cffunction>
-
     <cffunction name="getVendorFilter" access="private" returntype="string" output="false">
         <cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
             <cfreturn session.user_id>
@@ -26,7 +20,7 @@
 
     <!--- SEARCH CATEGORIES --->
     <cffunction name="searchCategories" access="remote" returntype="void" output="true" httpmethod="GET">
-        <cfset requireAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cftry>
             <cfset var categoryModel = createObject("component","models.Category")>
             <cfset var vendorFilter  = getVendorFilter()>
@@ -131,97 +125,97 @@
     </cffunction>
 
     <!--- ADD CATEGORY --->
-<cffunction name="addCategory" access="remote" returntype="void" output="true" httpmethod="POST">
-    <cfset requireAuth()>
-
-    <cfset var catName = structKeyExists(form,"category_name") ? trim(form.category_name) : "">
-    <cfset var desc    = structKeyExists(form,"description")   ? trim(form.description)   : "">
-
-    <cfif NOT len(catName)>
-        <cfset sendJSON({status:"error", message:"Category name is required.", html:"", pagination:""})>
-    </cfif>
-    <cfif len(catName) LT 2>
-        <cfset sendJSON({status:"error", message:"Category name must be at least 2 characters.", html:"", pagination:""})>
-    </cfif>
-    <cfif NOT len(desc)>
-        <cfset sendJSON({status:"error", message:"Description is required.", html:"", pagination:""})>
-    </cfif>
-    <cfif len(desc) LT 5>
-        <cfset sendJSON({status:"error", message:"Description must be at least 5 characters.", html:"", pagination:""})>
-    </cfif>
-
-    <cftry>
-        <cfset var categoryModel = createObject("component","models.Category")>
-        <cfset var vendorFilter  = getVendorFilter()>
-        <cfset var result = categoryModel.addCategory(
-            category_name = catName,
-            description   = desc,
-            vendor_id     = vendorFilter
-        )>
-        <cfif result>
-            <cfset sendJSON({status:"success", message:"Category added successfully.", html:"", pagination:""})>
-        <cfelse>
-            <cfset sendJSON({status:"error", message:"Could not add category.", html:"", pagination:""})>
+    <cffunction name="addCategory" access="remote" returntype="void" output="true" httpmethod="POST">
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+    
+        <cfset var catName = structKeyExists(form,"category_name") ? trim(form.category_name) : "">
+        <cfset var desc    = structKeyExists(form,"description")   ? trim(form.description)   : "">
+    
+        <cfif NOT len(catName)>
+            <cfset sendJSON({status:"error", message:"Category name is required.", html:"", pagination:""})>
         </cfif>
-    <cfcatch>
-        <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
-    </cfcatch>
-    </cftry>
-</cffunction>
-
-<!--- UPDATE CATEGORY --->
-<cffunction name="updateCategory" access="remote" returntype="void" output="true" httpmethod="POST">
-    <cfset requireAuth()>
-
-    <cfset var id      = structKeyExists(form,"id")            ? trim(form.id)            : "">
-    <cfset var catName = structKeyExists(form,"category_name") ? trim(form.category_name) : "">
-    <cfset var desc    = structKeyExists(form,"description")   ? trim(form.description)   : "">
-
-    <cfif NOT len(id)>
-        <cfset sendJSON({status:"error", message:"Category ID is required.", html:"", pagination:""})>
-    </cfif>
-    <cfif NOT len(catName)>
-        <cfset sendJSON({status:"error", message:"Category name is required.", html:"", pagination:""})>
-    </cfif>
-    <cfif len(catName) LT 2>
-        <cfset sendJSON({status:"error", message:"Category name must be at least 2 characters.", html:"", pagination:""})>
-    </cfif>
-    <cfif NOT len(desc)>
-        <cfset sendJSON({status:"error", message:"Description is required.", html:"", pagination:""})>
-    </cfif>
-    <cfif len(desc) LT 5>
-        <cfset sendJSON({status:"error", message:"Description must be at least 5 characters.", html:"", pagination:""})>
-    </cfif>
-
-    <cftry>
-        <cfset var categoryModel = createObject("component","models.Category")>
-        <cfset var result = categoryModel.update_category(
-            id            = id,
-            category_name = catName,
-            description   = desc
-        )>
-        <cfif result>
-            <cfset sendJSON({
-                status        : "success",
-                message       : "Category updated successfully.",
-                id            : id,
-                category_name : catName,
-                description   : desc,
-                html          : "",
-                pagination    : ""
-            })>
-        <cfelse>
-            <cfset sendJSON({status:"error", message:"Could not update category.", html:"", pagination:""})>
+        <cfif len(catName) LT 2>
+            <cfset sendJSON({status:"error", message:"Category name must be at least 2 characters.", html:"", pagination:""})>
         </cfif>
-    <cfcatch>
-        <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
-    </cfcatch>
-    </cftry>
-</cffunction>
+        <cfif NOT len(desc)>
+            <cfset sendJSON({status:"error", message:"Description is required.", html:"", pagination:""})>
+        </cfif>
+        <cfif len(desc) LT 5>
+            <cfset sendJSON({status:"error", message:"Description must be at least 5 characters.", html:"", pagination:""})>
+        </cfif>
+    
+        <cftry>
+            <cfset var categoryModel = createObject("component","models.Category")>
+            <cfset var vendorFilter  = getVendorFilter()>
+            <cfset var result = categoryModel.addCategory(
+                category_name = catName,
+                description   = desc,
+                vendor_id     = vendorFilter
+            )>
+            <cfif result>
+                <cfset sendJSON({status:"success", message:"Category added successfully.", html:"", pagination:""})>
+            <cfelse>
+                <cfset sendJSON({status:"error", message:"Could not add category.", html:"", pagination:""})>
+            </cfif>
+        <cfcatch>
+            <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
+        </cfcatch>
+        </cftry>
+    </cffunction>
+    
+    <!--- UPDATE CATEGORY --->
+    <cffunction name="updateCategory" access="remote" returntype="void" output="true" httpmethod="POST">
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+    
+        <cfset var id      = structKeyExists(form,"id")            ? trim(form.id)            : "">
+        <cfset var catName = structKeyExists(form,"category_name") ? trim(form.category_name) : "">
+        <cfset var desc    = structKeyExists(form,"description")   ? trim(form.description)   : "">
+    
+        <cfif NOT len(id)>
+            <cfset sendJSON({status:"error", message:"Category ID is required.", html:"", pagination:""})>
+        </cfif>
+        <cfif NOT len(catName)>
+            <cfset sendJSON({status:"error", message:"Category name is required.", html:"", pagination:""})>
+        </cfif>
+        <cfif len(catName) LT 2>
+            <cfset sendJSON({status:"error", message:"Category name must be at least 2 characters.", html:"", pagination:""})>
+        </cfif>
+        <cfif NOT len(desc)>
+            <cfset sendJSON({status:"error", message:"Description is required.", html:"", pagination:""})>
+        </cfif>
+        <cfif len(desc) LT 5>
+            <cfset sendJSON({status:"error", message:"Description must be at least 5 characters.", html:"", pagination:""})>
+        </cfif>
+    
+        <cftry>
+            <cfset var categoryModel = createObject("component","models.Category")>
+            <cfset var result = categoryModel.update_category(
+                id            = id,
+                category_name = catName,
+                description   = desc
+            )>
+            <cfif result>
+                <cfset sendJSON({
+                    status        : "success",
+                    message       : "Category updated successfully.",
+                    id            : id,
+                    category_name : catName,
+                    description   : desc,
+                    html          : "",
+                    pagination    : ""
+                })>
+            <cfelse>
+                <cfset sendJSON({status:"error", message:"Could not update category.", html:"", pagination:""})>
+            </cfif>
+        <cfcatch>
+            <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
+        </cfcatch>
+        </cftry>
+    </cffunction>
 
     <!--- TOGGLE STATUS --->
     <cffunction name="toggleStatus" access="remote" returntype="void" output="true" httpmethod="GET">
-        <cfset requireAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfif NOT structKeyExists(url,"id")>
             <cfset sendJSON({status:"error", message:"ID required", html:"", pagination:""})>
         </cfif>

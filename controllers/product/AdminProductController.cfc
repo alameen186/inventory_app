@@ -20,17 +20,9 @@
         <cfreturn "">
     </cffunction>
 
-    <!---  auth check helper  --->
-    <cffunction name="checkAuth" access="private" returntype="void" output="true">
-        <cfif NOT structKeyExists(session,"user_id")>
-            <cfset jsonRes(false, "Session expired. Please login.")>
-            <cfabort>
-        </cfif>
-    </cffunction>
-
     <!--- ADD PRODUCT --->
     <cffunction name="add" access="remote" returntype="void" output="true" httpMethod="POST">
-        <cfset checkAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel = createObject("component","models.Product")>
 
         <cftry>
@@ -95,7 +87,7 @@
 
     <!--- UPDATE PRODUCT --->
     <cffunction name="update" access="remote" returntype="void" output="true" httpMethod="POST">
-        <cfset checkAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel = createObject("component","models.Product")>
 
         <cftry>
@@ -153,7 +145,7 @@
 
     <!--- TOGGLE STATUS --->
     <cffunction name="toggleStatus" access="remote" returntype="void" output="true" httpMethod="GET">
-        <cfset checkAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel = createObject("component","models.Product")>
 
         <cftry>
@@ -175,7 +167,7 @@
 
     <!--- SEARCH / PAGINATION --->
     <cffunction name="search" access="remote" returntype="void" output="true" httpMethod="GET">
-        <cfset checkAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel  = createObject("component","models.Product")>
         <cfset var categoryModel = createObject("component","models.Category")>
         <cfset var vendorFilter  = getVendorFilter()>

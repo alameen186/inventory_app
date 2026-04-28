@@ -74,7 +74,7 @@
 </ul>
 </cfif>
 
-<a href="../../controllers/LogoutController.cfm" class="btn btn-danger w-100 mt-4">Logout</a>
+<button onclick="Auth.logout()" class="btn btn-danger w-100 mt-4">Logout</button>
 </div>
 
 <!--  MOBILE SIDEBAR  -->
@@ -112,7 +112,7 @@
 </ul>
 </cfif>
 
-<a href="../../controllers/LogoutController.cfm" class="btn btn-danger w-100 mt-4">Logout</a>
+<button onclick="Auth.logout()" class="btn btn-danger w-100 mt-4">Logout</button>
 </div>
 </div>
 
@@ -156,9 +156,7 @@ style="width:50px;height:50px;">
 
 <hr>
 
-<a href="../../controllers/LogoutController.cfm" class="btn btn-danger btn-sm w-100">
-Logout
-</a>
+<button onclick="Auth.logout()" class="btn btn-danger w-100 mt-4">Logout</button>
 </cfoutput>
 </div>
 </div>
@@ -256,6 +254,6 @@ Logout
 });
 
 </script>
-
+<script src="../../assets/js/auth.js"></script>
 </body>
 </html>

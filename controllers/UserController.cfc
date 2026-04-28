@@ -11,15 +11,10 @@
             <cfabort>
         </cffunction>
 
-        <cffunction name="requireAdmin" access="private" returntype="void" output="false">
-            <cfif NOT structKeyExists(session,"role_id") OR session.role_id NEQ 1>
-                <cfset sendJSON({status:"error", message:"Unauthorized", html:"", pagination:""})>
-            </cfif>
-        </cffunction>
-
         <!--- SEARCH USERS --->
         <cffunction name="searchUsers" access="remote" returntype="void" output="true" httpmethod="GET">
-            <cfset requireAdmin()>
+            <cfset createObject("component","models.AuthGuard").checkAuth()>
+            <cfset createObject("component","models.AuthGuard").requireRole(1)>
             <cftry>
                 <cfset var userModel    = createObject("component","models.User")>
                 <cfset var srch         = structKeyExists(url,"search") ? trim(url.search) : "">
@@ -49,23 +44,23 @@
                             <td class="text-break">#email#</td>
                             <td>#role_name#</td>
                             <<td class="d-flex flex-wrap gap-1">
-    <cfif role_id EQ 1>
-        <span class="badge bg-secondary">Action Restricted</span>
-    <cfelse>
-        <button class="btn btn-warning btn-sm editBtn"
-            data-id="#id#"
-            data-first="#encodeForHTMLAttribute(first_name)#"
-            data-last="#encodeForHTMLAttribute(last_name)#"
-            data-email="#encodeForHTMLAttribute(email)#">
-            Edit
-        </button>
-
-        <button class="btn btn-danger btn-sm deleteBtn"
-            data-id="#id#">
-            Delete
-        </button>
-    </cfif>
-</td>
+                            <cfif role_id EQ 1>
+                                <span class="badge bg-secondary">Action Restricted</span>
+                            <cfelse>
+                                <button class="btn btn-warning btn-sm editBtn"
+                                    data-id="#id#"
+                                    data-first="#encodeForHTMLAttribute(first_name)#"
+                                    data-last="#encodeForHTMLAttribute(last_name)#"
+                                    data-email="#encodeForHTMLAttribute(email)#">
+                                    Edit
+                                </button>
+                        
+                                <button class="btn btn-danger btn-sm deleteBtn"
+                                    data-id="#id#">
+                                    Delete
+                                </button>
+                            </cfif>
+                        </td>
                         </tr>
                         </cfoutput>
                     </cfif>
@@ -116,7 +111,8 @@
 
         <!--- CREATE USER --->
         <cffunction name="createUser" access="remote" returntype="void" output="true" httpmethod="POST">
-            <cfset requireAdmin()>
+            <cfset createObject("component","models.AuthGuard").checkAuth()>
+            <cfset createObject("component","models.AuthGuard").requireRole(1)>
             <cftry>
                 <cfset var first_name = structKeyExists(form,"first_name") ? trim(form.first_name) : "">
                 <cfset var last_name  = structKeyExists(form,"last_name")  ? trim(form.last_name)  : "">
@@ -160,7 +156,8 @@
 
         <!--- UPDATE USER --->
         <cffunction name="updateUser" access="remote" returntype="void" output="true" httpmethod="POST">
-            <cfset requireAdmin()>
+            <cfset createObject("component","models.AuthGuard").checkAuth()>
+            <cfset createObject("component","models.AuthGuard").requireRole(1)>
             <cftry>
                 <cfset var id         = structKeyExists(form,"id")         ? val(form.id)          : 0>
                 <cfset var first_name = structKeyExists(form,"first_name") ? trim(form.first_name) : "">
@@ -196,7 +193,8 @@
 
         <!--- DELETE USER --->
         <cffunction name="deleteUser" access="remote" returntype="void" output="true" httpmethod="GET">
-            <cfset requireAdmin()>
+            <cfset createObject("component","models.AuthGuard").checkAuth()>
+            <cfset createObject("component","models.AuthGuard").requireRole(1)>
             <cftry>
                 <cfset var id = structKeyExists(url,"id") ? val(url.id) : 0>
                 <cfif id LTE 0>
@@ -212,100 +210,102 @@
         </cffunction>
 
         <!--- SEARCH VENDORS --->
-<cffunction name="searchVendors" access="remote" returntype="void" output="true" httpmethod="GET">
-    <cfset requireAdmin()>
-    <cftry>
-        <cfset var userModel   = createObject("component","models.User")>
-        <cfset var srch        = structKeyExists(url,"search") ? trim(url.search) : "">
-        <cfset var sort        = structKeyExists(url,"sort")   ? trim(url.sort)   : "">
-        <cfset var currentPage = structKeyExists(url,"p") AND val(url.p) GT 0 ? val(url.p) : 1>
-        <cfset var limit       = 5>
-        <cfset var groupSize   = 4>
-
-        <cfset var vendors = userModel.getAllVendors(
-            search = srch,
-            sort   = sort,
-            page   = currentPage,
-            limit  = limit
-        )>
-        <cfset var totalRecords = userModel.getVendorCount(search = srch)>
-        <cfset var totalPages   = ceiling(totalRecords / limit)>
-
-        <!--- TABLE ROWS HTML --->
-        <cfsavecontent variable="tableHTML">
-            <cfif vendors.recordCount EQ 0>
-                <tr><td colspan="5" class="text-center">No vendors found.</td></tr>
-            <cfelse>
-                <cfoutput query="vendors">
-                <tr id="vrow_#id#">
-                    <td>#id#</td>
-                    <td>#encodeForHTML(first_name)# #encodeForHTML(last_name)#</td>
-                    <td class="text-break">#encodeForHTML(email)#</td>
-                    <td>#role_name#</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm deleteVendorBtn"
-                                data-id="#id#">Delete</button>
-                    </td>
-                </tr>
-                </cfoutput>
-            </cfif>
-        </cfsavecontent>
-
-        <!--- GROUPED PAGINATION HTML --->
-        <cfsavecontent variable="paginationHTML">
-        <cfif totalPages GT 1>
-            <cfoutput>
-            <cfset var pageGroup = ceiling(currentPage / groupSize)>
-            <cfset var startPage = (pageGroup - 1) * groupSize + 1>
-            <cfset var endPage   = min(startPage + groupSize - 1, totalPages)>
-
-            <cfif startPage GT 1>
-                <button class="btn btn-outline-primary btn-sm vendorPageBtn"
-                        data-page="#startPage - 1#">&laquo; Prev</button>
-            </cfif>
-
-            <cfloop from="#startPage#" to="#endPage#" index="i">
-                <button class="btn btn-sm vendorPageBtn
-                    <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
-                    data-page="#i#">#i#</button>
-            </cfloop>
-
-            <cfif endPage LT totalPages>
-                <button class="btn btn-outline-primary btn-sm vendorPageBtn"
-                        data-page="#endPage + 1#">Next &raquo;</button>
-            </cfif>
-            </cfoutput>
-        </cfif>
-        </cfsavecontent>
-
-        <cfset sendJSON({
-            status     : "success",
-            message    : "",
-            html       : tableHTML,
-            pagination : paginationHTML
-        })>
-
-    <cfcatch>
-        <cfset sendJSON({status:"error", message:cfcatch.message, html:"", pagination:""})>
-    </cfcatch>
-    </cftry>
-</cffunction>
-
-<!--- DELETE VENDOR --->
-<cffunction name="deleteVendor" access="remote" returntype="void" output="true" httpmethod="GET">
-    <cfset requireAdmin()>
-    <cftry>
-        <cfset var id = structKeyExists(url,"id") ? val(url.id) : 0>
-        <cfif id LTE 0>
-            <cfset sendJSON({status:"error", message:"Invalid vendor ID"})>
-        </cfif>
-        <cfset var userModel = createObject("component","models.User")>
-        <cfset userModel.deleteUser(id)>
-        <cfset sendJSON({status:"success", message:"Vendor deleted successfully"})>
-    <cfcatch>
-        <cfset sendJSON({status:"error", message:cfcatch.message})>
-    </cfcatch>
-    </cftry>
-</cffunction>
+        <cffunction name="searchVendors" access="remote" returntype="void" output="true" httpmethod="GET">
+            <cfset createObject("component","models.AuthGuard").checkAuth()>
+            <cfset createObject("component","models.AuthGuard").requireRole(1)>
+            <cftry>
+                <cfset var userModel   = createObject("component","models.User")>
+                <cfset var srch        = structKeyExists(url,"search") ? trim(url.search) : "">
+                <cfset var sort        = structKeyExists(url,"sort")   ? trim(url.sort)   : "">
+                <cfset var currentPage = structKeyExists(url,"p") AND val(url.p) GT 0 ? val(url.p) : 1>
+                <cfset var limit       = 5>
+                <cfset var groupSize   = 4>
+        
+                <cfset var vendors = userModel.getAllVendors(
+                    search = srch,
+                    sort   = sort,
+                    page   = currentPage,
+                    limit  = limit
+                )>
+                <cfset var totalRecords = userModel.getVendorCount(search = srch)>
+                <cfset var totalPages   = ceiling(totalRecords / limit)>
+        
+                <!--- TABLE ROWS HTML --->
+                <cfsavecontent variable="tableHTML">
+                    <cfif vendors.recordCount EQ 0>
+                        <tr><td colspan="5" class="text-center">No vendors found.</td></tr>
+                    <cfelse>
+                        <cfoutput query="vendors">
+                        <tr id="vrow_#id#">
+                            <td>#id#</td>
+                            <td>#encodeForHTML(first_name)# #encodeForHTML(last_name)#</td>
+                            <td class="text-break">#encodeForHTML(email)#</td>
+                            <td>#role_name#</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm deleteVendorBtn"
+                                        data-id="#id#">Delete</button>
+                            </td>
+                        </tr>
+                        </cfoutput>
+                    </cfif>
+                </cfsavecontent>
+        
+                <!--- GROUPED PAGINATION HTML --->
+                <cfsavecontent variable="paginationHTML">
+                <cfif totalPages GT 1>
+                    <cfoutput>
+                    <cfset var pageGroup = ceiling(currentPage / groupSize)>
+                    <cfset var startPage = (pageGroup - 1) * groupSize + 1>
+                    <cfset var endPage   = min(startPage + groupSize - 1, totalPages)>
+        
+                    <cfif startPage GT 1>
+                        <button class="btn btn-outline-primary btn-sm vendorPageBtn"
+                                data-page="#startPage - 1#">&laquo; Prev</button>
+                    </cfif>
+        
+                    <cfloop from="#startPage#" to="#endPage#" index="i">
+                        <button class="btn btn-sm vendorPageBtn
+                            <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+                            data-page="#i#">#i#</button>
+                    </cfloop>
+        
+                    <cfif endPage LT totalPages>
+                        <button class="btn btn-outline-primary btn-sm vendorPageBtn"
+                                data-page="#endPage + 1#">Next &raquo;</button>
+                    </cfif>
+                    </cfoutput>
+                </cfif>
+                </cfsavecontent>
+        
+                <cfset sendJSON({
+                    status     : "success",
+                    message    : "",
+                    html       : tableHTML,
+                    pagination : paginationHTML
+                })>
+        
+            <cfcatch>
+                <cfset sendJSON({status:"error", message:cfcatch.message, html:"", pagination:""})>
+            </cfcatch>
+            </cftry>
+        </cffunction>
+        
+        <!--- DELETE VENDOR --->
+        <cffunction name="deleteVendor" access="remote" returntype="void" output="true" httpmethod="GET">
+            <cfset createObject("component","models.AuthGuard").checkAuth()>
+            <cfset createObject("component","models.AuthGuard").requireRole(1)>
+            <cftry>
+                <cfset var id = structKeyExists(url,"id") ? val(url.id) : 0>
+                <cfif id LTE 0>
+                    <cfset sendJSON({status:"error", message:"Invalid vendor ID"})>
+                </cfif>
+                <cfset var userModel = createObject("component","models.User")>
+                <cfset userModel.deleteUser(id)>
+                <cfset sendJSON({status:"success", message:"Vendor deleted successfully"})>
+            <cfcatch>
+                <cfset sendJSON({status:"error", message:cfcatch.message})>
+            </cfcatch>
+            </cftry>
+        </cffunction>
 
     </cfcomponent>

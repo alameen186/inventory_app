@@ -11,15 +11,9 @@
         <cfabort>
     </cffunction>
 
-    <cffunction name="requireAuth" access="private" returntype="void" output="false">
-        <cfif NOT structKeyExists(session,"user_id")>
-            <cfset sendJSON({status:"error", message:"Please login to submit an enquiry"})>
-        </cfif>
-    </cffunction>
-
     <!--- GET USER ENQUIRIES WITH PAGINATION --->
     <cffunction name="getUserEnquiries" access="remote" returntype="void" output="true" httpmethod="GET">
-    <cfset requireAuth()>
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
     <cftry>
         <cfset var enquiryModel = createObject("component","models.Enquiry")>
         <cfset var currentPage  = structKeyExists(url,"p") AND val(url.p) GT 0 ? val(url.p) : 1>
@@ -92,7 +86,7 @@
 
 <!--- ADD ENQUIRY --->
 <cffunction name="addEnquiry" access="remote" returntype="void" output="true" httpmethod="POST">
-    <cfset requireAuth()>
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
     <cfif NOT structKeyExists(form,"product_id") OR NOT len(trim(form.product_id))>
         <cfset sendJSON({status:"error", message:"Product ID required"})>
     </cfif>

@@ -11,12 +11,6 @@
         <cfabort>
     </cffunction>
 
-    <cffunction name="requireAuth" access="private" returntype="void" output="false">
-        <cfif NOT structKeyExists(session,"user_id")>
-            <cfset sendJSON({status:"error", message:"Unauthorized", html:"", pagination:""})>
-        </cfif>
-    </cffunction>
-
     <cffunction name="getVendorFilter" access="private" returntype="string" output="false">
         <cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
             <cfreturn session.user_id>
@@ -26,7 +20,7 @@
 
     <!--- SEARCH ENQUIRIES --->
     <cffunction name="searchEnquiries" access="remote" returntype="void" output="true" httpmethod="GET">
-    <cfset requireAuth()>
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
     <cftry>
         <cfset var enquiryModel = createObject("component","models.Enquiry")>
         <cfset var vendorFilter = getVendorFilter()>
@@ -128,7 +122,7 @@
 
     <!--- RESTOCK PRODUCT --->
     <cffunction name="restockProduct" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset requireAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfif NOT structKeyExists(form,"product_id") OR NOT len(trim(form.product_id))>
             <cfset sendJSON({status:"error", message:"Product ID required", html:"", pagination:""})>
         </cfif>

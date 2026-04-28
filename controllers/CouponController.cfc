@@ -11,15 +11,10 @@
         <cfabort>
     </cffunction>
 
-    <cffunction name="requireAdmin" access="private" returntype="void" output="false">
-        <cfif NOT structKeyExists(session,"role_id") OR session.role_id NEQ 1>
-            <cfset sendJSON({status:"error", message:"Unauthorized", html:"", pagination:""})>
-        </cfif>
-    </cffunction>
-
     <!--- SEARCH COUPONS --->
     <cffunction name="searchCoupons" access="remote" returntype="void" output="true" httpmethod="GET">
-        <cfset requireAdmin()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+        <cfset createObject("component","models.AuthGuard").requireRole(1)>
         <cftry>
             <cfset var couponModel = createObject("component","models.Coupon")>
             <cfset var srch        = structKeyExists(url,"search") ? trim(url.search) : "">
@@ -122,7 +117,8 @@
 
     <!--- CREATE COUPON --->
     <cffunction name="createCoupon" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset requireAdmin()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+        <cfset createObject("component","models.AuthGuard").requireRole(1)>
         <cftry>
             <cfset var code   = structKeyExists(form,"code")   ? trim(uCase(form.code)) : "">
             <cfset var type   = structKeyExists(form,"type")   ? trim(form.type)        : "">
@@ -177,7 +173,8 @@
 
     <!--- UPDATE COUPON --->
     <cffunction name="updateCoupon" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset requireAdmin()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+        <cfset createObject("component","models.AuthGuard").requireRole(1)>
         <cftry>
             <cfset var id     = structKeyExists(form,"id")     ? val(form.id)           : 0>
             <cfset var code   = structKeyExists(form,"code")   ? trim(uCase(form.code)) : "">
@@ -240,7 +237,8 @@
 
     <!--- TOGGLE COUPON --->
     <cffunction name="toggleCoupon" access="remote" returntype="void" output="true" httpmethod="GET">
-        <cfset requireAdmin()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+        <cfset createObject("component","models.AuthGuard").requireRole(1)>
         <cftry>
             <cfset var id = structKeyExists(url,"id") ? val(url.id) : 0>
             <cfif id LTE 0>

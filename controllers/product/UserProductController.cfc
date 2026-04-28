@@ -12,26 +12,9 @@
         })#</cfoutput>
     </cffunction>
 
-    <cffunction name="requireAuth" access="private" returntype="void" output="false">
-    <!--- Keep existing session check --->
-    <cfif NOT structKeyExists(session, "user_id")>
-        <!--- Also try JWT if no session --->
-        <cfset var helper = createObject("component", "models.JwtHelper")>
-        <cfset var result = helper.verifyToken()>
-        <cfif NOT result.success>
-            <cfset sendJSON({status:"error", message:"Unauthorized"})>
-        <cfelse>
-            <!--- Restore session from token --->
-            <cfset session.user_id   = result.payload.userid>
-            <cfset session.role_id   = result.payload.role_id>
-            <cfset session.role_name = result.payload.role_name>
-        </cfif>
-    </cfif>
-</cffunction>
-
     <!--- SEARCH PRODUCTS --->
     <cffunction name="search" access="remote" returntype="void" output="true" httpMethod="GET">
-        <cfset requireAuth()>
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel = createObject("component","models.Product")>
 
         <cftry>

@@ -90,20 +90,20 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 
-    //  Alert  
     function showAlert(message, type) {
         var box = $("#alertBox");
         box.removeClass().addClass("alert alert-" + (type || "danger"));
         box.text(message);
-        setTimeout(function() { box.addClass("d-none"); }, 5000);
+        setTimeout(function () { box.addClass("d-none"); }, 5000);
     }
 
-    // ── Generic ajax submit to CFC 
+    //   Generic AJAX submit to CFC  
     function submitToCFC(method, formId, spinnerId) {
         var spinner  = $("#" + spinnerId);
-        var formData = $("#" + formId).serialize(); 
+        var formData = $("#" + formId).serialize();
 
         spinner.removeClass("d-none");
 
@@ -112,49 +112,60 @@
             type     : "POST",
             data     : formData + "&method=" + method,
             dataType : "json",
-            success  : function(res) {
+
+            success: function (res) {
+
                 if (res.success) {
+
+                    //   STORE TOKENS IN localStorage    
+                    if (res.data && res.data.access_token) {
+                        localStorage.setItem("access_token",  res.data.access_token);
+                        localStorage.setItem("refresh_token", res.data.refresh_token);
+                    }
+
                     showAlert(res.message, "success");
 
-                     if (res.data && res.data.token) {
-            localStorage.setItem("inv_token", res.data.token);
-        }
+                    //   REDIRECT after short delay    
                     if (res.redirect) {
-                        setTimeout(function() {
+                        setTimeout(function () {
                             window.location.href = res.redirect;
                         }, 800);
                     }
+
                 } else {
                     showAlert(res.message, "danger");
                 }
             },
-            error    : function() {
+
+            error: function () {
                 showAlert("Network error. Please try again.", "danger");
             },
-            complete : function() {
+
+            complete: function () {
                 spinner.addClass("d-none");
             }
         });
     }
 
-    // Login form submit 
-    $("#loginForm").on("submit", function(e) {
+    //  Login form submit 
+    $("#loginForm").on("submit", function (e) {
         e.preventDefault();
         submitToCFC("login", "loginForm", "loginSpinner");
     });
 
     //  Signup form submit 
-    $("#signupForm").on("submit", function(e) {
+    $("#signupForm").on("submit", function (e) {
         e.preventDefault();
         submitToCFC("signup", "signupForm", "signupSpinner");
     });
 
-    //  Vendor field toggle
-    $("#roleSelect").on("change", function() {
+    //  Vendor field toggle 
+    $("#roleSelect").on("change", function () {
         var selected = $(this).find("option:selected").text().toLowerCase();
         $("#vendorFields").toggle(selected === "vendor");
     });
 
 </script>
+
 </body>
 </html>
