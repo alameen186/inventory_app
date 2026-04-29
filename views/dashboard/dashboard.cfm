@@ -223,13 +223,13 @@ style="width:50px;height:50px;">
 
 <script>
 
-    // ── JWT HELPER ── add this once here, available to all pages ──
+    // ── JWT HELPER ──
     function getAuthHeaders() {
         var token = localStorage.getItem("inv_token");
         return token ? { "Authorization": "Bearer " + token } : {};
     }
 
-    // ── MENU CLICK ── your existing code, unchanged ──
+    // ── MENU CLICK ── 
     $(document).on("click", ".menuLink", function(e){
         e.preventDefault();
 

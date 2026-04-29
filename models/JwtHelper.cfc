@@ -6,11 +6,7 @@
         Requires: models/jwt.cfc, refresh_tokens table in DB
     --->
 
-    <!--- ─────────────────────────────────────────────
-        getTokenFromRequest()
-        Reads Bearer token from Authorization header
-        or falls back to ?token= URL param
-    ───────────────────────────────────────────── --->
+    <!--- getTokenFromRequest --->
     <cffunction name="getTokenFromRequest" access="public" returntype="string" output="false">
         <cfset var headers = getHttpRequestData().headers>
         <cfset var token = "">
@@ -25,11 +21,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        verifyToken()
-        Verifies access token from request headers
-        Returns: { success, payload } or { success, message }
-    ───────────────────────────────────────────── --->
+    <!--- verifyToken--->
     <cffunction name="verifyToken" access="public" returntype="struct" output="false">
         <cftry>
             <cfset var token = getTokenFromRequest()>
@@ -50,12 +42,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        generateTokens()
-        Creates access token (15 min) + refresh token (7 days)
-        Saves refresh token to refresh_tokens table
-        Returns: { access_token, refresh_token }
-    ───────────────────────────────────────────── --->
+    <!--- generateTokens --->
     <cffunction name="generateTokens" access="public" returntype="struct" output="false">
         <cfargument name="user_id"   type="numeric" required="true">
         <cfargument name="email"     type="string"  required="true">
@@ -88,7 +75,7 @@
             <cfset var refreshToken = jwtObj.encode(refreshPayload)>
 
             <!--- SAVE REFRESH TOKEN TO DATABASE --->
-            <!--- First delete old tokens for this user to keep table clean --->
+            <!--- First delete old tokens  --->
             <cfquery datasource="#application.dsn#">
                 DELETE FROM refresh_tokens
                 WHERE user_id = <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
@@ -118,12 +105,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        refreshAccessToken(refreshToken)
-        Validates the refresh token against DB
-        Issues a new access token (15 min)
-        Returns: { success, access_token } or { success, message }
-    ───────────────────────────────────────────── --->
+    <!--- refreshAccessToken --->
     <cffunction name="refreshAccessToken" access="public" returntype="struct" output="false">
         <cfargument name="refreshToken" type="string" required="true">
 
@@ -173,12 +155,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        revokeToken(refreshToken)
-        Marks a refresh token as revoked in DB
-        Called on logout
-        Returns: boolean
-    ───────────────────────────────────────────── --->
+    <!---  revokeToken --->
     <cffunction name="revokeToken" access="public" returntype="boolean" output="false">
         <cfargument name="refreshToken" type="string" required="true">
 
@@ -198,11 +175,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        revokeAllUserTokens(userId)
-        Revokes ALL refresh tokens for a user
-        Use when password changes or account is locked
-    ───────────────────────────────────────────── --->
+    <!--- revokeAllUserTokens --->
     <cffunction name="revokeAllUserTokens" access="public" returntype="boolean" output="false">
         <cfargument name="user_id" type="numeric" required="true">
 
