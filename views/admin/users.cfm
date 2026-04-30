@@ -155,7 +155,7 @@ $(document).ready(function(){
 
     const CTRL = "../../controllers/UserController.cfc";
 
-    // ── HELPERS ──────────────────────────────────────────────
+    // ── HELPERS 
     function showMsg(res){
         const cls = res.status === "success" ? "success" : "danger";
         $("#ajaxMessage").html(
@@ -181,22 +181,22 @@ $(document).ready(function(){
         }, "json");
     }
 
-    // ── SEARCH ────────────────────────────────────────────────
+    // ── SEARCH 
     $("#searchForm").submit(function(e){
         e.preventDefault();
         loadUsers(1);
     });
 
-    // ── PAGINATION ────────────────────────────────────────────
+    // ── PAGINATION 
     $(document).on("click", ".pageBtn", function(){
         loadUsers($(this).data("page"));
     });
 
-    // ── ADD FORM TOGGLE ───────────────────────────────────────
+    // ── ADD FORM TOGGLE 
     $("#showAddForm").click(() => $("#addUserForm").slideDown());
     $("#cancelAdd").click(() => $("#addUserForm").slideUp());
 
-    // ── CREATE USER ───────────────────────────────────────────
+    // ── CREATE USER 
     $("#submitCreate").click(function(){
         $.post(CTRL + "?method=createUser", {
             first_name : $("#cu_first_name").val(),
@@ -216,7 +216,7 @@ $(document).ready(function(){
         }, "json");
     });
 
-    // ── EDIT ROW ──────────────────────────────────────────────
+    // ── EDIT ROW 
     $(document).on("click", ".editBtn", function(){
         const btn = $(this);
         $(".editRow").remove();
@@ -245,7 +245,7 @@ $(document).ready(function(){
 
     $(document).on("click", ".cancelEdit", () => $(".editRow").remove());
 
-    // ── UPDATE USER ───────────────────────────────────────────
+    // ── UPDATE USER 
     $(document).on("click", ".saveEdit", function(){
         const row = $(this).closest("tr");
         $.post(CTRL + "?method=updateUser", {
@@ -262,7 +262,7 @@ $(document).ready(function(){
         }, "json");
     });
 
-    // ── DELETE USER ───────────────────────────────────────────
+    // ── DELETE USER 
     $(document).on("click", ".deleteBtn", function(){
         const id = $(this).data("id");
         if(!confirm("Are you sure you want to delete this user?")) return;

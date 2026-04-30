@@ -123,11 +123,7 @@
     </cffunction>
 
 
-    <!--- 
-        refreshToken
-        Accepts: form.refresh_token
-        Returns: new access_token
-     --->
+    <!--- refreshToken --->
     <cffunction name="refreshToken" access="remote" returntype="void" output="true" httpMethod="POST">
 
         <cftry>

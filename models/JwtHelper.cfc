@@ -1,11 +1,5 @@
 <cfcomponent output="false">
 
-    <!---
-        JwtHelper.cfc
-        Handles: token generation, verification, refresh, revocation
-        Requires: models/jwt.cfc, refresh_tokens table in DB
-    --->
-
     <!--- getTokenFromRequest --->
     <cffunction name="getTokenFromRequest" access="public" returntype="string" output="false">
         <cfset var headers = getHttpRequestData().headers>

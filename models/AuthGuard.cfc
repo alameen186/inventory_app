@@ -3,11 +3,6 @@
     <!---
         AuthGuard.cfc
         Single shared auth checker used by ALL controllers.
-
-        Priority order:
-          1. Session already exists → pass through
-          2. Valid JWT in header/url → restore session from token
-          3. Neither → return 401 JSON error and abort
     --->
 
     <cffunction name="checkAuth" access="public" returntype="void" output="true">
@@ -49,11 +44,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        requireRole(roleId)
-        Use AFTER checkAuth() when you need a specific role.
-        Example: requireRole(1) for admin only
-    ───────────────────────────────────────────── --->
+    <!--- requireRole --->
     <cffunction name="requireRole" access="public" returntype="void" output="true">
         <cfargument name="role_id" type="numeric" required="true">
 
@@ -64,10 +55,7 @@
     </cffunction>
 
 
-    <!--- ─────────────────────────────────────────────
-        sendUnauthorized(message)
-        Sends a 401 JSON response and aborts
-    ───────────────────────────────────────────── --->
+    <!---  sendUnauthorized --->
     <cffunction name="sendUnauthorized" access="private" returntype="void" output="true">
         <cfargument name="message" type="string" default="Unauthorized">
 

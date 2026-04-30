@@ -1,6 +1,6 @@
 <cfcomponent output="false">
 
-    <!--- ── helpers ────────────────────────────────────────────── --->
+    <!--- helpers --->
 
     <cffunction name="jsonRes" access="private" returntype="void" output="true">
         <cfargument name="success" type="boolean" required="true">
@@ -35,7 +35,7 @@
         <cfreturn "">
     </cffunction>
 
-    <!--- ── ADD ────────────────────────────────────────────────── --->
+    <!--- ADD --->
 
     <cffunction name="add" access="remote" returntype="void" output="true" httpMethod="POST">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
@@ -92,7 +92,7 @@
         </cftry>
     </cffunction>
 
-    <!--- ── UPDATE ─────────────────────────────────────────────── --->
+    <!--- UPDATE --->
 
     <cffunction name="update" access="remote" returntype="void" output="true" httpMethod="POST">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
@@ -151,7 +151,7 @@
         </cftry>
     </cffunction>
 
-    <!--- ── TOGGLE STATUS (unchanged) ──────────────────────────── --->
+    <!--- TOGGLE STATUS --->
 
     <cffunction name="toggleStatus" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
@@ -167,7 +167,7 @@
         </cftry>
     </cffunction>
 
-    <!--- ── SEARCH / PAGINATION ─────────────────────────────────── --->
+    <!--- SEARCH / PAGINATION --->
 
     <cffunction name="search" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
