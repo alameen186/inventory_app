@@ -130,7 +130,10 @@
     price         : product.price,
     stock         : product.stock,
     image         : product.image,
-    images        : [product.image],
+    images        : listToArray(listFilter(
+                    "#product.image#,#product.image2#,#product.image3#",
+                    function(v){ return len(trim(v)); }
+                )),
     expiry_date   : len(trim(product.expiry_date)) ? dateFormat(product.expiry_date, "dd-mmm-yyyy") : "",
     avg_rating    : avgRating,
     total_reviews : totalReviews,

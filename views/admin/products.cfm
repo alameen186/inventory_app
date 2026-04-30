@@ -66,9 +66,14 @@
             <div class="col-6 col-md-2">
     <input type="date" name="expiry_date" class="form-control" placeholder="Expiry Date">
 </div>
-            <div class="col-12 col-md-2">
-                <input type="file" name="product_image" class="form-control">
-            </div>
+<div class="col-12 col-md-2">
+    <label class="form-label mb-0 small">Image 1</label>
+    <input type="file" name="product_image"  class="form-control mb-1">
+    <label class="form-label mb-0 small">Image 2</label>
+    <input type="file" name="product_image2" class="form-control mb-1">
+    <label class="form-label mb-0 small">Image 3</label>
+    <input type="file" name="product_image3" class="form-control">
+</div>
             <div class="col-12 col-md-2 d-grid">
                 <button class="btn btn-success">Add</button>
             </div>
@@ -158,9 +163,10 @@
             <td>#category_name#</td>
             <td><cfif len(trim(expiry_date))>#dateFormat(expiry_date, "dd-mmm-yyyy")#<cfelse>-</cfif></td>
             <td>
-                <cfif len(image)>
-                    <img src="../../assets/images/products/#image#" width="50">
-                <cfelse>No Image</cfif>
+               <cfif len(image)><img src="../../assets/images/products/#image#"  width="40" class="me-1"></cfif>
+               <cfif len(image2)><img src="../../assets/images/products/#image2#" width="40" class="me-1"></cfif>
+               <cfif len(image3)><img src="../../assets/images/products/#image3#" width="40"></cfif>
+               <cfif NOT len(image) AND NOT len(image2) AND NOT len(image3)>No Image</cfif>
             </td>
             <td>
                 <cfif is_active EQ 1>
@@ -197,7 +203,14 @@
                 </select>
             </td>
             <td><input type="date" value="#expiry_date#" class="form-control expiry"></td>
-            <td><input type="file" class="form-control image" style="min-width:120px;"></td>
+            <td>
+               <small class="text-muted">Img 1</small>
+               <input type="file" class="form-control image  mb-1" style="min-width:140px;">
+               <small class="text-muted">Img 2</small>
+               <input type="file" class="form-control image2 mb-1" style="min-width:140px;">
+               <small class="text-muted">Img 3</small>
+               <input type="file" class="form-control image3 mb-1" style="min-width:140px;">
+            </td>
             <td>
                 <cfif is_active EQ 1>
                     <span class="badge bg-success">Active</span>
@@ -311,31 +324,31 @@ $(function(){
 
     // SAVE EDIT
     $(document).on("click", ".saveBtn", function(){
-        var id  = $(this).data("id");
-        var row = $("#editRow_" + id);
-        var fd  = new FormData();
-        fd.append("id",           id);
-        fd.append("product_name", row.find(".name").val());
-        fd.append("price",        row.find(".price").val());
-        fd.append("stock",        row.find(".stock").val());
-        fd.append("category_id",  row.find(".category").val());
-        fd.append("expiry_date",  row.find(".expiry").val());
-        var file = row.find(".image")[0].files[0];
-        if(file) fd.append("product_image", file);
+    var id  = $(this).data("id");
+    var row = $("#editRow_" + id);
+    var fd  = new FormData();
+    fd.append("id",           id);
+    fd.append("product_name", row.find(".name").val());
+    fd.append("price",        row.find(".price").val());
+    fd.append("stock",        row.find(".stock").val());
+    fd.append("category_id",  row.find(".category").val());
+    fd.append("expiry_date",  row.find(".expiry").val());
 
-        $.ajax({
-            url         : ADMIN_CTRL + "?method=update",
-            type        : "POST",
-            data        : fd,
-            processData : false,
-            contentType : false,
-            dataType    : "json",
-            success     : function(res){
-                msg(res);
-                if(res.success) location.reload();
-            }
-        });
+    // append each image slot only if a file was chosen
+    var f1 = row.find(".image")[0].files[0];
+    var f2 = row.find(".image2")[0].files[0];
+    var f3 = row.find(".image3")[0].files[0];
+    if(f1) fd.append("product_image",  f1);
+    if(f2) fd.append("product_image2", f2);
+    if(f3) fd.append("product_image3", f3);
+
+    $.ajax({
+        url: ADMIN_CTRL + "?method=update",
+        type: "POST", data: fd,
+        processData: false, contentType: false, dataType: "json",
+        success: function(res){ msg(res); if(res.success) location.reload(); }
     });
+});
 
     // TOGGLE STATUS
     $(document).on("click", ".toggleBtn", function(){

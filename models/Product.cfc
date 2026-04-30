@@ -32,65 +32,70 @@
     </cffunction>
 
     <cffunction name="addProduct" access="public" returntype="boolean" output="false">
-        <cfargument name="product_name" type="string" required="true">
-        <cfargument name="price" type="numeric" required="true">
-        <cfargument name="stock" type="numeric">
-        <cfargument name="category_id" type="numeric" required="true">
-        <cfargument name="image" type="string" required="false" default="">
-        <cfargument name="vendor_id" type="numeric" required="true">
-        <cfargument name="expiry_date" type="string" required="false" default="">
+    <cfargument name="product_name" type="string" required="true">
+    <cfargument name="price"        type="numeric" required="true">
+    <cfargument name="stock"        type="numeric">
+    <cfargument name="category_id"  type="numeric" required="true">
+    <cfargument name="image"        type="string"  required="false" default="">
+    <cfargument name="image2"       type="string"  required="false" default="">
+    <cfargument name="image3"       type="string"  required="false" default="">
+    <cfargument name="vendor_id"    type="numeric" required="true">
+    <cfargument name="expiry_date"  type="string"  required="false" default="">
 
-        <cftry>
-            <cfquery datasource="#application.dsn#">
-         INSERT INTO products(product_name, price, stock, category_id, image, vendor_id, expiry_date)
-         VALUES (
-             <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
-             <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
-             <cfqueryparam value="#arguments.stock#" cfsqltype="cf_sql_decimal">,
-             <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">,
-             <cfqueryparam value="#arguments.image#" cfsqltype="cf_sql_varchar">,
-             <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">,
-             <cfqueryparam value="#arguments.expiry_date#" cfsqltype="cf_sql_date" null="#NOT len(arguments.expiry_date)#">
-     
-         )
-         </cfquery>
-     
-                 <cfreturn true>
-             <cfcatch>
-             <cfdump var="#cfcatch#">
-             <cfabort>
-         </cfcatch> 
-             </cftry>     
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            INSERT INTO products
+                (product_name, price, stock, category_id, image, image2, image3, vendor_id, expiry_date)
+            VALUES (
+                <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.image#"        cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.image2#"       cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.image3#"       cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.vendor_id#"    cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
+                    null="#NOT len(arguments.expiry_date)#">
+            )
+        </cfquery>
+        <cfreturn true>
+    <cfcatch>
+        <cfdump var="#cfcatch#"><cfabort>
+    </cfcatch>
+    </cftry>
     </cffunction>
 
     <cffunction name="updateProduct" access="public" returntype="boolean" output="false">
-        <cfargument name="id" type="numeric" required="true">
-        <cfargument name="product_name" type="string" required="true">
-        <cfargument name="price" type="numeric" required="true">
-        <cfargument name="stock" type="numeric" >
-        <cfargument name="category_id" type="numeric" required="true">
-        <cfargument name="image" type="string" required="true">
-        <cfargument name="expiry_date" type="string" required="false" default=""> 
+    <cfargument name="id"           type="numeric" required="true">
+    <cfargument name="product_name" type="string"  required="true">
+    <cfargument name="price"        type="numeric" required="true">
+    <cfargument name="stock"        type="numeric">
+    <cfargument name="category_id"  type="numeric" required="true">
+    <cfargument name="image"        type="string"  required="true">
+    <cfargument name="image2"       type="string"  required="false" default="">
+    <cfargument name="image3"       type="string"  required="false" default="">
+    <cfargument name="expiry_date"  type="string"  required="false" default="">
 
-        <cftry>
-            <cfquery datasource="#application.dsn#">
-                UPDATE products
-                SET product_name = <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
-                    price = <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
-                    stock = <cfqueryparam value="#arguments.stock#" cfsqltype="cf_sql_decimal">,
-                    category_id = <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">,
-                    image = <cfqueryparam value="#arguments.image#" cfsqltype="cf_sql_varchar">,
-                    expiry_date = <cfqueryparam value="#arguments.expiry_date#" cfsqltype="cf_sql_date" null="#NOT len(arguments.expiry_date)#">
-
-                WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
-            </cfquery>
-
-            <cfreturn true>
-
-        <cfcatch>
-            <cfreturn false>
-        </cfcatch>
-        </cftry>
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET product_name = <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
+                price        = <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
+                stock        = <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_decimal">,
+                category_id  = <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
+                image        = <cfqueryparam value="#arguments.image#"        cfsqltype="cf_sql_varchar">,
+                image2       = <cfqueryparam value="#arguments.image2#"       cfsqltype="cf_sql_varchar">,
+                image3       = <cfqueryparam value="#arguments.image3#"       cfsqltype="cf_sql_varchar">,
+                expiry_date  = <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
+                    null="#NOT len(arguments.expiry_date)#">
+            WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+        <cfreturn true>
+    <cfcatch>
+        <cfreturn false>
+    </cfcatch>
+    </cftry>
     </cffunction>
 
     <cffunction name="toggleStatus" access="public" returntype="boolean" output="false">
@@ -110,18 +115,20 @@
                     <cfreturn false>
                 </cfcatch>
             </cftry>
-        </cffunction>
+    </cffunction>
 
-        <cffunction name="getProductById" returntype="query" output="false">
-    <cfargument name="id" required="true">
+    <cffunction name="getProductById" returntype="query" output="false">
+      <cfargument name="id" required="true">
 
-    <cfquery name="q" datasource="#application.dsn#">
+      <cfquery name="q" datasource="#application.dsn#">
         SELECT 
             p.id,
             p.product_name,
             p.price,
             p.stock,
             p.image,
+            p.image2, 
+            p.image3,
             p.category_id,
             p.expiry_date,
             c.category_name,
@@ -130,10 +137,10 @@
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN users u ON p.vendor_id = u.id
         WHERE p.id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
-    </cfquery>
+      </cfquery>
 
-    <cfreturn q>
-</cffunction>
+      <cfreturn q>
+    </cffunction>
 
      <cffunction name="searchProducts" returntype="query">
            <!--- all your existing arguments stay the same --->
@@ -219,8 +226,7 @@
         <cfreturn products>
      </cffunction>
 
-
-        <cffunction name="getProductCount" returntype="numeric">
+    <cffunction name="getProductCount" returntype="numeric">
             <cfargument name="keyword" default="">
             <cfargument name="category_id">
             <cfargument name="min_price">
@@ -263,67 +269,65 @@
             </cfquery>
         
             <cfreturn result.total>
-        </cffunction>
-        
+    </cffunction>
 
+    <cffunction name="getAllProductsAdmin" returntype="query">
 
-<cffunction name="getAllProductsAdmin" returntype="query">
-
-    <cfargument name="search" default="">
-    <cfargument name="sort" default="">
-    <cfargument name="page" default="1">
-    <cfargument name="limit" default="10">
-    <cfargument name="category_id" default="">
-    <cfargument name="vendor_id" default=""> 
-
-    <cfset var searchValue = trim(arguments.search)>
-    <cfset var offset = (arguments.page - 1) * arguments.limit>
-
-    <cfquery name="products" datasource="#application.dsn#">
-        SELECT p.*, c.category_name, p.expiry_date
-        FROM products p
-        JOIN categories c ON p.category_id = c.id
-        WHERE 1=1
-
-        <cfif isNumeric(arguments.vendor_id)>
-            AND p.vendor_id =
-            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
-        </cfif>
-
-        <cfif len(searchValue)>
-            AND (
-                LOWER(p.product_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-                OR LOWER(c.category_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-            )
-        </cfif>
-
-        <cfif isNumeric(arguments.category_id)>
-            AND p.category_id = 
-            <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
-        </cfif>
-
-        <cfif arguments.sort EQ "a_z">
-            ORDER BY p.product_name ASC
-        <cfelseif arguments.sort EQ "z_a">
-            ORDER BY p.product_name DESC
-        <cfelseif arguments.sort EQ "price_low">
-            ORDER BY p.price ASC
-        <cfelseif arguments.sort EQ "price_high">
-            ORDER BY p.price DESC
-        <cfelse>
-             ORDER BY p.expiry_date ASC
-        </cfif>
-
-        LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
-        OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
-
-    </cfquery>
-
-    <cfreturn products>
-
-</cffunction>
+             <cfargument name="search" default="">
+             <cfargument name="sort" default="">
+             <cfargument name="page" default="1">
+             <cfargument name="limit" default="10">
+             <cfargument name="category_id" default="">
+             <cfargument name="vendor_id" default=""> 
+         
+             <cfset var searchValue = trim(arguments.search)>
+             <cfset var offset = (arguments.page - 1) * arguments.limit>
+         
+             <cfquery name="products" datasource="#application.dsn#">
+                 SELECT p.*, c.category_name, p.expiry_date
+                 FROM products p
+                 JOIN categories c ON p.category_id = c.id
+                 WHERE 1=1
+         
+                 <cfif isNumeric(arguments.vendor_id)>
+                     AND p.vendor_id =
+                     <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+                 </cfif>
+         
+                 <cfif len(searchValue)>
+                     AND (
+                         LOWER(p.product_name) LIKE 
+                         <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+                         OR LOWER(c.category_name) LIKE 
+                         <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+                     )
+                 </cfif>
+         
+                 <cfif isNumeric(arguments.category_id)>
+                     AND p.category_id = 
+                     <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
+                 </cfif>
+         
+                 <cfif arguments.sort EQ "a_z">
+                     ORDER BY p.product_name ASC
+                 <cfelseif arguments.sort EQ "z_a">
+                     ORDER BY p.product_name DESC
+                 <cfelseif arguments.sort EQ "price_low">
+                     ORDER BY p.price ASC
+                 <cfelseif arguments.sort EQ "price_high">
+                     ORDER BY p.price DESC
+                 <cfelse>
+                      ORDER BY p.expiry_date ASC
+                 </cfif>
+         
+                 LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+                 OFFSET <cfqueryparam value="#offset#" cfsqltype="cf_sql_integer">
+         
+             </cfquery>
+         
+             <cfreturn products>
+         
+    </cffunction>
 
 
 <cffunction name="getProductCountAdmin" returntype="numeric">
