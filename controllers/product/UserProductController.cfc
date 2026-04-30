@@ -12,7 +12,6 @@
         })#</cfoutput>
     </cffunction>
 
-    <!--- SEARCH PRODUCTS --->
     <cffunction name="search" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel = createObject("component","models.Product")>
@@ -22,7 +21,7 @@
             <cfset var cat_id        = structKeyExists(url,"category_id")   AND isNumeric(url.category_id) ? url.category_id : "">
             <cfset var min_price     = structKeyExists(url,"min_price")     AND isNumeric(url.min_price)   ? url.min_price   : "">
             <cfset var max_price     = structKeyExists(url,"max_price")     AND isNumeric(url.max_price)   ? url.max_price   : "">
-            <cfset var sort          = structKeyExists(url,"sort")          ? url.sort                : "">
+            <cfset var sort          = structKeyExists(url,"sort")          ? url.sort                     : "">
             <cfset var expiry_months = structKeyExists(url,"expiry_months") AND isNumeric(url.expiry_months) ? url.expiry_months : "">
             <cfset var limit         = 3>
             <cfset var currentPage   = structKeyExists(url,"p") AND val(url.p) GT 0 ? val(url.p) : 1>
@@ -46,74 +45,92 @@
                 expiry_months = expiry_months
             )>
 
-            <!--- pagination calculation --->
-            <cfset var totalPages = ceiling(totalRecords / limit)>
+            <cfset var totalPages = totalRecords GT 0 ? ceiling(totalRecords / limit) : 0>
             <cfset var groupSize  = 4>
             <cfset var startPage  = ((currentPage - 1) \ groupSize) * groupSize + 1>
-            <cfset var endPage    = min(startPage + groupSize - 1, totalPages)>
+            <cfset var endPage    = totalPages GT 0 ? min(startPage + groupSize - 1, totalPages) : 0>
             <cfset var prevPage   = startPage - 1>
             <cfset var nextPage   = endPage + 1>
 
-            <!--- product cards HTML --->
+            <!--- PRODUCT CARDS HTML --->
             <cfsavecontent variable="productHTML">
             <cfoutput query="products">
-                <div class="col-6 col-md-4 col-lg-3 mb-3 d-flex">
-                    <div class="card w-100">
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card h-100 product-card" data-pid="#id#">
+
                         <cfif len(image)>
                             <img src="../../assets/images/products/#image#"
-                                class="img-fluid" style="height:180px;object-fit:cover;">
+                                 class="card-img-top" style="height:180px;object-fit:cover;">
                         <cfelse>
                             <img src="https://via.placeholder.com/200"
-                                class="card-img-top" style="height:200px;object-fit:cover;">
+                                 class="card-img-top" style="height:180px;object-fit:cover;">
                         </cfif>
-                        <div class="card-body text-center d-flex flex-column justify-content-between p-2">
-                            <div>
-                                <h5 class="card-title">#product_name#</h5>
-                                <p class="small text-muted mb-1">Sold by: <strong>#business_name#</strong></p>
-                                <cfif len(trim(expiry_date))>
-                                    <p class="small text-muted mb-1">Expires: #dateFormat(expiry_date,"dd-mmm-yyyy")#</p>
+
+                        <div class="card-body d-flex flex-column text-center p-2">
+                            <h6 class="card-title mb-1">#product_name#</h6>
+                            <p class="text-muted small mb-1">#category_name#</p>
+                            <p class="fw-semibold mb-1">#price# /-</p>
+
+                            <div class="mb-2">
+                                <cfif val(avg_rating) GT 0>
+                                    <span class="text-warning small">
+                                        <cfloop from="1" to="5" index="s">
+                                            <cfif s LTE round(avg_rating)>&##9733;<cfelse>&##9734;</cfif>
+                                        </cfloop>
+                                    </span>
+                                    <small class="text-muted">#avg_rating# (#review_count#)</small>
+                                <cfelse>
+                                    <small class="text-muted">No reviews yet</small>
                                 </cfif>
-                                <p class="mb-1">#category_name#</p>
-                                <p class="mb-2">#price# /-</p>
                             </div>
-                            <div>
+
+                            <div class="mt-auto" onclick="event.stopPropagation()">
                                 <cfif stock LTE 0>
-                                    <p class="text-danger fw-bold mb-2">Out of Stock</p>
-                                    <form class="enquiryForm">
-                                        <input type="hidden" name="product_id" value="#id#">
-                                        <button class="btn btn-warning btn-sm w-100">Request Product</button>
-                                    </form>
+                                    <p class="text-danger fw-bold small mb-2">Out of Stock</p>
+                                    <div id="enqMsg_#id#"></div>
+                                    <div id="enqBtnArea_#id#">
+                                        <form class="enquiryForm">
+                                            <input type="hidden" name="product_id" value="#id#">
+                                            <button type="submit" class="btn btn-warning btn-sm w-100">Request</button>
+                                        </form>
+                                    </div>
                                 <cfelse>
                                     <form class="addToCartForm">
-                                        <input type="hidden" name="product_id" value="#id#">
+                                        <input type="hidden" name="product_id"   value="#id#">
                                         <input type="hidden" name="product_name" value="#product_name#">
-                                        <input type="hidden" name="price" value="#price#">
-                                        <input type="hidden" name="image" value="#image#">
-                                        <button class="btn btn-success btn-sm w-100">Add to Cart</button>
+                                        <input type="hidden" name="price"        value="#price#">
+                                        <input type="hidden" name="image"        value="#image#">
+                                        <button type="submit" class="btn btn-success btn-sm w-100">Add to Cart</button>
                                     </form>
                                 </cfif>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </cfoutput>
             </cfsavecontent>
 
-            <!--- pagination HTML --->
+            <!--- PAGINATION HTML --->
             <cfsavecontent variable="paginationHTML">
             <cfoutput>
+            <cfif totalPages GT 1>
             <div class="d-flex gap-2 justify-content-center mt-3">
                 <cfif startPage GT 1>
-                    <button class="pageBtn btn btn-outline-primary" data-page="#prevPage#">Prev</button>
+                    <button class="pageBtn btn btn-outline-primary"
+                            data-page="#prevPage#">Prev</button>
                 </cfif>
                 <cfloop from="#startPage#" to="#endPage#" index="i">
-                    <button class="pageBtn btn btn-sm <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
+                    <button class="pageBtn btn btn-sm
+                        <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
                         data-page="#i#">#i#</button>
                 </cfloop>
                 <cfif endPage LT totalPages>
-                    <button class="pageBtn btn btn-outline-primary" data-page="#nextPage#">Next</button>
+                    <button class="pageBtn btn btn-outline-primary"
+                            data-page="#nextPage#">Next</button>
                 </cfif>
             </div>
+            </cfif>
             </cfoutput>
             </cfsavecontent>
 

@@ -54,6 +54,7 @@
 <li><a href="#"class="nav-link text-white menuLink <cfif section EQ 'vendors'>active</cfif>"data-section="vendors">Vendors</a></li>
 <li><a href="#"class="nav-link text-white menuLink <cfif section EQ 'roles'>active</cfif>"data-section="roles">Roles</a></li>
 <li><a href="#"class="nav-link text-white menuLink <cfif section EQ 'coupons'>active</cfif>"data-section="coupons">Coupons</a></li>
+<li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'reviews'>active</cfif>" data-section="reviews">Reviews</a></li>
 </ul>
 
 <cfelseif session.role_name EQ "vendor">
