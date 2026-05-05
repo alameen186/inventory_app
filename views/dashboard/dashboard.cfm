@@ -3,6 +3,23 @@
     <cfabort>
 </cfif>
 
+<!--- Vendor plan gate --->
+<cfif session.role_name EQ "vendor">
+    <cfif NOT structKeyExists(session,"plan_id") OR session.plan_id EQ 0>
+        <!--- Re-check DB in case session is fresh --->
+        <cfset  planModel = createObject("component","models.Plan")>
+        <cfset  planQ     = planModel.getVendorPlan(session.user_id)>
+        <cfif planQ.recordCount>
+            <cfset session.plan_id   = planQ.id>
+            <cfset session.plan_name = lcase(planQ.plan_name)>
+        <cfelse>
+            <!--- No plan chosen — show plan selector full page --->
+            <cfinclude template="/views/vendor/selectPlan.cfm">
+            <cfabort>
+        </cfif>
+    </cfif>
+</cfif>
+
 <cfparam name="url.section" default="home">
 <cfset section = url.section>
 
@@ -79,18 +96,34 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'roles'>active</cfif>"    data-section="roles">Roles</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'coupons'>active</cfif>"  data-section="coupons">Coupons</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'reviews'>active</cfif>"  data-section="reviews">Reviews</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'plans'>active</cfif>" data-section="plans">Plans</a></li>
     </ul>
 
     <cfelseif session.role_name EQ "vendor">
-    <ul class="nav flex-column">
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorDashboard'>active</cfif>"  data-section="vendorDashboard">Dashboard</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'category'>active</cfif>"         data-section="category">Categories</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'products'>active</cfif>"         data-section="products">Products</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'allorders'>active</cfif>"        data-section="allorders">Orders</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"   data-section="adminEnquiries">Enquiries</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'createOrder'>active</cfif>"      data-section="createOrder">Create Order</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>"  data-section="scheduledOrders">Scheduled Orders</a></li>
-    </ul>
+<ul class="nav flex-column">
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorDashboard'>active</cfif>" data-section="vendorDashboard">Dashboard</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'category'>active</cfif>"        data-section="category">Categories</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'products'>active</cfif>"        data-section="products">Products</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'allorders'>active</cfif>"       data-section="allorders">Orders</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'createOrder'>active</cfif>"     data-section="createOrder">Create Order</a></li>
+
+    <!--- PRO only --->
+    <cfif session.plan_name EQ "pro">
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
+    <cfelse>
+    <li>
+        <span class="nav-link text-secondary" style="cursor:default;">
+            Enquiries <span class="badge bg-warning text-dark ms-1">Pro</span>
+        </span>
+    </li>
+    <li>
+        <span class="nav-link text-secondary" style="cursor:default;">
+            Scheduled Orders <span class="badge bg-warning text-dark ms-1">Pro</span>
+        </span>
+    </li>
+    </cfif>
+</ul>
 
     <cfelse>
     <ul class="nav flex-column">
@@ -120,15 +153,30 @@
         </ul>
 
         <cfelseif session.role_name EQ "vendor">
-        <ul class="nav flex-column">
-            <li><a href="#" class="nav-link text-white menuLink" data-section="vendorDashboard">Dashboard</a></li>
-            <li><a href="#" class="nav-link text-white menuLink" data-section="category">Categories</a></li>
-            <li><a href="#" class="nav-link text-white menuLink" data-section="products">Products</a></li>
-            <li><a href="#" class="nav-link text-white menuLink" data-section="allorders">Orders</a></li>
-            <li><a href="#" class="nav-link text-white menuLink" data-section="adminEnquiries">Enquiries</a></li>
-            <li><a href="#" class="nav-link text-white menuLink" data-section="createOrder">Create Order</a></li>
-            <li><a href="#" class="nav-link text-white menuLink" data-section="scheduledOrders">Scheduled Orders</a></li>
-        </ul>
+<ul class="nav flex-column">
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorDashboard'>active</cfif>" data-section="vendorDashboard">Dashboard</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'category'>active</cfif>"        data-section="category">Categories</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'products'>active</cfif>"        data-section="products">Products</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'allorders'>active</cfif>"       data-section="allorders">Orders</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'createOrder'>active</cfif>"     data-section="createOrder">Create Order</a></li>
+
+    <!--- PRO only --->
+    <cfif session.plan_name EQ "pro">
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
+    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
+    <cfelse>
+    <li>
+        <span class="nav-link text-secondary" style="cursor:default;">
+            Enquiries <span class="badge bg-warning text-dark ms-1">Pro</span>
+        </span>
+    </li>
+    <li>
+        <span class="nav-link text-secondary" style="cursor:default;">
+            Scheduled Orders <span class="badge bg-warning text-dark ms-1">Pro</span>
+        </span>
+    </li>
+    </cfif>
+</ul>
 
         <cfelse>
         <ul class="nav flex-column">
@@ -192,7 +240,11 @@
         <cfelseif section EQ "allorders">
             <cfinclude template="../admin/orders.cfm">
         <cfelseif section EQ "adminEnquiries">
-            <cfinclude template="../admin/enquiries.cfm">
+    <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
+        <div class="alert alert-warning">This feature requires the Pro plan.</div>
+    <cfelse>
+        <cfinclude template="../admin/enquiries.cfm">
+    </cfif>
         <cfelseif section EQ "productList">
             <cfinclude template="../user/products.cfm">
         <cfelseif section EQ "cart">
@@ -203,10 +255,16 @@
             <cfinclude template="../user/enquiry.cfm">
         <cfelseif section EQ "vendorDashboard">
             <cfinclude template="../vendor/dashboard.cfm">
+        <cfelseif section EQ "plans">
+            <cfinclude template="../admin/plans.cfm">    
         <cfelseif section EQ "createOrder">
             <cfinclude template="../vendor/createOrder.cfm">
         <cfelseif section EQ "scheduledOrders">
-            <cfinclude template="../vendor/scheduledOrders.cfm">
+    <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
+        <div class="alert alert-warning">This feature requires the Pro plan.</div>
+    <cfelse>
+        <cfinclude template="../vendor/scheduledOrders.cfm">
+    </cfif>
         <cfelseif section EQ "reviews">
             <cfinclude template="../admin/reviews.cfm">
         <cfelse>

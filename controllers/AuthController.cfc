@@ -84,6 +84,19 @@
 
             <cfif result.success>
 
+                <!--- Load vendor plan into session --->
+                <cfif result.user.role_name EQ "vendor">
+                    <cfset var planModel = createObject("component","models.Plan")>
+                    <cfset var planQ     = planModel.getVendorPlan(result.user.id)>
+                    <cfif planQ.recordCount>
+                        <cfset session.plan_id   = planQ.id>
+                        <cfset session.plan_name = lcase(planQ.plan_name)>
+                    <cfelse>
+                        <cfset session.plan_id   = 0>
+                        <cfset session.plan_name = "">
+                    </cfif>
+                </cfif>
+
                 <!--- SET SESSION --->
                 <cfset session.user_id    = result.user.id>
                 <cfset session.user_email = result.user.email>
