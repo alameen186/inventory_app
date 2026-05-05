@@ -97,10 +97,7 @@
         </div>
     </div>
 
-    <!---
-        SEARCH — NOT a <form method="get"> anymore.
-        Uses hidden inputs + AJAX, same as products.cfm / orders.cfm
-    --->
+    <!--- SEARCH --->
     <div class="row g-2 mb-3" id="schedSearchBar">
 
         <div class="col-md-5">
@@ -129,7 +126,7 @@
 
     </div>
 
-    <!--- TABLE — filled by AJAX on load and on search --->
+    <!--- TABLE  --->
     <div class="table-responsive">
     <table class="table table-bordered table-hover align-middle">
         <thead class="table-dark">
@@ -155,7 +152,7 @@
     </table>
     </div>
 
-    <!--- PAGINATION — filled by AJAX --->
+    <!--- PAGINATION  --->
     <div id="schedPagination" class="d-flex justify-content-center flex-wrap gap-2 mt-3"></div>
 
 </div>
@@ -281,7 +278,7 @@ $(function(){
             dataType : 'json',
             success  : function(res){
                 if (!res.success) { alert(res.message); return; }
-                var s = res.data.newStatus;
+                var s = parseInt(res.data.newStatus);
                 btn.data('status', s)
                    .text(s ? 'Stop' : 'Resume')
                    .removeClass('btn-danger btn-success')

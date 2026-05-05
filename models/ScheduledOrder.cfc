@@ -1,61 +1,100 @@
 <cfcomponent output="false">
 
-    <cffunction name="createSchedule" returntype="boolean">
-        <cfargument name="vendor_id"    required="true">
-        <cfargument name="customer_id"  required="true">
-        <cfargument name="start_date"   required="true">
-        <cfargument name="day_of_month" required="true">
-        <cfargument name="items"        required="true">
+    <cffunction name="createSchedule" returntype="struct">
+   
+    <cfloop list="#arguments.items#" delimiters="|" index="item">
+        <cfset var pid = val(listFirst(item,":"))>
+        <cfset var qty = val(listLast(item,":"))>
+        <cfif pid LTE 0 OR qty LTE 0><cfcontinue></cfif>
 
-        <cftry>
-            <cfloop list="#arguments.items#" delimiters="|" index="item">
-                <cfset var pid = val(listFirst(item,":"))>
-                <cfset var qty = val(listLast(item,":"))>
-                <cfif pid LTE 0 OR qty LTE 0><cfcontinue></cfif>
+        <!--- Check available stock BEFORE inserting --->
+        <cfquery name="stockCheck" datasource="#application.dsn#">
+            SELECT stock FROM products WHERE id = <cfqueryparam value="#pid#" cfsqltype="cf_sql_integer">
+        </cfquery>
 
-                <cfquery datasource="#application.dsn#">
-                    INSERT INTO scheduled_orders
-                        (vendor_id, product_id, quantity,
-                         customer_id, start_date, day_of_month, is_active)
-                    VALUES (
-                        <cfqueryparam value="#arguments.vendor_id#"    cfsqltype="cf_sql_integer">,
-                        <cfqueryparam value="#pid#"                     cfsqltype="cf_sql_integer">,
-                        <cfqueryparam value="#qty#"                     cfsqltype="cf_sql_integer">,
-                        <cfqueryparam value="#arguments.customer_id#"  cfsqltype="cf_sql_integer">,
-                        <cfqueryparam value="#arguments.start_date#"   cfsqltype="cf_sql_date">,
-                        <cfqueryparam value="#arguments.day_of_month#" cfsqltype="cf_sql_tinyint">,
-                        1
-                    )
-                </cfquery>
-            </cfloop>
-            <cfreturn true>
-        <cfcatch>
-            <cfreturn false>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+        <cfif stockCheck.stock LT qty>
+            <cfreturn {success: false, message: "Insufficient stock for product ID #pid#. Available: #stockCheck.stock#, Required: #qty#"}>
+        </cfif>
+
+        <!--- Insert schedule with reserved_qty --->
+        <cfquery datasource="#application.dsn#">
+            INSERT INTO scheduled_orders
+                (vendor_id, product_id, quantity, reserved_qty,
+                 customer_id, start_date, day_of_month, is_active)
+            VALUES (
+                <cfqueryparam value="#arguments.vendor_id#"    cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#pid#"                     cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#qty#"                     cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#qty#"                     cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.customer_id#"  cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.start_date#"   cfsqltype="cf_sql_date">,
+                <cfqueryparam value="#arguments.day_of_month#" cfsqltype="cf_sql_tinyint">,
+                1
+            )
+        </cfquery>
+
+        <!--- Reduce stock immediately for first cycle --->
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET stock = stock - <cfqueryparam value="#qty#" cfsqltype="cf_sql_integer">
+            WHERE id  = <cfqueryparam value="#pid#" cfsqltype="cf_sql_integer">
+            AND stock >= <cfqueryparam value="#qty#" cfsqltype="cf_sql_integer">
+        </cfquery>
+    </cfloop>
+    <cfreturn {success: true, message: "Schedule created"}>
+</cffunction>
 
 
-    <cffunction name="toggleSchedule" returntype="boolean">
-        <cfargument name="id"        required="true">
-        <cfargument name="vendor_id" required="true">
-        <cfargument name="status"    required="true">
-        <cftry>
+    <cffunction name="toggleSchedule" returntype="struct">
+    <cfargument name="id"        required="true">
+    <cfargument name="vendor_id" required="true">
+    <cfargument name="status"    required="true">  <!--- 1 = resume, 0 = stop --->
+    <cftry>
+        <!--- Get schedule details first --->
+        <cfquery name="sched" datasource="#application.dsn#">
+            SELECT product_id, quantity, reserved_qty FROM scheduled_orders
+            WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+            AND vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+
+        <cfif arguments.status EQ 0>
+            <!--- Stopping: release reserved stock back --->
             <cfquery datasource="#application.dsn#">
-                UPDATE scheduled_orders
-                SET is_active = <cfqueryparam value="#arguments.status#" cfsqltype="cf_sql_tinyint">
-                WHERE id        = <cfqueryparam value="#arguments.id#"        cfsqltype="cf_sql_integer">
-                AND   vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+                UPDATE products SET stock = stock + <cfqueryparam value="#sched.reserved_qty#" cfsqltype="cf_sql_integer">
+                WHERE id = <cfqueryparam value="#sched.product_id#" cfsqltype="cf_sql_integer">
             </cfquery>
-            <cfreturn true>
-        <cfcatch>
-            <cfreturn false>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+            <cfquery datasource="#application.dsn#">
+                UPDATE scheduled_orders SET is_active = 0, reserved_qty = 0
+                WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+            </cfquery>
+        <cfelse>
+            <!--- Resuming: check stock and re-reserve --->
+            <cfquery name="stockCheck" datasource="#application.dsn#">
+                SELECT stock FROM products WHERE id = <cfqueryparam value="#sched.product_id#" cfsqltype="cf_sql_integer">
+            </cfquery>
+            <cfif stockCheck.stock LT sched.quantity>
+                <cfreturn {success: false, message: "Cannot resume — insufficient stock (#stockCheck.stock# available, #sched.quantity# needed)"}>
+            </cfif>
+            <cfquery datasource="#application.dsn#">
+                UPDATE products SET stock = stock - <cfqueryparam value="#sched.quantity#" cfsqltype="cf_sql_integer">
+                WHERE id = <cfqueryparam value="#sched.product_id#" cfsqltype="cf_sql_integer">
+                AND stock >= <cfqueryparam value="#sched.quantity#" cfsqltype="cf_sql_integer">
+            </cfquery>
+            <cfquery datasource="#application.dsn#">
+                UPDATE scheduled_orders SET is_active = 1, reserved_qty = <cfqueryparam value="#sched.quantity#" cfsqltype="cf_sql_integer">
+                WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+            </cfquery>
+        </cfif>
+
+        <cfreturn {success: true, newStatus: arguments.status}>
+    <cfcatch>
+        <cfreturn {success: false, message: cfcatch.message}>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 
-    <!--- PRODUCTION: runs once per day, no time check needed --->
+    <!---  runs once per day --->
     <cffunction name="getSchedulesDueToday" returntype="query">
         <cfquery name="q" datasource="#application.dsn#">
             SELECT s.*

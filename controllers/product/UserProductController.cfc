@@ -37,6 +37,27 @@
                 expiry_months = expiry_months
             )>
 
+            <cfset logModel = createObject("component","models.SearchLog")>
+
+<!--- Log each matched product --->
+<cfif products.recordCount GT 0 AND len(keyword)>
+    <cfloop query="products">
+        <cfset logModel.logSearch(
+            keyword            = keyword,
+            user_id            = session.user_id,
+            result_count       = products.recordCount,
+            matched_product_id = products.id
+        )>
+    </cfloop>
+<cfelseif len(keyword)>
+    <!--- No results — track unmatched demand --->
+    <cfset logModel.logSearch(
+        keyword      = keyword,
+        user_id      = session.user_id,
+        result_count = 0
+    )>
+</cfif>
+
             <cfset var totalRecords = productModel.getProductCount(
                 keyword       = keyword,
                 category_id   = cat_id,

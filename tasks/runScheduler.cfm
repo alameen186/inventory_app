@@ -52,16 +52,43 @@ Running scheduler [#testMode ? 'TEST MODE' : 'PRODUCTION'#]
         )>
 
         <cfif result.success>
-            <!--- reduce stock --->
-            <cfset prodModel.reduceStock(dueTodayQ.product_id, dueTodayQ.quantity)>
+    <!--- Stock already reduced at reservation time, so skip reduceStock --->
+    
+    <!--- Reserve stock for NEXT cycle --->
+    <cfquery name="nextStockCheck" datasource="#application.dsn#">
+        SELECT stock FROM products WHERE id = <cfqueryparam value="#dueTodayQ.product_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
 
-            <cfset schedModel.logRun(
-                scheduled_order_id = dueTodayQ.id,
-                order_id           = 0,
-                status             = "success",
-                notes              = "Auto-created. Group: #groupId#"
-            )>
-            <cfoutput>✓ Schedule ##dueTodayQ.id — Order #groupId# created.<br></cfoutput>
+    <cfif nextStockCheck.stock GTE dueTodayQ.quantity>
+        <!--- Enough stock: reserve for next month --->
+        <cfquery datasource="#application.dsn#">
+            UPDATE products SET stock = stock - <cfqueryparam value="#dueTodayQ.quantity#" cfsqltype="cf_sql_integer">
+            WHERE id = <cfqueryparam value="#dueTodayQ.product_id#" cfsqltype="cf_sql_integer">
+            AND stock >= <cfqueryparam value="#dueTodayQ.quantity#" cfsqltype="cf_sql_integer">
+        </cfquery>
+        <cfquery datasource="#application.dsn#">
+            UPDATE scheduled_orders SET reserved_qty = <cfqueryparam value="#dueTodayQ.quantity#" cfsqltype="cf_sql_integer">
+            WHERE id = <cfqueryparam value="#dueTodayQ.id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+        <cfset notes = "Auto-created. Group: #groupId#. Next cycle reserved.">
+    <cfelse>
+        <!--- Not enough stock for next cycle: pause the schedule and alert --->
+        <cfquery datasource="#application.dsn#">
+            UPDATE scheduled_orders SET is_active = 0, reserved_qty = 0
+            WHERE id = <cfqueryparam value="#dueTodayQ.id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+        <cfset notes = "Auto-created. Group: #groupId#. WARNING: Schedule auto-paused — insufficient stock for next cycle.">
+        <cfoutput>⚠ Schedule ##dueTodayQ.id — paused, stock too low for next cycle.<br></cfoutput>
+    </cfif>
+
+    <cfset schedModel.logRun(
+        scheduled_order_id = dueTodayQ.id,
+        order_id           = 0,
+        status             = "success",
+        notes              = notes
+    )>
+    <cfoutput>✓ Schedule ##dueTodayQ.id — Order #groupId# created.<br></cfoutput>
+
         <cfelse>
             <cfset schedModel.logRun(
                 scheduled_order_id = dueTodayQ.id,

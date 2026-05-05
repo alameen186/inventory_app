@@ -27,11 +27,11 @@
                 items       = items
             )>
 
-            <cfif result>
-                <cfset jsonRes(true,"Schedule(s) created successfully")>
-            <cfelse>
-                <cfset jsonRes(false,"Could not create schedule")>
-            </cfif>
+            <cfif result.success>
+    <cfset jsonRes(true, result.message)>
+<cfelse>
+    <cfset jsonRes(false, result.message)>
+</cfif>
         <cfcatch>
             <cfset jsonRes(false,"Error: #cfcatch.message#")>
         </cfcatch>
@@ -40,24 +40,30 @@
 
 
     <cffunction name="toggleStatus" access="remote" returntype="void" httpMethod="GET">
-        <cfset createObject("component","models.AuthGuard").checkAuth()>
-        <cftry>
-            <cfset var id        = val(url.id)>
-            <cfset var newStatus = (url.currentStatus EQ 1) ? 0 : 1>
-            <cfset var model     = createObject("component","models.ScheduledOrder")>
-            <cfset model.toggleSchedule(
-                id        = id,
-                vendor_id = session.user_id,
-                status    = newStatus
-            )>
-            <cfset jsonRes(true, newStatus EQ 1 ? "Schedule resumed" : "Schedule stopped", {
-                newStatus: newStatus
-            })>
-        <cfcatch>
-            <cfset jsonRes(false,"Error: #cfcatch.message#")>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+    <cftry>
+        <cfset var id        = val(url.id)>
+        <cfset var newStatus = (url.currentStatus EQ 1) ? 0 : 1>
+        <cfset var model     = createObject("component","models.ScheduledOrder")>
+        <cfset var result    = model.toggleSchedule(
+            id        = id,
+            vendor_id = session.user_id,
+            status    = newStatus
+        )>
+
+      <cfif result.success>
+    <cfset jsonRes(true, newStatus EQ 1 ? "Schedule resumed" : "Schedule stopped", {
+        "newStatus": javaCast("int", newStatus)
+    })>
+<cfelse>
+    <cfset jsonRes(false, result.message)>
+</cfif>
+
+    <cfcatch>
+        <cfset jsonRes(false,"Error: #cfcatch.message#")>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 
     <cffunction name="jsonRes" access="private" returntype="void" output="true">
