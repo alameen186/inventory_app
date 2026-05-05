@@ -330,138 +330,211 @@
     </cffunction>
 
 
-<cffunction name="getProductCountAdmin" returntype="numeric">
-
-    <cfargument name="search" default="">
-    <cfargument name="category_id" default="">
-    <cfargument name="vendor_id" default=""> 
-
-    <cfset var searchValue = trim(arguments.search)>
-
-    <cfquery name="result" datasource="#application.dsn#">
-        SELECT COUNT(*) as total
-        FROM products p
-        JOIN categories c ON p.category_id = c.id
-        WHERE 1=1
-
-        <cfif isNumeric(arguments.vendor_id)>
-            AND p.vendor_id =
-            <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
-        </cfif>
-
-        <cfif len(searchValue)>
-            AND (
-                LOWER(p.product_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-                OR LOWER(c.category_name) LIKE 
-                <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
-            )
-        </cfif>
-
-        <cfif isNumeric(arguments.category_id)>
-            AND p.category_id = 
-            <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
-        </cfif>
-
-    </cfquery>
-
-    <cfreturn result.total>
-
-</cffunction>
-
-<cffunction name="reduceStock" returntype="boolean" output="false">
-    <cfargument name="product_id" type="numeric" required="true">
-    <cfargument name="qty" type="numeric" required="true">
-
-    <cftry>
-
-        <cfquery datasource="#application.dsn#">
-            UPDATE products
-            SET stock = stock - 
-                <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
-            WHERE id = 
-                <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
-            AND stock >= 
-                <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+    <cffunction name="getProductCountAdmin" returntype="numeric">
+    
+        <cfargument name="search" default="">
+        <cfargument name="category_id" default="">
+        <cfargument name="vendor_id" default=""> 
+    
+        <cfset var searchValue = trim(arguments.search)>
+    
+        <cfquery name="result" datasource="#application.dsn#">
+            SELECT COUNT(*) as total
+            FROM products p
+            JOIN categories c ON p.category_id = c.id
+            WHERE 1=1
+    
+            <cfif isNumeric(arguments.vendor_id)>
+                AND p.vendor_id =
+                <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+            </cfif>
+    
+            <cfif len(searchValue)>
+                AND (
+                    LOWER(p.product_name) LIKE 
+                    <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+                    OR LOWER(c.category_name) LIKE 
+                    <cfqueryparam value="%#lcase(searchValue)#%" cfsqltype="cf_sql_varchar">
+                )
+            </cfif>
+    
+            <cfif isNumeric(arguments.category_id)>
+                AND p.category_id = 
+                <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">
+            </cfif>
+    
         </cfquery>
-
-        <cfreturn true>
-
-    <cfcatch>
-        <cfreturn false>
-    </cfcatch>
-
-    </cftry>
-</cffunction>
-
-
-<cffunction name="getStock" returntype="numeric">
-
-    <cfargument name="product_id" required="true">
-
-    <cfquery name="q" datasource="#application.dsn#">
-        SELECT stock FROM products
-        WHERE id = 
-        <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
-    </cfquery>
-
-    <cfreturn q.stock>
-
-</cffunction>
-
-
-<cffunction name="getAllProductsSimple" returntype="query">
-    <cfquery name="products" datasource="#application.dsn#">
-        SELECT id, product_name, price, stock
-        FROM products
-        WHERE stock > 0
-        ORDER BY product_name ASC
-    </cfquery>
-    <cfreturn products>
-</cffunction>
-
-
-<cffunction name="addStock" returntype="boolean" output="false">
-    <cfargument name="product_id" required="true">
-    <cfargument name="qty" required="true">
-
-    <cftry>
-        <cfquery datasource="#application.dsn#">
-            UPDATE products
-            SET stock = stock + 
-            <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
-            WHERE id =
-            <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
-        </cfquery>
-
-        <cfreturn true>
-
+    
+        <cfreturn result.total>
+    
+    </cffunction>
+    
+    <cffunction name="reduceStock" returntype="boolean" output="false">
+        <cfargument name="product_id" type="numeric" required="true">
+        <cfargument name="qty" type="numeric" required="true">
+    
+        <cftry>
+    
+            <cfquery datasource="#application.dsn#">
+                UPDATE products
+                SET stock = stock - 
+                    <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+                WHERE id = 
+                    <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+                AND stock >= 
+                    <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+            </cfquery>
+    
+            <cfreturn true>
+    
         <cfcatch>
             <cfreturn false>
         </cfcatch>
-    </cftry>
-</cffunction>
-
-<cffunction name="getProductsWithVendorByIds" returntype="query" output="false">
-    <cfargument name="productIds" required="true"> 
-
-    <cfquery name="q" datasource="#application.dsn#">
-        SELECT 
-            p.id,
-            p.product_name,
-            p.price,
-            u.business_name,
-            u.address
-        FROM products p
-        JOIN users u ON p.vendor_id = u.id
-        WHERE p.id IN (
-            <cfqueryparam value="#arguments.productIds#" 
-                          list="true" 
-                          cfsqltype="cf_sql_integer">
-        )
-    </cfquery>
-
-    <cfreturn q>
-</cffunction>
-
+    
+        </cftry>
+    </cffunction>
+    
+    
+    <cffunction name="getStock" returntype="numeric">
+    
+        <cfargument name="product_id" required="true">
+    
+        <cfquery name="q" datasource="#application.dsn#">
+            SELECT stock FROM products
+            WHERE id = 
+            <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+    
+        <cfreturn q.stock>
+    
+    </cffunction>
+    
+    
+    <cffunction name="getAllProductsSimple" returntype="query">
+        <cfquery name="products" datasource="#application.dsn#">
+            SELECT id, product_name, price, stock
+            FROM products
+            WHERE stock > 0
+            ORDER BY product_name ASC
+        </cfquery>
+        <cfreturn products>
+    </cffunction>
+    
+    
+    <cffunction name="addStock" returntype="boolean" output="false">
+        <cfargument name="product_id" required="true">
+        <cfargument name="qty" required="true">
+    
+        <cftry>
+            <cfquery datasource="#application.dsn#">
+                UPDATE products
+                SET stock = stock + 
+                <cfqueryparam value="#arguments.qty#" cfsqltype="cf_sql_integer">
+                WHERE id =
+                <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+            </cfquery>
+    
+            <cfreturn true>
+    
+            <cfcatch>
+                <cfreturn false>
+            </cfcatch>
+        </cftry>
+    </cffunction>
+    
+    <cffunction name="getProductsWithVendorByIds" returntype="query" output="false">
+        <cfargument name="productIds" required="true"> 
+    
+        <cfquery name="q" datasource="#application.dsn#">
+            SELECT 
+                p.id,
+                p.product_name,
+                p.price,
+                u.business_name,
+                u.address
+            FROM products p
+            JOIN users u ON p.vendor_id = u.id
+            WHERE p.id IN (
+                <cfqueryparam value="#arguments.productIds#" 
+                              list="true" 
+                              cfsqltype="cf_sql_integer">
+            )
+        </cfquery>
+    
+        <cfreturn q>
+    </cffunction>
+    
+    <cffunction name="getByVendorSimple" returntype="query" output="false">
+        <cfargument name="vendor_id" type="numeric" required="true">
+    
+        <cfquery name="q" datasource="#application.dsn#">
+            SELECT id, product_name, price, stock
+            FROM products
+            WHERE vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+            AND   is_active = 1
+            AND   stock     > 0
+            ORDER BY product_name ASC
+        </cfquery>
+    
+        <cfreturn q>
+    </cffunction>
+    
+    <cffunction name="getVendorProductsPaged" returntype="query" output="false">
+        <cfargument name="vendor_id"  type="numeric" required="true">
+        <cfargument name="search"     type="string"  required="false" default="">
+        <cfargument name="sort"       type="string"  required="false" default="">
+        <cfargument name="page"       type="numeric" required="false" default="1">
+        <cfargument name="limit"      type="numeric" required="false" default="10">
+    
+        <cfset var offset = (arguments.page - 1) * arguments.limit>
+    
+        <cfquery name="q" datasource="#application.dsn#">
+            SELECT p.id, p.product_name, p.price, p.stock, p.image
+            FROM products p
+            WHERE p.vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+            AND   p.is_active = 1
+    
+            <cfif len(trim(arguments.search))>
+                AND p.product_name LIKE
+                    <cfqueryparam value="%#trim(arguments.search)#%" cfsqltype="cf_sql_varchar">
+            </cfif>
+    
+            <cfif arguments.sort EQ "price_low">
+                ORDER BY p.price ASC
+            <cfelseif arguments.sort EQ "price_high">
+                ORDER BY p.price DESC
+            <cfelseif arguments.sort EQ "z_a">
+                ORDER BY p.product_name DESC
+            <cfelse>
+                ORDER BY p.product_name ASC
+            </cfif>
+    
+            LIMIT  <cfqueryparam value="#arguments.limit#"  cfsqltype="cf_sql_integer">
+            OFFSET <cfqueryparam value="#offset#"           cfsqltype="cf_sql_integer">
+        </cfquery>
+    
+        <cfreturn q>
+    </cffunction>
+    
+    
+    <cffunction name="getVendorProductCount" returntype="numeric" output="false">
+        <cfargument name="vendor_id" type="numeric" required="true">
+        <cfargument name="search"    type="string"  required="false" default="">
+    
+        <cfquery name="q" datasource="#application.dsn#">
+            SELECT COUNT(*) AS total
+            FROM products
+            WHERE vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+            AND   is_active = 1
+    
+            <cfif len(trim(arguments.search))>
+                AND product_name LIKE
+                    <cfqueryparam value="%#trim(arguments.search)#%" cfsqltype="cf_sql_varchar">
+            </cfif>
+        </cfquery>
+    
+        <cfreturn q.total>
+    </cffunction>
+    
+    
 </cfcomponent>

@@ -257,4 +257,19 @@ AND u.role_id != 6
     <cfreturn q.total>
 </cffunction>
 
+<cffunction name="getCustomers" returntype="query" output="false">
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT
+            u.id,
+            CONCAT(u.first_name, ' ', u.last_name) AS full_name,
+            u.email,
+            u.business_name
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE LOWER(r.role_name) = 'Customer'
+        ORDER BY u.first_name ASC, u.last_name ASC
+    </cfquery>
+    <cfreturn q>
+</cffunction>
+
 </cfcomponent>
