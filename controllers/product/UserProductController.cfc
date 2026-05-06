@@ -79,13 +79,13 @@
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card h-100 product-card" data-pid="#id#">
 
-                        <cfif len(image)>
-                            <img src="../../assets/images/products/#image#"
-                                 class="card-img-top" style="height:180px;object-fit:cover;">
-                        <cfelse>
-                            <img src="https://via.placeholder.com/200"
-                                 class="card-img-top" style="height:180px;object-fit:cover;">
-                        </cfif>
+                        <cfif len(first_image)>
+    <img src="../../assets/images/products/#first_image#"
+         class="card-img-top" style="height:180px;object-fit:cover;">
+<cfelse>
+    <img src="https://via.placeholder.com/200"
+         class="card-img-top" style="height:180px;object-fit:cover;">
+</cfif>
 
                         <div class="card-body d-flex flex-column text-center p-2">
                             <h6 class="card-title mb-1">#product_name#</h6>

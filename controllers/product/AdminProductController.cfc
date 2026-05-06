@@ -1,7 +1,5 @@
 <cfcomponent output="false">
 
-    <!--- helpers --->
-
     <cffunction name="jsonRes" access="private" returntype="void" output="true">
         <cfargument name="success" type="boolean" required="true">
         <cfargument name="message" type="string"  default="">
@@ -14,19 +12,60 @@
         })#</cfoutput>
     </cffunction>
 
-    <!--- Upload one image field; returns filename or "" --->
-    <cffunction name="uploadImage" access="private" returntype="string">
-        <cfargument name="fieldName" type="string" required="true">
-        <cfif structKeyExists(form, arguments.fieldName) AND len(form[arguments.fieldName])>
-            <cffile action="upload"
-                filefield="#arguments.fieldName#"
-                destination="#expandPath('../../assets/images/products/')#"
-                nameconflict="makeunique"
+<cffunction name="uploadImages" access="private" returntype="array">
+    <cfargument name="fieldName" type="string" required="true">
+    <cfargument name="maxImages" type="numeric" required="false" default="10">
+
+    <cfset var result = []>
+    <cfset var dest = expandPath("../../assets/images/products/")>
+
+    <cftry>
+        <cffile action="uploadAll"
+                fileField="#arguments.fieldName#"
+                destination="#dest#"
+                nameConflict="makeunique"
                 accept="image/jpeg,image/png,image/jpg,image/webp,image/gif">
-            <cfreturn cffile.serverFile>
+
+        <!--- Aggressive handling to catch all files --->
+        <cfif isStruct(cffile)>
+            <cfif structKeyExists(cffile, "serverFile") AND len(trim(cffile.serverFile))>
+                <cfset arrayAppend(result, cffile.serverFile)>
+            </cfif>
+
+        <cfelseif isQuery(cffile)>
+            <cfloop query="cffile">
+                <cfif len(trim(cffile.serverFile))>
+                    <cfset arrayAppend(result, cffile.serverFile)>
+                </cfif>
+            </cfloop>
+
+        <cfelseif isArray(cffile)>
+            <cfloop array="#cffile#" index="f">
+                <cfif isStruct(f) AND structKeyExists(f,"serverFile") AND len(trim(f.serverFile))>
+                    <cfset arrayAppend(result, f.serverFile)>
+                </cfif>
+            </cfloop>
         </cfif>
-        <cfreturn "">
-    </cffunction>
+
+        <cfif arrayLen(result) LTE 1>
+            <cfdirectory action="list" directory="#dest#" name="uploadedFiles" sort="dateLastModified DESC">
+            <cfloop query="uploadedFiles" endrow="10">
+                <cfif uploadedFiles.type EQ "file" AND 
+                      (uploadedFiles.name CONTAINS "Screenshot" OR uploadedFiles.name CONTAINS ".png" OR uploadedFiles.name CONTAINS ".jpg")>
+                    <cfif NOT listFind(arrayToList(result), uploadedFiles.name)>
+                        <cfset arrayAppend(result, uploadedFiles.name)>
+                    </cfif>
+                </cfif>
+            </cfloop>
+        </cfif>
+
+        <cfcatch>
+            <cfset jsonRes(false, "Upload Error: #cfcatch.message#")>
+        </cfcatch>
+    </cftry>
+
+    <cfreturn result>
+</cffunction>
 
     <cffunction name="getVendorFilter" access="private" returntype="string">
         <cfif structKeyExists(session,"role_name") AND session.role_name EQ "vendor">
@@ -36,69 +75,66 @@
     </cffunction>
 
     <!--- ADD --->
-
-    <cffunction name="add" access="remote" returntype="void" output="true" httpMethod="POST">
-        <cfset createObject("component","models.AuthGuard").checkAuth()>
+<cffunction name="add" access="remote" returntype="void" output="true" httpMethod="POST">
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+    
+    <cftry>
         <cfset var productModel = createObject("component","models.Product")>
+        <cfset var imageModel   = createObject("component","models.ProductImage")>
+        
+        <cfset var productName = trim(form.product_name)>
+        <cfset var price       = val(form.price)>
+        <cfset var stock       = val(form.stock)>
+        <cfset var category_id = val(form.category_id)>
+        <cfset var expiry_date = trim(form.expiry_date)>
 
-        <cftry>
-            <cfset var productName = trim(form.product_name)>
-            <cfset var price       = val(form.price)>
-            <cfset var stock       = val(form.stock)>
-            <cfset var category_id = val(form.category_id)>
-            <cfset var expiry_date = trim(form.expiry_date)>
+        <!--- Create Product --->
+        <cfset var newId = productModel.addProduct(
+            productName, price, stock, category_id, "", "", "", 
+            session.user_id, expiry_date
+        )>
 
-            <cfif len(productName) LT 3>
-                <cfset jsonRes(false,"Product name must be at least 3 characters")><cfreturn>
-            </cfif>
-            <cfif len(productName) GT 50>
-                <cfset jsonRes(false,"Product name too long")><cfreturn>
-            </cfif>
-            <cfif price LTE 0>
-                <cfset jsonRes(false,"Invalid price")><cfreturn>
-            </cfif>
-            <cfif stock LT 0>
-                <cfset jsonRes(false,"Invalid stock")><cfreturn>
-            </cfif>
-            <cfif category_id LTE 0>
-                <cfset jsonRes(false,"Invalid category")><cfreturn>
-            </cfif>
+        <cfif NOT newId>
+            <cfset jsonRes(false, "Failed to create product")>
+            <cfreturn>
+        </cfif>
 
-            <cfset var existing = productModel.getAllProducts()>
-            <cfif listFindNoCase(valueList(existing.product_name), productName)>
-                <cfset jsonRes(false,"Product name already exists")><cfreturn>
-            </cfif>
+        <!--- Upload Images --->
+                <cfset var images = uploadImages("product_images", 10)>
+        <cfset var inserted = 0>
 
-            <!--- upload up to 3 images --->
-            <cfset var img1 = uploadImage("product_image")>
-            <cfset var img2 = uploadImage("product_image2")>
-            <cfset var img3 = uploadImage("product_image3")>
+        <cfif arrayLen(images) EQ 0>
+            <cfset jsonRes(true, "Product ID #newId# created - No images received by server")>
+            <cfreturn>
+        </cfif>
 
-            <cfset var result = productModel.addProduct(
-                productName, price, stock,
-                category_id, img1, img2, img3,
-                session.user_id, expiry_date
+        <cfloop from="1" to="#arrayLen(images)#" index="i">
+            <cfset var imgName = images[i]>
+            <cfset var success = imageModel.addImage(
+                product_id = newId,
+                image = imgName,
+                sort_order = i
             )>
-
-            <cfif result>
-                <cfset jsonRes(true,"Product added successfully")>
-            <cfelse>
-                <cfset jsonRes(false,"Insert failed")>
+            <cfif success>
+                <cfset inserted++>
             </cfif>
+        </cfloop>
 
-        <cfcatch>
-            <cfset jsonRes(false,"Error: #cfcatch.message#")>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+        <cfset jsonRes(true, "Success! Product ID #newId# created. Files received: #arrayLen(images)# | Saved in DB: #inserted#")>
+
+    <cfcatch>
+        <cfset jsonRes(false, "Server Error: #cfcatch.message#")>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
     <!--- UPDATE --->
-
     <cffunction name="update" access="remote" returntype="void" output="true" httpMethod="POST">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
-        <cfset var productModel = createObject("component","models.Product")>
-
         <cftry>
+            <cfset var productModel = createObject("component","models.Product")>
+            <cfset var imageModel   = createObject("component","models.ProductImage")>
+
             <cfset var id          = val(form.id)>
             <cfset var productName = trim(form.product_name)>
             <cfset var price       = val(form.price)>
@@ -112,47 +148,34 @@
             <cfif price LTE 0>
                 <cfset jsonRes(false,"Invalid price")><cfreturn>
             </cfif>
-            <cfif stock LT 0>
-                <cfset jsonRes(false,"Invalid stock")><cfreturn>
-            </cfif>
-            <cfif category_id LTE 0>
-                <cfset jsonRes(false,"Invalid category")><cfreturn>
-            </cfif>
 
-            <!--- keep existing images as fallback --->
-            <cfset var oldProduct = productModel.getProductById(id)>
-            <cfset var img1 = oldProduct.image>
-            <cfset var img2 = oldProduct.image2>
-            <cfset var img3 = oldProduct.image3>
-
-            <!--- replace only slots where a new file was uploaded --->
-            <cfset var new1 = uploadImage("product_image")>
-            <cfset var new2 = uploadImage("product_image2")>
-            <cfset var new3 = uploadImage("product_image3")>
-
-            <cfif len(new1)><cfset img1 = new1></cfif>
-            <cfif len(new2)><cfset img2 = new2></cfif>
-            <cfif len(new3)><cfset img3 = new3></cfif>
-
-            <cfset var result = productModel.updateProduct(
+            <cfset productModel.updateProduct(
                 id, productName, price, stock,
-                category_id, img1, img2, img3, expiry_date
+                category_id, "", "", "", expiry_date
             )>
 
-            <cfif result>
-                <cfset jsonRes(true,"Product updated successfully")>
-            <cfelse>
-                <cfset jsonRes(false,"Update failed")>
+            <cfset var currentCount = imageModel.getCount(id)>
+            <cfset var slotsLeft    = 10 - currentCount>
+
+            <cfif slotsLeft GT 0>
+                <cfset var newImages = uploadImages("product_images", slotsLeft)>
+                <cfloop from="1" to="#arrayLen(newImages)#" index="i">
+                    <cfset imageModel.addImage(
+                        product_id = id,
+                        image      = newImages[i],
+                        sort_order = currentCount + i
+                    )>
+                </cfloop>
             </cfif>
 
+            <cfset jsonRes(true, "Product updated successfully")>
         <cfcatch>
-            <cfset jsonRes(false,"Error: #cfcatch.message#")>
+            <cfset jsonRes(false, "Error: #cfcatch.message#")>
         </cfcatch>
         </cftry>
     </cffunction>
 
     <!--- TOGGLE STATUS --->
-
     <cffunction name="toggleStatus" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel = createObject("component","models.Product")>
@@ -168,7 +191,6 @@
     </cffunction>
 
     <!--- SEARCH / PAGINATION --->
-
     <cffunction name="search" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
         <cfset var productModel  = createObject("component","models.Product")>
@@ -201,7 +223,6 @@
             <cfset var prevPage  = startPage - 1>
             <cfset var nextPage  = endPage + 1>
 
-            <!--- helper macro: render up to 3 image thumbs --->
             <cfsavecontent variable="rowsHTML">
             <cfoutput query="products">
                 <tr id="viewRow_#id#">
@@ -212,11 +233,11 @@
                     <td>#category_name#</td>
                     <td><cfif len(trim(expiry_date))>#dateFormat(expiry_date,"dd-mmm-yyyy")#<cfelse>-</cfif></td>
                     <td>
-                        <!--- show all uploaded images as small thumbs --->
-                        <cfif len(image)><img src="../../assets/images/products/#image#" width="40" class="me-1"></cfif>
-                        <cfif len(image2)><img src="../../assets/images/products/#image2#" width="40" class="me-1"></cfif>
-                        <cfif len(image3)><img src="../../assets/images/products/#image3#" width="40"></cfif>
-                        <cfif NOT len(image) AND NOT len(image2) AND NOT len(image3)>No Image</cfif>
+                        <cfif len(trim(first_image))>
+                            <img src="../../assets/images/products/#first_image#" width="40">
+                        <cfelse>
+                            No Image
+                        </cfif>
                     </td>
                     <td>
                         <cfif is_active EQ 1>
@@ -252,13 +273,10 @@
                     </td>
                     <td><input type="date" value="#expiry_date#" class="form-control expiry"></td>
                     <td>
-                        <!--- 3 separate file inputs, labelled --->
-                        <small class="text-muted">Img 1</small>
-                        <input type="file" class="form-control image mb-1" style="min-width:140px;">
-                        <small class="text-muted">Img 2</small>
-                        <input type="file" class="form-control image2 mb-1" style="min-width:140px;">
-                        <small class="text-muted">Img 3</small>
-                        <input type="file" class="form-control image3" style="min-width:140px;">
+                        <div id="existingImgs_#id#" class="d-flex flex-wrap gap-1 mb-2"></div>
+                        <input type="file" name="product_images" class="form-control"
+                               multiple accept="image/*">
+                        <small class="text-muted">Add more images (max 10 total)</small>
                     </td>
                     <td>
                         <cfif is_active EQ 1>
@@ -295,9 +313,52 @@
             </cfsavecontent>
 
             <cfset jsonRes(true,"",{"rows":rowsHTML,"pagination":paginationHTML})>
-
         <cfcatch>
             <cfset jsonRes(false,"Error: #cfcatch.message#")>
+        </cfcatch>
+        </cftry>
+    </cffunction>
+
+    <!--- DELETE single image --->
+    <cffunction name="deleteImage" access="remote" returntype="void" httpMethod="GET">
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+        <cftry>
+            <cfset var imageModel = createObject("component","models.ProductImage")>
+            <cfset imageModel.deleteImage(
+                id         = val(url.image_id),
+                product_id = val(url.product_id)
+            )>
+            <cfset jsonRes(true, "Image deleted")>
+        <cfcatch>
+            <cfset jsonRes(false, "Error: #cfcatch.message#")>
+        </cfcatch>
+        </cftry>
+    </cffunction>
+
+    <!---
+        GET all images for a product.
+        Returns a JSON array of {id, image} objects — used by the admin
+        edit row to render thumbnails with individual delete buttons.
+        Uses Java ArrayList so serializeJSON always produces a true JSON array.
+    --->
+    <cffunction name="getImages" access="remote" returntype="void" httpMethod="GET">
+        <cfset createObject("component","models.AuthGuard").checkAuth()>
+        <cftry>
+            <cfset var imageModel = createObject("component","models.ProductImage")>
+            <cfset var imgs       = imageModel.getByProduct(val(url.product_id))>
+
+            <!--- Build a Java ArrayList of structs — guaranteed JSON array output --->
+            <cfset var result = createObject("java","java.util.ArrayList").init()>
+            <cfloop query="imgs">
+                <cfset var entry = structNew("ordered")>
+                <cfset entry["id"]    = imgs.id>
+                <cfset entry["image"] = trim(imgs.image)>
+                <cfset result.add(entry)>
+            </cfloop>
+
+            <cfset jsonRes(true, "", result)>
+        <cfcatch>
+            <cfset jsonRes(false, "Error: #cfcatch.message#")>
         </cfcatch>
         </cftry>
     </cffunction>

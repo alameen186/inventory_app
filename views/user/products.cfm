@@ -49,6 +49,22 @@
 <cfset prevPage    = startPage - 1>
 <cfset nextPage    = endPage + 1>
 
+<style>
+.thumb-img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    cursor: pointer;
+    flex-shrink: 0;
+    border: 2px solid #dee2e6;
+    border-radius: 4px;
+    transition: border-color 0.2s;
+}
+.thumb-img.active {
+    border-color: #0d6efd;
+}
+</style>
+
 <div class="container mt-4">
 
     <cfif structKeyExists(url, "message")>
@@ -126,8 +142,8 @@
         <div class="col-6 col-md-4 col-lg-3">
             <div class="card h-100 product-card" data-pid="#id#">
 
-                <cfif len(image)>
-                    <img src="../../assets/images/products/#image#"
+                <cfif len(first_image)>
+                    <img src="../../assets/images/products/#first_image#"
                          class="card-img-top" style="height:180px;object-fit:cover;">
                 <cfelse>
                     <img src="https://via.placeholder.com/200"
@@ -170,7 +186,7 @@
                                     <input type="hidden" name="product_id"   value="#id#">
                                     <input type="hidden" name="product_name" value="#product_name#">
                                     <input type="hidden" name="price"        value="#price#">
-                                    <input type="hidden" name="image"        value="#image#">
+                                    <input type="hidden" name="image"        value="#first_image#">
                                     <button type="submit" class="btn btn-success btn-sm w-100">Add to Cart</button>
                                 </form>
                             </cfif>
@@ -198,7 +214,6 @@
 
     <div class="modal-body">
 
-        <!--- LOADER --->
         <div id="modalLoader" class="text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
             <p class="mt-2 text-muted">Loading...</p>
@@ -213,8 +228,24 @@
                     <img id="mainProductImg"
                          src="https://via.placeholder.com/400"
                          alt="Product image"
-                         class="img-fluid rounded border w-100">
-                    <div id="thumbContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
+                         class="img-fluid rounded border w-100"
+                         style="height:280px;object-fit:cover;">
+
+                    <!--- THUMBNAIL STRIP WITH ARROWS --->
+                    <div class="d-flex align-items-center gap-1 mt-2" id="thumbWrapper">
+                        <button id="thumbPrev" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                            style="width:28px;height:28px;padding:0;display:none;">&#8249;</button>
+
+                        <div style="overflow:hidden;flex:1;" id="thumbViewport">
+                            <div id="thumbContainer"
+                                 class="d-flex gap-2"
+                                 style="transition:transform 0.3s ease;will-change:transform;">
+                            </div>
+                        </div>
+
+                        <button id="thumbNext" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                            style="width:28px;height:28px;padding:0;display:none;">&#8250;</button>
+                    </div>
                 </div>
 
                 <!--- INFO COL --->
@@ -340,6 +371,11 @@ $(document).ready(function(){
     var REV_CTRL  = "../../controllers/review/UserReviewController.cfc";
     var IMG_BASE  = "../../assets/images/products/";
 
+    // ── Single global thumbOffset — used by both loadProductDetail and arrow buttons
+    var thumbOffset  = 0;
+    var thumbItemW   = 64;   // thumb 56px + gap 8px
+    var visibleCount = 4;
+
     // ── SEARCH
     function getFilterParams(){
         return $("#searchForm").find(
@@ -412,6 +448,7 @@ $(document).ready(function(){
         currentPid     = $(this).data("pid");
         selectedRating = 1;
 
+        // reset everything
         $("#modalLoader").show();
         $("#modalContent").hide();
         $("#modalProductName").text("Loading...");
@@ -424,7 +461,9 @@ $(document).ready(function(){
         $("#modalTotalReviews").text("0");
         $("#modalCartArea").html("");
         $("#mainProductImg").attr("src", "https://via.placeholder.com/400");
-        $("#thumbContainer").html("");
+        $("#thumbContainer").html("").css("transform","translateX(0)");
+        $("#thumbPrev, #thumbNext").hide();
+        thumbOffset = 0;
         $("#reviewComment").val("");
         $("#charCount").text("0");
         $("#reviewFormMsg").html("");
@@ -434,7 +473,10 @@ $(document).ready(function(){
         loadProductDetail(currentPid, 1);
     });
 
+    // ── MODAL CLOSE — reset thumb strip
     $("#productDetailModal").on("hidden.bs.modal", function(){
+        thumbOffset = 0;
+        $("#thumbContainer").css("transform","translateX(0)");
         $("body").focus();
     });
 
@@ -445,6 +487,27 @@ $(document).ready(function(){
         $(this).addClass("active");
     });
 
+    // ── THUMBNAIL ARROW NEXT
+    $(document).on("click", "#thumbNext", function(){
+        var total    = $("#thumbContainer .thumb-img").length;
+        var maxShift = Math.max(0, total - visibleCount);
+        if(thumbOffset < maxShift){
+            thumbOffset++;
+            $("#thumbContainer").css("transform",
+                "translateX(-" + (thumbOffset * thumbItemW) + "px)");
+        }
+    });
+
+    // ── THUMBNAIL ARROW PREV
+    $(document).on("click", "#thumbPrev", function(){
+        if(thumbOffset > 0){
+            thumbOffset--;
+            $("#thumbContainer").css("transform",
+                "translateX(-" + (thumbOffset * thumbItemW) + "px)");
+        }
+    });
+
+    // ── LOAD PRODUCT DETAIL
     function loadProductDetail(pid, page){
         $.ajax({
             url      : REV_CTRL,
@@ -472,25 +535,36 @@ $(document).ready(function(){
                 $("#totalReviewsDisplay").text(res.total_reviews);
                 buildStarBreakdown(res.star_counts, parseInt(res.total_reviews));
 
-                // gallery
+                // ── GALLERY
                 var images = (res.images && res.images.length) ? res.images : [];
                 if(!images.length && res.image) images = [res.image];
+
+                thumbOffset = 0;
+                $("#thumbContainer").css("transform","translateX(0)");
 
                 if(images.length){
                     $("#mainProductImg").attr("src", IMG_BASE + images[0]);
                     var thumbHtml = "";
                     $.each(images, function(i, img){
                         var src = IMG_BASE + img;
-                        thumbHtml += '<img class="thumb-img rounded border' + (i===0 ? " active" : "") + '" ' +
-                                     'src="' + src + '" data-src="' + src + '" alt="Image ' + (i+1) + '">';
+                        thumbHtml += '<img class="thumb-img' + (i === 0 ? " active" : "") + '" '
+                                   + 'src="' + src + '" data-src="' + src + '" '
+                                   + 'alt="Image ' + (i + 1) + '">';
                     });
                     $("#thumbContainer").html(thumbHtml);
+                    if(images.length > visibleCount){
+                        $("#thumbNext").show();
+                        $("#thumbPrev").hide(); // prev hidden at start
+                    } else {
+                        $("#thumbPrev, #thumbNext").hide();
+                    }
                 } else {
                     $("#mainProductImg").attr("src", "https://via.placeholder.com/400");
                     $("#thumbContainer").html("");
+                    $("#thumbPrev, #thumbNext").hide();
                 }
 
-                // cart area inside modal
+                // ── CART AREA
                 if(res.stock !== undefined){
                     if(parseInt(res.stock) <= 0){
                         $("#modalCartArea").html(
@@ -511,7 +585,7 @@ $(document).ready(function(){
                     }
                 }
 
-                // review eligibility
+                // ── REVIEW ELIGIBILITY
                 $("#reviewFormSection, #alreadyReviewedMsg, #notEligibleMsg").hide();
                 if(res.has_reviewed){
                     $("#alreadyReviewedMsg").show();
@@ -594,18 +668,18 @@ $(document).ready(function(){
     }
 
     function buildStarBreakdown(counts, total){
-    var html = "";
-    for(var star = 5; star >= 1; star--){
-        var cnt = parseInt(counts[star - 1]) || 0;  // array is 0-based from JS perspective
-        var pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
-        html += '<div class="d-flex align-items-center gap-2 mb-1">' +
-                '<small class="text-nowrap" style="width:28px;">' + star + ' &#9733;</small>' +
-                '<div class="progress flex-grow-1" style="height:9px;">' +
-                '<div class="progress-bar bg-warning" style="width:' + pct + '%"></div></div>' +
-                '<small class="text-nowrap text-muted" style="width:28px;">' + cnt + '</small></div>';
+        var html = "";
+        for(var star = 5; star >= 1; star--){
+            var cnt = parseInt(counts[star - 1]) || 0;
+            var pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
+            html += '<div class="d-flex align-items-center gap-2 mb-1">'
+                  + '<small class="text-nowrap" style="width:28px;">' + star + ' &#9733;</small>'
+                  + '<div class="progress flex-grow-1" style="height:9px;">'
+                  + '<div class="progress-bar bg-warning" style="width:' + pct + '%"></div></div>'
+                  + '<small class="text-nowrap text-muted" style="width:28px;">' + cnt + '</small></div>';
+        }
+        $("#starBreakdown").html(html || '<p class="text-muted small">No ratings yet.</p>');
     }
-    $("#starBreakdown").html(html || '<p class="text-muted small">No ratings yet.</p>');
-}
 
     function showReviewMsg(msg, type){
         $("#reviewFormMsg").html('<div class="alert alert-' + type + ' py-2 mb-2">' + msg + '</div>');

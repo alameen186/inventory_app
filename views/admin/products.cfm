@@ -66,17 +66,19 @@
             <div class="col-6 col-md-2">
     <input type="date" name="expiry_date" class="form-control" placeholder="Expiry Date">
 </div>
-<div class="col-12 col-md-2">
-    <label class="form-label mb-0 small">Image 1</label>
-    <input type="file" name="product_image"  class="form-control mb-1">
-    <label class="form-label mb-0 small">Image 2</label>
-    <input type="file" name="product_image2" class="form-control mb-1">
-    <label class="form-label mb-0 small">Image 3</label>
-    <input type="file" name="product_image3" class="form-control">
+<div class="col-12 col-md-3">
+    <label class="form-label small fw-semibold">
+        Images <span class="text-muted">(up to 10)</span>
+    </label>
+    <input type="file" name="product_images" class="form-control"
+        multiple accept="image/*">
+    <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
 </div>
-            <div class="col-12 col-md-2 d-grid">
-                <button class="btn btn-success">Add</button>
-            </div>
+            <div class="col-12 col-md-2 d-flex align-items-end">
+    <button class="btn btn-success w-100">
+        Add
+    </button>
+</div>
         </div>
     </form>
 </div>
@@ -203,14 +205,14 @@
                 </select>
             </td>
             <td><input type="date" value="#expiry_date#" class="form-control expiry"></td>
-            <td>
-               <small class="text-muted">Img 1</small>
-               <input type="file" class="form-control image  mb-1" style="min-width:140px;">
-               <small class="text-muted">Img 2</small>
-               <input type="file" class="form-control image2 mb-1" style="min-width:140px;">
-               <small class="text-muted">Img 3</small>
-               <input type="file" class="form-control image3 mb-1" style="min-width:140px;">
-            </td>
+           <td>
+    <div id="existingImgs_#id#" class="d-flex flex-wrap gap-1 mb-2">
+        <!-- filled by JS when edit row opens -->
+    </div>
+    <input type="file" name="product_images" class="form-control"
+        multiple accept="image/*">
+    <small class="text-muted">Add more images (max 10 total)</small>
+</td>
             <td>
                 <cfif is_active EQ 1>
                     <span class="badge bg-success">Active</span>
@@ -310,11 +312,42 @@ $(function(){
     });
 
     // EDIT TOGGLE
-    $(document).on("click", ".editBtn", function(){
-        var id = $(this).data("id");
-        $("#viewRow_" + id).hide();
-        $("#editRow_" + id).show();
-    });
+   $(document).on('click', '.editBtn', function(){
+    var id = $(this).data('id');
+    $('#viewRow_' + id).hide();
+    $('#editRow_' + id).show();
+
+    // Load existing images
+    $.get('../../controllers/product/AdminProductController.cfc', {
+        method: 'getImages', product_id: id
+    }, function(res){
+        if(!res.success) return;
+        var html = '';
+        $.each(res.data, function(i, img){
+            html += '<div class="position-relative d-inline-block">'
+                  + '<img src="../../assets/images/products/' + img.image
+                  + '" width="50" class="rounded border">'
+                  + '<button type="button" class="btn btn-danger btn-sm deleteImgBtn position-absolute top-0 end-0 p-0"'
+                  + ' style="width:16px;height:16px;font-size:10px;line-height:1;"'
+                  + ' data-image-id="' + img.id + '" data-product-id="' + id + '">&times;</button>'
+                  + '</div>';
+        });
+        $('#existingImgs_' + id).html(html);
+    }, 'json');
+});
+
+$(document).on('click', '.deleteImgBtn', function(){
+    if(!confirm('Delete this image?')) return;
+    var btn = $(this);
+    $.get('../../controllers/product/AdminProductController.cfc', {
+        method     : 'deleteImage',
+        image_id   : btn.data('image-id'),
+        product_id : btn.data('product-id')
+    }, function(res){
+        if(res.success) btn.closest('div.position-relative').remove();
+        else alert(res.message);
+    }, 'json');
+});
 
     $(document).on("click", ".cancelBtn", function(){
         var id = $(this).data("id");
@@ -323,7 +356,7 @@ $(function(){
     });
 
     // SAVE EDIT
-    $(document).on("click", ".saveBtn", function(){
+   $(document).on("click", ".saveBtn", function(){
     var id  = $(this).data("id");
     var row = $("#editRow_" + id);
     var fd  = new FormData();
@@ -334,19 +367,25 @@ $(function(){
     fd.append("category_id",  row.find(".category").val());
     fd.append("expiry_date",  row.find(".expiry").val());
 
-    // append each image slot only if a file was chosen
-    var f1 = row.find(".image")[0].files[0];
-    var f2 = row.find(".image2")[0].files[0];
-    var f3 = row.find(".image3")[0].files[0];
-    if(f1) fd.append("product_image",  f1);
-    if(f2) fd.append("product_image2", f2);
-    if(f3) fd.append("product_image3", f3);
+    // append all selected files from the multi-file input
+    var fileInput = row.find("input[type='file']")[0];
+    if(fileInput && fileInput.files.length){
+        for(var i = 0; i < fileInput.files.length; i++){
+            fd.append("product_images", fileInput.files[i]);
+        }
+    }
 
     $.ajax({
-        url: ADMIN_CTRL + "?method=update",
-        type: "POST", data: fd,
-        processData: false, contentType: false, dataType: "json",
-        success: function(res){ msg(res); if(res.success) location.reload(); }
+        url         : ADMIN_CTRL + "?method=update",
+        type        : "POST",
+        data        : fd,
+        processData : false,
+        contentType : false,
+        dataType    : "json",
+        success     : function(res){
+            msg(res);
+            if(res.success) location.reload();
+        }
     });
 });
 

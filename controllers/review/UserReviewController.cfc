@@ -11,15 +11,13 @@
         <cfabort>
     </cffunction>
 
-    <!--- requireAuth --->
     <cffunction name="requireAuth" access="private" returntype="void" output="false">
         <cfif NOT structKeyExists(session,"user_id")>
             <cfset sendJSON({status:"error", message:"Unauthorized"})>
         </cfif>
     </cffunction>
 
-
-    <!--- getProductDetail--->
+    <!--- getProductDetail --->
     <cffunction name="getProductDetail" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset requireAuth()>
         <cftry>
@@ -27,46 +25,86 @@
                 <cfset sendJSON({status:"error", message:"Invalid product ID"})>
             </cfif>
 
-            <cfset var pid          = val(url.product_id)>
-            <cfset var currentPage  = structKeyExists(url,"p") AND val(url.p) GT 0 ? val(url.p) : 1>
-            <cfset var limit        = 5>
-            <cfset var groupSize    = 4>
+            <cfset var pid         = val(url.product_id)>
+            <cfset var currentPage = structKeyExists(url,"p") AND val(url.p) GT 0 ? val(url.p) : 1>
+            <cfset var limit       = 5>
+            <cfset var groupSize   = 4>
 
             <cfset var reviewModel  = createObject("component","models.Review")>
             <cfset var productModel = createObject("component","models.Product")>
+            <cfset var imageModel   = createObject("component","models.ProductImage")>
 
-            <!--- product name --->
+            <!--- product details --->
             <cfset var product = productModel.getProductById(pid)>
             <cfif product.recordCount EQ 0>
                 <cfset sendJSON({status:"error", message:"Product not found"})>
             </cfif>
 
+            <!---
+                Query product_images directly and build a Java ArrayList.
+                A Java ArrayList serializes as a proper JSON array ["a","b","c"]
+                in ALL Lucee/ColdFusion versions — unlike CF arrays which can
+                serialize as {"1":"a","2":"b"} (object with numeric keys).
+                This is the guaranteed fix for the "only 1 image showing" bug.
+            --->
+            <cfset var imgQuery    = imageModel.getByProduct(pid)>
+            <cfset var imagesArray = createObject("java","java.util.ArrayList").init()>
+
+            <cfif imgQuery.recordCount GT 0>
+                <cfloop query="imgQuery">
+                    <cfset imagesArray.add(javaCast("string", trim(imgQuery.image)))>
+                </cfloop>
+            <cfelse>
+                <!--- Legacy fallback: images stored directly in products table columns --->
+                <cfif len(trim(product.image))>
+                    <cfset imagesArray.add(javaCast("string", trim(product.image)))>
+                </cfif>
+                <cfif len(trim(product.image2))>
+                    <cfset imagesArray.add(javaCast("string", trim(product.image2)))>
+                </cfif>
+                <cfif len(trim(product.image3))>
+                    <cfset imagesArray.add(javaCast("string", trim(product.image3)))>
+                </cfif>
+            </cfif>
+
+            <!--- Primary image for the cart hidden input (first image, 0-based index) --->
+            <cfset var primaryImage = imagesArray.size() GT 0 ? imagesArray.get(0) : "">
+
             <!--- average rating + total --->
-            <cfset var avgData     = reviewModel.getAverageRating(product_id = pid)>
-            <cfset var avgRating   = avgData.avg_rating>
+            <cfset var avgData      = reviewModel.getAverageRating(product_id = pid)>
+            <cfset var avgRating    = avgData.avg_rating>
             <cfset var totalReviews = avgData.total_reviews>
 
-            <!--- star breakdown  --->
-            <cfset var summaryQ    = reviewModel.getRatingSummary(pid)>
-           <cfset var starCounts = [0, 0, 0, 0, 0]>
-<cfloop query="summaryQ">
-    <cfset starCounts[summaryQ.rating] = summaryQ.cnt>
-</cfloop>
+            <!---
+                Star breakdown — also use Java ArrayList so it serializes as [0,3,1,2,5]
+                not {"1":0,"2":3,...}. Index 0 = 1-star count, index 4 = 5-star count.
+                The JS reads: counts[star - 1]  (same as before).
+            --->
+            <cfset var summaryQ   = reviewModel.getRatingSummary(pid)>
+            <cfset var starCounts = createObject("java","java.util.ArrayList").init()>
+            <cfset starCounts.add(javaCast("int", 0))>
+            <cfset starCounts.add(javaCast("int", 0))>
+            <cfset starCounts.add(javaCast("int", 0))>
+            <cfset starCounts.add(javaCast("int", 0))>
+            <cfset starCounts.add(javaCast("int", 0))>
+            <cfloop query="summaryQ">
+                <cfset starCounts.set(javaCast("int", summaryQ.rating - 1), javaCast("int", summaryQ.cnt))>
+            </cfloop>
 
             <!--- eligibility --->
-            <cfset var canReview    = reviewModel.canUserReview(session.user_id, pid)>
-            <cfset var hasReviewed  = reviewModel.hasUserReviewed(session.user_id, pid)>
+            <cfset var canReview   = reviewModel.canUserReview(session.user_id, pid)>
+            <cfset var hasReviewed = reviewModel.hasUserReviewed(session.user_id, pid)>
 
             <!--- reviews paginated --->
-            <cfset var reviews     = reviewModel.getProductReviews(
-                                         product_id = pid,
-                                         page       = currentPage,
-                                         limit      = limit
-                                     )>
-            <cfset var totalRev    = reviewModel.getProductReviewCount(product_id = pid)>
-            <cfset var totalPages  = ceiling(totalRev / limit)>
+            <cfset var reviews    = reviewModel.getProductReviews(
+                                        product_id = pid,
+                                        page       = currentPage,
+                                        limit      = limit
+                                    )>
+            <cfset var totalRev   = reviewModel.getProductReviewCount(product_id = pid)>
+            <cfset var totalPages = ceiling(totalRev / limit)>
 
-            <!--- ── REVIEWS  ── --->
+            <!--- REVIEWS HTML --->
             <cfsavecontent variable="reviewsHTML">
             <cfif reviews.recordCount EQ 0>
                 <p class="text-muted text-center py-3">No reviews yet. Be the first!</p>
@@ -95,61 +133,53 @@
             <cfif totalPages GT 1>
                 <cfset var pageGroup = ceiling(currentPage / groupSize)>
                 <cfset var startPage = (pageGroup - 1) * groupSize + 1>
-                <!--- FIX: cap endPage --->
                 <cfset var endPage   = min(startPage + groupSize - 1, totalPages)>
                 <cfset var prevPage  = startPage - 1>
                 <cfset var nextPage  = endPage + 1>
 
                 <cfif startPage GT 1>
                     <button class="reviewPageBtn btn btn-outline-primary btn-sm"
-                            data-page="#prevPage#"
-                            data-pid="#pid#">Prev</button>
+                            data-page="#prevPage#" data-pid="#pid#">Prev</button>
                 </cfif>
 
                 <cfloop from="#startPage#" to="#endPage#" index="i">
                     <button class="reviewPageBtn btn btn-sm
                         <cfif i EQ currentPage>btn-primary<cfelse>btn-outline-primary</cfif>"
-                        data-page="#i#"
-                        data-pid="#pid#">#i#</button>
+                        data-page="#i#" data-pid="#pid#">#i#</button>
                 </cfloop>
 
                 <cfif endPage LT totalPages>
                     <button class="reviewPageBtn btn btn-outline-primary btn-sm"
-                            data-page="#nextPage#"
-                            data-pid="#pid#">Next</button>
+                            data-page="#nextPage#" data-pid="#pid#">Next</button>
                 </cfif>
             </cfif>
             </cfoutput>
             </cfsavecontent>
 
             <cfset sendJSON({
-    status        : "success",
-    product_name  : product.product_name,
-    category_name : product.category_name,
-    business_name : product.business_name,
-    price         : product.price,
-    stock         : product.stock,
-    image         : product.image,
-    images        : listToArray(listFilter(
-                    "#product.image#,#product.image2#,#product.image3#",
-                    function(v){ return len(trim(v)); }
-                )),
-    expiry_date   : len(trim(product.expiry_date)) ? dateFormat(product.expiry_date, "dd-mmm-yyyy") : "",
-    avg_rating    : avgRating,
-    total_reviews : totalReviews,
-    star_counts   : starCounts,
-    can_review    : canReview,
-    has_reviewed  : hasReviewed,
-    reviews_html  : reviewsHTML,
-    pagination    : paginationHTML
-})>
-            
+                status        : "success",
+                product_name  : product.product_name,
+                category_name : product.category_name,
+                business_name : product.business_name,
+                price         : product.price,
+                stock         : product.stock,
+                image         : primaryImage,
+                images        : imagesArray,
+                expiry_date   : len(trim(product.expiry_date)) ? dateFormat(product.expiry_date,"dd-mmm-yyyy") : "",
+                avg_rating    : avgRating,
+                total_reviews : totalReviews,
+                star_counts   : starCounts,
+                can_review    : canReview,
+                has_reviewed  : hasReviewed,
+                reviews_html  : reviewsHTML,
+                pagination    : paginationHTML
+            })>
+
         <cfcatch>
             <cfset sendJSON({status:"error", message:"#cfcatch.message#"})>
         </cfcatch>
         </cftry>
     </cffunction>
-
 
     <!--- addReview --->
     <cffunction name="addReview" access="remote" returntype="void" output="true" httpMethod="POST">
@@ -174,12 +204,10 @@
             <cfset var comment     = trim(form.comment)>
             <cfset var reviewModel = createObject("component","models.Review")>
 
-            <!--- must have purchased at least twice --->
             <cfif NOT reviewModel.canUserReview(session.user_id, pid)>
                 <cfset sendJSON({status:"error", message:"You need to purchase this product at least 2 times to write a review"})>
             </cfif>
 
-            <!--- one review per user per product --->
             <cfif reviewModel.hasUserReviewed(session.user_id, pid)>
                 <cfset sendJSON({status:"error", message:"You have already reviewed this product"})>
             </cfif>
