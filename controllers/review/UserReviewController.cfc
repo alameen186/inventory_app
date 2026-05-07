@@ -40,13 +40,6 @@
                 <cfset sendJSON({status:"error", message:"Product not found"})>
             </cfif>
 
-            <!---
-                Query product_images directly and build a Java ArrayList.
-                A Java ArrayList serializes as a proper JSON array ["a","b","c"]
-                in ALL Lucee/ColdFusion versions — unlike CF arrays which can
-                serialize as {"1":"a","2":"b"} (object with numeric keys).
-                This is the guaranteed fix for the "only 1 image showing" bug.
-            --->
             <cfset var imgQuery    = imageModel.getByProduct(pid)>
             <cfset var imagesArray = createObject("java","java.util.ArrayList").init()>
 
@@ -75,11 +68,6 @@
             <cfset var avgRating    = avgData.avg_rating>
             <cfset var totalReviews = avgData.total_reviews>
 
-            <!---
-                Star breakdown — also use Java ArrayList so it serializes as [0,3,1,2,5]
-                not {"1":0,"2":3,...}. Index 0 = 1-star count, index 4 = 5-star count.
-                The JS reads: counts[star - 1]  (same as before).
-            --->
             <cfset var summaryQ   = reviewModel.getRatingSummary(pid)>
             <cfset var starCounts = createObject("java","java.util.ArrayList").init()>
             <cfset starCounts.add(javaCast("int", 0))>
@@ -158,6 +146,7 @@
 
             <cfset sendJSON({
                 status        : "success",
+                vendor_id     : product.vendor_id,
                 product_name  : product.product_name,
                 category_name : product.category_name,
                 business_name : product.business_name,

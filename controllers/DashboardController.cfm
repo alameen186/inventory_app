@@ -32,6 +32,9 @@
 
 <cfelseif url.section EQ "enquiry">
     <cfinclude template="../views/user/enquiry.cfm">
+    
+<cfelseif url.section EQ "chat">
+    <cfinclude template="../views/user/chat.cfm">
 
 <cfelseif url.section EQ "vendorDashboard">
     <cfinclude template="../views/vendor/dashboard.cfm">
@@ -46,7 +49,10 @@
     <cfinclude template="../views/admin/reviews.cfm">    
 
 <cfelseif url.section EQ "scheduledOrders">
-    <cfinclude template="../views/vendor/scheduledOrders.cfm">    
+    <cfinclude template="../views/vendor/scheduledOrders.cfm">   
+
+<cfelseif url.section EQ "vendorChat">
+    <cfinclude template="../views/vendor/chats.cfm">    
 
 <cfelse>
     <cfoutput>

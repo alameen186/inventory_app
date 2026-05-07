@@ -26,8 +26,7 @@
                 nameConflict="makeunique"
                 accept="image/jpeg,image/png,image/jpg,image/webp,image/gif">
 
-        <!--- Aggressive handling to catch all files --->
-        <cfif isStruct(cffile)>
+            <cfif isStruct(cffile)>
             <cfif structKeyExists(cffile, "serverFile") AND len(trim(cffile.serverFile))>
                 <cfset arrayAppend(result, cffile.serverFile)>
             </cfif>

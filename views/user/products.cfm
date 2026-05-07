@@ -274,7 +274,6 @@
 
                     <div id="modalCartArea" class="mt-auto"></div>
                 </div>
-
             </div>
 
             <hr>
@@ -565,26 +564,38 @@ $(document).ready(function(){
                 }
 
                 // ── CART AREA
-                if(res.stock !== undefined){
-                    if(parseInt(res.stock) <= 0){
-                        $("#modalCartArea").html(
-                            '<p class="text-danger fw-bold small mb-2">Out of Stock</p>' +
-                            '<form class="enquiryForm">' +
-                            '<input type="hidden" name="product_id" value="' + pid + '">' +
-                            '<button type="submit" class="btn btn-warning btn-sm w-100">Request Product</button></form>'
-                        );
-                    } else {
-                        $("#modalCartArea").html(
-                            '<form class="addToCartForm">' +
-                            '<input type="hidden" name="product_id"   value="' + pid + '">' +
-                            '<input type="hidden" name="product_name" value="' + (res.product_name || "") + '">' +
-                            '<input type="hidden" name="price"        value="' + (res.price || "") + '">' +
-                            '<input type="hidden" name="image"        value="' + (res.image || "") + '">' +
-                            '<button type="submit" class="btn btn-success w-100">Add to Cart</button></form>'
-                        );
-                    }
-                }
+$('#chatVendorWrap').remove(); 
 
+if(res.stock !== undefined){
+    if(parseInt(res.stock) <= 0){
+        $("#modalCartArea").html(
+            '<p class="text-danger fw-bold small mb-2">Out of Stock</p>' +
+            '<form class="enquiryForm">' +
+            '<input type="hidden" name="product_id" value="' + pid + '">' +
+            '<button type="submit" class="btn btn-warning btn-sm w-100">Request Product</button></form>'
+        );
+    } else {
+        $("#modalCartArea").html(
+            '<form class="addToCartForm">' +
+            '<input type="hidden" name="product_id"   value="' + pid + '">' +
+            '<input type="hidden" name="product_name" value="' + (res.product_name || "") + '">' +
+            '<input type="hidden" name="price"        value="' + (res.price || "") + '">' +
+            '<input type="hidden" name="image"        value="' + (res.image || "") + '">' +
+            '<button type="submit" class="btn btn-success w-100">Add to Cart</button></form>'
+        );
+    }
+}
+
+// Insert chat button once with a wrapper id so it can be removed next time
+$("#modalCartArea").after(
+    '<div id="chatVendorWrap" class="mt-2">' +
+    '<button class="btn btn-info w-100 chatWithVendorBtn"' +
+    ' data-vendor-id="' + (res.vendor_id || '') + '"' +
+    ' data-product-id="' + pid + '"' +
+    ' data-product-name="' + (res.product_name || '') + '">' +
+    '💬 Chat with Vendor' +
+    '</button></div>'
+);
                 // ── REVIEW ELIGIBILITY
                 $("#reviewFormSection, #alreadyReviewedMsg, #notEligibleMsg").hide();
                 if(res.has_reviewed){
@@ -685,6 +696,56 @@ $(document).ready(function(){
         $("#reviewFormMsg").html('<div class="alert alert-' + type + ' py-2 mb-2">' + msg + '</div>');
         if(type === "success") setTimeout(function(){ $("#reviewFormMsg").html(""); }, 3000);
     }
+
+     $(document).on("click", ".chatWithVendorBtn", function(){
+        var btn         = $(this);
+        var vendorId    = btn.data("vendor-id");
+        var productId   = btn.data("product-id");
+        var productName = btn.data("product-name");
+ 
+        if(!vendorId || vendorId === ""){
+            alert("Vendor not found for this product.");
+            return;
+        }
+ 
+        btn.prop("disabled", true).text("Connecting...");
+ 
+        $.ajax({
+            url      : "../../controllers/chat/ChatController.cfc?method=startConversation",
+            type     : "POST",
+            data     : { vendor_id: vendorId, product_id: productId, product_name: productName },
+            dataType : "json",
+            success  : function(res){
+                if(!res.success){
+                    alert(res.message || "Could not start chat.");
+                    btn.prop("disabled", false).text("💬 Chat with Vendor");
+                    return;
+                }
+ 
+                var convId  = res.data.conversation_id;
+                var introMsg = "Hi, I am interested in your product: " + productName;
+ 
+   
+                $.ajax({
+                    url      : "../../controllers/chat/ChatController.cfc?method=sendMessage",
+                    type     : "POST",
+                    data     : { conversation_id: convId, message: introMsg },
+                    dataType : "json",
+                    complete : function(){
+                      
+                        window.location.href =
+                            "../../index.cfm?page=dashboard&section=chat&conversation_id=" + convId;
+                    }
+                });
+            },
+            error : function(xhr){
+                console.log("Chat error:", xhr.responseText);
+                alert("Server error. Check console.");
+                btn.prop("disabled", false).text("💬 Chat with Vendor");
+            }
+        });
+    });
+ 
 
 });
 </script>

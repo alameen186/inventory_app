@@ -28,10 +28,7 @@
         <cfreturn products>
     </cffunction>
 
-    <!---
-        addProduct now returns the new auto-increment ID (numeric).
-        The controller uses this ID to link uploaded images.
-    --->
+
     <cffunction name="addProduct" access="public" returntype="numeric" output="false">
         <cfargument name="product_name" type="string"  required="true">
         <cfargument name="price"        type="numeric" required="true">
@@ -114,17 +111,14 @@
         </cftry>
     </cffunction>
 
-    <!---
-        getProductById — now returns a grouped_images column
-        (comma-separated filenames ordered by sort_order) so the
-        controller can build the images array without extra queries.
-    --->
+ 
     <cffunction name="getProductById" returntype="query" output="false">
         <cfargument name="id" required="true">
 
         <cfquery name="q" datasource="#application.dsn#">
             SELECT
                 p.id,
+                p.vendor_id,
                 p.product_name,
                 p.price,
                 p.stock,

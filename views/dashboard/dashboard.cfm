@@ -6,14 +6,12 @@
 <!--- Vendor plan gate --->
 <cfif session.role_name EQ "vendor">
     <cfif NOT structKeyExists(session,"plan_id") OR session.plan_id EQ 0>
-        <!--- Re-check DB in case session is fresh --->
-        <cfset  planModel = createObject("component","models.Plan")>
-        <cfset  planQ     = planModel.getVendorPlan(session.user_id)>
+        <cfset planModel = createObject("component","models.Plan")>
+        <cfset planQ     = planModel.getVendorPlan(session.user_id)>
         <cfif planQ.recordCount>
             <cfset session.plan_id   = planQ.id>
             <cfset session.plan_name = lcase(planQ.plan_name)>
         <cfelse>
-            <!--- No plan chosen — show plan selector full page --->
             <cfinclude template="/views/vendor/selectPlan.cfm">
             <cfabort>
         </cfif>
@@ -24,7 +22,7 @@
 <cfset section = url.section>
 
 <cfset userModel = createObject("component","models.User")>
-<cfset userData = userModel.getUserWithRole(session.user_id)>
+<cfset userData  = userModel.getUserWithRole(session.user_id)>
 
 <!DOCTYPE html>
 <html>
@@ -34,6 +32,8 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        html, body { height: 100%; overflow: hidden; }
+
         .menuLink { transition: all 0.2s ease; }
         .menuLink:hover { background-color: rgba(255,255,255,0.1); }
         .menuLink.active {
@@ -77,15 +77,32 @@
             0%   { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
+
+
+        #mainContent {
+            flex: 1;
+            overflow-y: auto;       /* default: normal sections scroll */
+            display: flex;
+            flex-direction: column;
+        }
+        #mainContent.chat-mode {
+            overflow: hidden;       /* chat sections: no outer scroll */
+            padding: 0 !important;  /* remove the p-3/p-md-4 padding */
+        }
+        /* chat shell must fill its parent when injected */
+        #mainContent.chat-mode .chat-shell {
+            flex: 1;
+            min-height: 0;
+        }
     </style>
 </head>
 <body class="bg-light">
 
-<div class="container-fluid vh-100">
-<div class="row h-100">
+<div class="container-fluid" style="height:100vh; display:flex; flex-direction:column; overflow:hidden;">
+<div class="row" style="flex:1; min-height:0; overflow:hidden;">
 
 <!-- DESKTOP SIDEBAR -->
-<div class="col-md-2 d-none d-md-block bg-dark text-white p-3 overflow-auto">
+<div class="col-md-2 d-none d-md-flex flex-column bg-dark text-white p-3" style="overflow-y:auto; height:100%;">
     <h5 class="text-center">Menu</h5>
     <hr class="bg-light">
 
@@ -96,40 +113,32 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'roles'>active</cfif>"    data-section="roles">Roles</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'coupons'>active</cfif>"  data-section="coupons">Coupons</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'reviews'>active</cfif>"  data-section="reviews">Reviews</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'plans'>active</cfif>" data-section="plans">Plans</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'plans'>active</cfif>"    data-section="plans">Plans</a></li>
     </ul>
 
     <cfelseif session.role_name EQ "vendor">
-<ul class="nav flex-column">
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorDashboard'>active</cfif>" data-section="vendorDashboard">Dashboard</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'category'>active</cfif>"        data-section="category">Categories</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'products'>active</cfif>"        data-section="products">Products</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'allorders'>active</cfif>"       data-section="allorders">Orders</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'createOrder'>active</cfif>"     data-section="createOrder">Create Order</a></li>
-
-    <!--- PRO only --->
-    <cfif session.plan_name EQ "pro">
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
-    <cfelse>
-    <li>
-        <span class="nav-link text-secondary" style="cursor:default;">
-            Enquiries <span class="badge bg-warning text-dark ms-1">Pro</span>
-        </span>
-    </li>
-    <li>
-        <span class="nav-link text-secondary" style="cursor:default;">
-            Scheduled Orders <span class="badge bg-warning text-dark ms-1">Pro</span>
-        </span>
-    </li>
-    </cfif>
-</ul>
+    <ul class="nav flex-column">
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorDashboard'>active</cfif>" data-section="vendorDashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'category'>active</cfif>"        data-section="category">Categories</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'products'>active</cfif>"        data-section="products">Products</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'allorders'>active</cfif>"       data-section="allorders">Orders</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'createOrder'>active</cfif>"     data-section="createOrder">Create Order</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorChat'>active</cfif>"      data-section="vendorChat">Chat</a></li>
+        <cfif session.plan_name EQ "pro">
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
+        <cfelse>
+        <li><span class="nav-link text-secondary" style="cursor:default;">Enquiries <span class="badge bg-warning text-dark ms-1">Pro</span></span></li>
+        <li><span class="nav-link text-secondary" style="cursor:default;">Scheduled Orders <span class="badge bg-warning text-dark ms-1">Pro</span></span></li>
+        </cfif>
+    </ul>
 
     <cfelse>
     <ul class="nav flex-column">
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'productList'>active</cfif>" data-section="productList">Products</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'orders'>active</cfif>"      data-section="orders">Orders</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'enquiry'>active</cfif>"     data-section="enquiry">My Enquiries</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'chat'>active</cfif>"        data-section="chat">Chat</a></li>
     </ul>
     </cfif>
 
@@ -151,51 +160,40 @@
             <li><a href="#" class="nav-link text-white menuLink" data-section="coupons">Coupons</a></li>
             <li><a href="#" class="nav-link text-white menuLink" data-section="reviews">Reviews</a></li>
         </ul>
-
         <cfelseif session.role_name EQ "vendor">
-<ul class="nav flex-column">
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorDashboard'>active</cfif>" data-section="vendorDashboard">Dashboard</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'category'>active</cfif>"        data-section="category">Categories</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'products'>active</cfif>"        data-section="products">Products</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'allorders'>active</cfif>"       data-section="allorders">Orders</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'createOrder'>active</cfif>"     data-section="createOrder">Create Order</a></li>
-
-    <!--- PRO only --->
-    <cfif session.plan_name EQ "pro">
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
-    <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
-    <cfelse>
-    <li>
-        <span class="nav-link text-secondary" style="cursor:default;">
-            Enquiries <span class="badge bg-warning text-dark ms-1">Pro</span>
-        </span>
-    </li>
-    <li>
-        <span class="nav-link text-secondary" style="cursor:default;">
-            Scheduled Orders <span class="badge bg-warning text-dark ms-1">Pro</span>
-        </span>
-    </li>
-    </cfif>
-</ul>
-
+        <ul class="nav flex-column">
+            <li><a href="#" class="nav-link text-white menuLink" data-section="vendorDashboard">Dashboard</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="category">Categories</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="products">Products</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="allorders">Orders</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="createOrder">Create Order</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="vendorChat">Chat</a></li>
+            <cfif session.plan_name EQ "pro">
+            <li><a href="#" class="nav-link text-white menuLink" data-section="adminEnquiries">Enquiries</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="scheduledOrders">Scheduled Orders</a></li>
+            <cfelse>
+            <li><span class="nav-link text-secondary" style="cursor:default;">Enquiries <span class="badge bg-warning text-dark ms-1">Pro</span></span></li>
+            <li><span class="nav-link text-secondary" style="cursor:default;">Scheduled Orders <span class="badge bg-warning text-dark ms-1">Pro</span></span></li>
+            </cfif>
+        </ul>
         <cfelse>
         <ul class="nav flex-column">
             <li><a href="#" class="nav-link text-white menuLink" data-section="productList">Products</a></li>
             <li><a href="#" class="nav-link text-white menuLink" data-section="orders">Orders</a></li>
             <li><a href="#" class="nav-link text-white menuLink" data-section="enquiry">My Enquiries</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="chat">Chat</a></li>
         </ul>
         </cfif>
-
         <a href="../../controllers/LogoutController.cfm" class="btn btn-danger w-100 mt-4">Logout</a>
     </div>
 </div>
 
 <!-- MAIN CONTENT AREA -->
-<div class="col-12 col-md-10 d-flex flex-column h-100">
+<div class="col-12 col-md-10 d-flex flex-column" style="height:100%; overflow:hidden;">
 
     <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom">
-        <button class="btn btn-dark d-md-none" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">=</button>
+    <div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom" style="flex-shrink:0;">
+        <button class="btn btn-dark d-md-none" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">☰</button>
         <h5 class="mb-0">Inventory Store</h5>
         <div class="d-flex align-items-center gap-2">
             <cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
@@ -222,8 +220,7 @@
         </div>
     </div>
 
-    <!-- CONTENT -->
-    <div id="mainContent" class="p-3 p-md-4 flex-grow-1 overflow-auto">
+    <div id="mainContent" class="p-3 p-md-4 <cfif section EQ 'chat' OR section EQ 'vendorChat'>chat-mode</cfif>">
 
         <cfif section EQ "users">
             <cfinclude template="../admin/users.cfm">
@@ -240,11 +237,11 @@
         <cfelseif section EQ "allorders">
             <cfinclude template="../admin/orders.cfm">
         <cfelseif section EQ "adminEnquiries">
-    <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
-        <div class="alert alert-warning">This feature requires the Pro plan.</div>
-    <cfelse>
-        <cfinclude template="../admin/enquiries.cfm">
-    </cfif>
+            <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
+                <div class="alert alert-warning">This feature requires the Pro plan.</div>
+            <cfelse>
+                <cfinclude template="../admin/enquiries.cfm">
+            </cfif>
         <cfelseif section EQ "productList">
             <cfinclude template="../user/products.cfm">
         <cfelseif section EQ "cart">
@@ -256,15 +253,19 @@
         <cfelseif section EQ "vendorDashboard">
             <cfinclude template="../vendor/dashboard.cfm">
         <cfelseif section EQ "plans">
-            <cfinclude template="../admin/plans.cfm">    
+            <cfinclude template="../admin/plans.cfm">
+        <cfelseif section EQ "chat">
+            <cfinclude template="../user/chat.cfm">
+        <cfelseif section EQ "vendorChat">
+            <cfinclude template="../vendor/chats.cfm">
         <cfelseif section EQ "createOrder">
             <cfinclude template="../vendor/createOrder.cfm">
         <cfelseif section EQ "scheduledOrders">
-    <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
-        <div class="alert alert-warning">This feature requires the Pro plan.</div>
-    <cfelse>
-        <cfinclude template="../vendor/scheduledOrders.cfm">
-    </cfif>
+            <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
+                <div class="alert alert-warning">This feature requires the Pro plan.</div>
+            <cfelse>
+                <cfinclude template="../vendor/scheduledOrders.cfm">
+            </cfif>
         <cfelseif section EQ "reviews">
             <cfinclude template="../admin/reviews.cfm">
         <cfelse>
@@ -280,7 +281,9 @@
 <script>
 $(function(){
 
-    // ── SKELETON TEMPLATES ──
+    var chatSections = { chat: 1, vendorChat: 1 };
+
+    /* ── SKELETON TEMPLATES ── */
     var skeletons = {
         table: '<div class="skeleton-wrap">'
              + '<div class="skeleton-line short mb-4"></div>'
@@ -300,10 +303,10 @@ $(function(){
              + '<div class="skeleton-table-row mt-3"></div>'
              + '<div class="skeleton-table-row"></div>'
              + '<div class="skeleton-table-row"></div>'
-             + '</div>'
+             + '</div>',
+        chat: '<div class="p-4 text-center text-muted"><div class="spinner-border"></div></div>'
     };
 
-    // Which sections get which skeleton
     var skeletonMap = {
         users           : 'table',
         vendors         : 'table',
@@ -320,47 +323,52 @@ $(function(){
         enquiry         : 'table',
         vendorDashboard : 'cards',
         createOrder     : 'table',
-        scheduledOrders : 'table'
+        scheduledOrders : 'table',
+        chat            : 'chat',
+        vendorChat      : 'chat'
     };
 
-    // ── TAB CACHE ──
-    // Sections that have live data changing often — don't cache these
-    var noCacheSet = { orders:1, allorders:1, vendorDashboard:1, cart:1 };
+    var noCacheSet = { orders:1, allorders:1, vendorDashboard:1, cart:1, chat:1, vendorChat:1 };
     var tabCache   = {};
+    var activeXhr  = null;
 
-    // ── CURRENT XHR — abort previous if user clicks fast ──
-    var activeXhr = null;
+    function applyContainerMode(section){
+        var mc = $('#mainContent');
+        if(chatSections[section]){
+            mc.addClass('chat-mode').removeClass('p-3 p-md-4');
+        } else {
+            mc.removeClass('chat-mode').addClass('p-3 p-md-4');
+        }
+    }
 
-    function loadSection(section, fromCache) {
-
+    function loadSection(section, fromCache){
         $(".menuLink").removeClass("active");
         $(".menuLink[data-section='" + section + "']").addClass("active");
         window.history.pushState(null, "", "?page=dashboard&section=" + section);
 
-        // Return cached version instantly
-        if (fromCache && tabCache[section] && !noCacheSet[section]) {
+        applyContainerMode(section);
+
+        if(fromCache && tabCache[section] && !noCacheSet[section]){
             $("#mainContent").html(tabCache[section]);
             return;
         }
 
-        // Show skeleton immediately — zero wait
         var skelType = skeletonMap[section] || 'table';
         $("#mainContent").html(skeletons[skelType]);
 
-        // Abort any in-flight request
-        if (activeXhr) { activeXhr.abort(); }
+        if(activeXhr){ activeXhr.abort(); }
 
         activeXhr = $.ajax({
-            url      : "../../controllers/DashboardController.cfm",
-            type     : "GET",
-            data     : { section: section },
-            success  : function(res) {
+            url     : "../../controllers/DashboardController.cfm",
+            type    : "GET",
+            data    : { section: section },
+            success : function(res){
                 tabCache[section] = res;
                 $("#mainContent").html(res);
                 activeXhr = null;
             },
-            error    : function(xhr) {
-                if (xhr.statusText !== "abort") {
+            error   : function(xhr){
+                if(xhr.statusText !== "abort"){
                     $("#mainContent").html(
                         '<div class="alert alert-danger m-3">Failed to load section. '
                         + '<a href="#" onclick="loadSection(\'' + section + '\')">Retry</a></div>'
@@ -371,44 +379,41 @@ $(function(){
         });
     }
 
-    // Expose globally so retry link works
     window.loadSection = loadSection;
 
-    // ── MENU CLICK ──
-    $(document).on("click", ".menuLink", function(e) {
+    applyContainerMode("<cfoutput>#section#</cfoutput>");
+
+    $(document).on("click", ".menuLink", function(e){
         e.preventDefault();
-        var section = $(this).data("section");
-        loadSection(section, true);
+        loadSection($(this).data("section"), true);
     });
 
-    // ── PREFETCH: silently load next likely tabs after 2s ──
+    /* ── PREFETCH ── */
     <cfif session.role_name EQ "vendor">
-    setTimeout(function() {
-        var prefetchOrder = ["products","allorders","category","adminEnquiries"];
-        var i = 0;
-        var currentSection = "<cfoutput>#section#</cfoutput>";
-        function next() {
-            if (i >= prefetchOrder.length) return;
+    setTimeout(function(){
+        var prefetchOrder   = ["products","allorders","category","adminEnquiries"];
+        var i               = 0;
+        var currentSection  = "<cfoutput>#section#</cfoutput>";
+        function next(){
+            if(i >= prefetchOrder.length) return;
             var s = prefetchOrder[i++];
-            if (s === currentSection || tabCache[s]) { next(); return; }
-            $.get("../../controllers/DashboardController.cfm", { section: s }, function(res){
-                tabCache[s] = res;
-            }).always(function(){ setTimeout(next, 600); });
+            if(s === currentSection || tabCache[s]){ next(); return; }
+            $.get("../../controllers/DashboardController.cfm",{section:s},function(res){ tabCache[s]=res; })
+             .always(function(){ setTimeout(next,600); });
         }
         next();
     }, 2000);
     <cfelseif session.role_id EQ 1>
-    setTimeout(function() {
-        var prefetchOrder = ["users","vendors","roles","coupons"];
-        var i = 0;
-        var currentSection = "<cfoutput>#section#</cfoutput>";
-        function next() {
-            if (i >= prefetchOrder.length) return;
+    setTimeout(function(){
+        var prefetchOrder   = ["users","vendors","roles","coupons"];
+        var i               = 0;
+        var currentSection  = "<cfoutput>#section#</cfoutput>";
+        function next(){
+            if(i >= prefetchOrder.length) return;
             var s = prefetchOrder[i++];
-            if (s === currentSection || tabCache[s]) { next(); return; }
-            $.get("../../controllers/DashboardController.cfm", { section: s }, function(res){
-                tabCache[s] = res;
-            }).always(function(){ setTimeout(next, 600); });
+            if(s === currentSection || tabCache[s]){ next(); return; }
+            $.get("../../controllers/DashboardController.cfm",{section:s},function(res){ tabCache[s]=res; })
+             .always(function(){ setTimeout(next,600); });
         }
         next();
     }, 2000);
