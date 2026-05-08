@@ -21,9 +21,11 @@
         <cfreturn newId.new_id>
     </cffunction>
 
-    <cffunction name="getByConversation" returntype="query" output="false">
-    <cfargument name="chat_id"  type="numeric" required="true">
-    <cfargument name="after_id" type="numeric" required="false" default="0">
+<cffunction name="getByConversation" returntype="query" output="false">
+    <cfargument name="chat_id"     type="numeric" required="true">
+    <cfargument name="after_id"    type="numeric" required="false" default="0">
+    <cfargument name="before_id"   type="numeric" required="false" default="0">
+    <cfargument name="page_size"   type="numeric" required="false" default="15">
 
     <cfquery name="q" datasource="#application.dsn#">
         SELECT
@@ -38,10 +40,20 @@
         FROM messages m
         JOIN users u ON u.id = m.sender_id
         WHERE m.chat_id = <cfqueryparam value="#arguments.chat_id#" cfsqltype="cf_sql_integer">
+
         <cfif arguments.after_id GT 0>
             AND m.id > <cfqueryparam value="#arguments.after_id#" cfsqltype="cf_sql_integer">
+            ORDER BY m.id ASC
+
+        <cfelseif arguments.before_id GT 0>
+            AND m.id < <cfqueryparam value="#arguments.before_id#" cfsqltype="cf_sql_integer">
+            ORDER BY m.id DESC
+            LIMIT <cfqueryparam value="#arguments.page_size#" cfsqltype="cf_sql_integer">
+
+        <cfelse>
+            ORDER BY m.id DESC
+            LIMIT <cfqueryparam value="#arguments.page_size#" cfsqltype="cf_sql_integer">
         </cfif>
-        ORDER BY m.created_at ASC
     </cfquery>
 
     <cfreturn q>

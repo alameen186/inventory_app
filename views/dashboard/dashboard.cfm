@@ -32,7 +32,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    
+    <link rel="stylesheet"href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-light">
 
@@ -130,83 +130,163 @@
 <div class="col-12 col-md-10 d-flex flex-column" style="height:100%; overflow:hidden;">
 
     <!-- HEADER -->
-<div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom" style="flex-shrink:0;">
-    <button class="btn btn-dark d-md-none" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">☰</button>
-    <h5 class="mb-0">Inventory Store</h5>
+<div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom flex-wrap gap-2"
+     style="flex-shrink:0;">
+
+    <!-- Left Section -->
     <div class="d-flex align-items-center gap-2">
 
-        <cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
-            <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm">Cart</a>
-        </cfif>
+    <button class="btn btn-dark d-md-none"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#mobileSidebar">
 
-        <!--- ── NOTIFICATION BELL ── --->
-        <div class="position-relative">
-    <button class="btn btn-outline-secondary btn-sm position-relative fs-5" 
-            id="notifBellBtn" title="Notifications">
-        &#128276;
+        <i class="bi bi-list fs-5"></i>
+
     </button>
-    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-          style="display:none; font-size:0.65rem; padding: 3px 6px;">0</span>
+
+    <h5 class="mb-0 fw-semibold">Inventory Store</h5>
+
 </div>
 
-        <!--- ── NOTIFICATION MODAL ── --->
-        <div class="modal fade" id="notifModal" tabindex="-1" aria-hidden="true">
-         <div class="modal-dialog modal-dialog-scrollable" style="max-width:420px;">
-          <div class="modal-content">
+    <!-- Right Section -->
+    <div class="d-flex align-items-center gap-3">
 
-            <div class="modal-header py-2 px-3 bg-dark text-white">
-                <h6 class="modal-title mb-0">    &#128276; Notifications</h6>
-                <div class="d-flex align-items-center gap-2 ms-auto">
-                    <button class="btn btn-sm btn-outline-light py-0 px-2" 
-                            id="markAllReadBtn" title="Mark all as read"
-                            style="font-size:0.75rem;">
-                            &#10004;     All Read
-                    </button>
-                    <button type="button" class="btn-close btn-close-white ms-1" 
-                            data-bs-dismiss="modal"></button>
-                </div>
-            </div>
+        <!-- Cart -->
+        <cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
+            <a href="../../index.cfm?page=dashboard&section=cart"
+               class="btn btn-success btn-sm d-flex align-items-center justify-content-center px-3"
+               style="height:38px;">
+                Cart
+            </a>
+        </cfif>
 
-            <!--- scrollable list --->
-            <div class="modal-body p-0" style="max-height:480px; overflow-y:auto;">
-                <div id="notifList">
-                    <div class="text-center text-muted py-5">
-                        <div class="spinner-border spinner-border-sm"></div>
-                        <p class="mt-2 small">Loading...</p>
-                    </div>
-                </div>
-            </div>
+        <!-- Notification -->
+        <div class="position-relative d-flex align-items-center">
 
-            <div class="modal-footer py-2 px-3 justify-content-center">
-                <small class="text-muted">Only last 20 notifications shown</small>
-            </div>
+            <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center position-relative"
+                    id="notifBellBtn"
+                    title="Notifications"
+                    style="width:38px; height:38px;">
 
-        </div>
-        </div>
+<i class="bi bi-bell-fill fs-5 text-dark"></i>
+            </button>
+
+            <span id="notifBadge"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  style="display:none; font-size:0.65rem; padding:4px 6px;">
+                0
+            </span>
         </div>
 
+        <!-- Profile Dropdown -->
         <div class="dropdown">
-            <button class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">Profile</button>
-            <div class="dropdown-menu dropdown-menu-end p-3 text-center shadow" style="min-width:220px;">
+
+            <button class="btn btn-secondary btn-sm dropdown-toggle d-flex align-items-center justify-content-center px-3"
+                    data-bs-toggle="dropdown"
+                    style="height:38px;">
+                Profile
+            </button>
+
+            <div class="dropdown-menu dropdown-menu-end p-3 text-center shadow border-0"
+                 style="min-width:220px; border-radius:12px;">
+
                 <cfoutput>
-                <div class="mb-2">
-                    <div class="bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center"
-                         style="width:50px;height:50px;">
-                        #ucase(left(userData.first_name,1))#
+
+                    <div class="mb-2">
+                        <div class="bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center fw-bold"
+                             style="width:55px;height:55px;font-size:20px;">
+                            #ucase(left(userData.first_name,1))#
+                        </div>
                     </div>
-                </div>
-                <h6 class="mb-0 fw-bold">#userData.first_name# #userData.last_name#</h6>
-                <small class="text-muted d-block mb-2">#userData.email#</small>
-                <small><span class="badge bg-dark mb-2">#userData.role_name#</span></small>
-                <hr>
-                <a href="../../controllers/LogoutController.cfm" class="btn btn-danger btn-sm w-100">Logout</a>
+
+                    <h6 class="mb-1 fw-bold">
+                        #userData.first_name# #userData.last_name#
+                    </h6>
+
+                    <small class="text-muted d-block mb-2">
+                        #userData.email#
+                    </small>
+
+                    <span class="badge bg-dark mb-3">
+                        #userData.role_name#
+                    </span>
+
+                    <hr class="my-2">
+
+                    <a href="../../controllers/LogoutController.cfm"
+                       class="btn btn-danger btn-sm w-100">
+                        Logout
+                    </a>
+
                 </cfoutput>
+
             </div>
         </div>
 
     </div>
-</div>
 
+    <!-- Notification Modal -->
+    <div class="modal fade" id="notifModal" tabindex="-1" aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-scrollable"
+             style="max-width:420px;">
+
+            <div class="modal-content">
+
+                <div class="modal-header py-2 px-3 bg-dark text-white">
+
+                    <h6 class="modal-title mb-0 d-flex align-items-center gap-2">
+
+                        <i class="bi bi-bell-fill fs-5 text-white"></i>
+
+                        Notifications
+                    </h6>
+
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+
+                        <button class="btn btn-sm btn-outline-light py-1 px-2"
+                                id="markAllReadBtn"
+                                title="Mark all as read"
+                                style="font-size:0.75rem;">
+
+                             <i class="bi bi-check2-circle text-success"></i>
+
+                            All Read
+                        </button>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal">
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Notification List -->
+                <div class="modal-body p-0"
+                     style="max-height:480px; overflow-y:auto;">
+
+                    <div id="notifList">
+
+                        <div class="text-center text-muted py-5">
+                            <div class="spinner-border spinner-border-sm"></div>
+                            <p class="mt-2 small mb-0">Loading...</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer py-2 px-3 justify-content-center">
+                    <small class="text-muted">
+                        Only last 20 notifications shown
+                    </small>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
     <div id="mainContent" class="p-3 p-md-4 <cfif section EQ 'chat' OR section EQ 'vendorChat'>chat-mode</cfif>">
 
         <cfif section EQ "users">
@@ -411,17 +491,32 @@ $(function(){
 (function(){
     var NOTIF = "../../controllers/NotificationController.cfc";
 
-    var iconMap = {
-            order_placed            : '&#128722;',  
-            order_cancelled_vendor  : '&#10060;',
-            order_cancelled_user    : '&#9989;',
-            cancel_request_vendor   : '&#9888;',
-            restock_alert           : '&#128230;',
-            scheduled_order_created : '&#128197;',
-            new_enquiry             : '&#10067;',
-            cancel_approved         : '&#9989;',
-            new_enquiry           : '&#10067;'
-        };
+   var iconMap = {
+
+    order_placed : `
+        <i class="bi bi-bag-check-fill text-success"></i>`,
+
+    order_cancelled_vendor : `
+        <i class="bi bi-x-circle-fill text-danger"></i>`,
+
+    order_cancelled_user : `
+        <i class="bi bi-check-circle-fill text-primary"></i>`,
+
+    cancel_request_vendor : `
+        <i class="bi bi-exclamation-triangle-fill text-warning"></i>`,
+
+    restock_alert : `
+        <i class="bi bi-box-seam-fill text-purple"></i>`,
+
+    scheduled_order_created : `
+        <i class="bi bi-calendar-check-fill text-info"></i>`,
+
+    new_enquiry : `
+        <i class="bi bi-question-circle-fill text-info"></i>`,
+
+    cancel_approved : `
+        <i class="bi bi-check2-circle text-success"></i>`
+};
 
     // ── Update badge count
     function updateBadge(count){

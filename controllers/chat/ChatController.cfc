@@ -155,7 +155,6 @@
 
         <cfset var msgModel = createObject("component", "models.Message")>
 
-        <!--- Use model to verify ownership — no raw query in controller --->
         <cfset var chk = msgModel.getById(val(form.message_id), session.user_id)>
 
         <cfif chk.recordCount EQ 0>
@@ -172,61 +171,84 @@
     </cffunction>
 
     <cffunction name="getMessages" access="remote" returntype="void" output="true" httpMethod="GET">
-        <cfset requireAuth()>
-        <cftry>
-            <cfif NOT structKeyExists(url, "conversation_id") OR NOT isNumeric(url.conversation_id)>
-                <cfset jsonRes(false, "Invalid conversation")>
-                <cfreturn>
-            </cfif>
+    <cfset requireAuth()>
+    <cftry>
+        <cfif NOT structKeyExists(url, "conversation_id") OR NOT isNumeric(url.conversation_id)>
+            <cfset jsonRes(false, "Invalid conversation")>
+            <cfreturn>
+        </cfif>
 
-            <cfset var chat_id   = val(url.conversation_id)>
-            <cfset var after_id  = (structKeyExists(url, "after_id") AND isNumeric(url.after_id)) ? val(url.after_id) : 0>
-            <cfset var convModel = createObject("component", "models.Conversation")>
-            <cfset var msgModel  = createObject("component", "models.Message")>
-            <cfset var conv      = convModel.getById(chat_id)>
+        <cfset var chat_id   = val(url.conversation_id)>
+        <cfset var after_id  = (structKeyExists(url, "after_id")  AND isNumeric(url.after_id))  ? val(url.after_id)  : 0>
+        <cfset var before_id = (structKeyExists(url, "before_id") AND isNumeric(url.before_id)) ? val(url.before_id) : 0>
+        
+        <cfset var convModel = createObject("component", "models.Conversation")>
+        <cfset var msgModel  = createObject("component", "models.Message")>
+        <cfset var conv      = convModel.getById(chat_id)>
 
-            <cfif conv.recordCount EQ 0>
-                <cfset jsonRes(false, "Conversation not found")>
-                <cfreturn>
-            </cfif>
+        <cfif conv.recordCount EQ 0>
+            <cfset jsonRes(false, "Conversation not found")>
+            <cfreturn>
+        </cfif>
 
-            <!--- Verify ownership --->
-            <cfif conv.user_id NEQ session.user_id AND conv.vendor_id NEQ session.user_id>
-                <cfset jsonRes(false, "Access denied")>
-                <cfreturn>
-            </cfif>
+        <cfif conv.user_id NEQ session.user_id AND conv.vendor_id NEQ session.user_id>
+            <cfset jsonRes(false, "Access denied")>
+            <cfreturn>
+        </cfif>
 
-            <!--- Mark messages from the other party as read --->
-            <cfset msgModel.markRead(chat_id, session.user_id)>
+        <cfset msgModel.markRead(chat_id, session.user_id)>
 
-            <cfset var messages  = msgModel.getByConversation(chat_id, after_id)>
-            <cfset var result    = createObject("java", "java.util.ArrayList").init()>
-            <cfset var lastMsgId = 0>
+        <cfset var messages  = msgModel.getByConversation(chat_id, after_id, before_id)>
+        <cfset var result    = createObject("java", "java.util.ArrayList").init()>
 
-             <cfloop query="messages">
-              <cfset var row = structNew("ordered")>
-              <cfset row["id"]          = messages.id>
-              <cfset row["sender_id"]   = messages.sender_id>
-              <cfset row["sender_name"] = messages.sender_name>
-              <cfset row["message"]     = messages.message>
-              <cfset row["is_mine"]     = (messages.sender_id EQ session.user_id)>
-              <cfset row["is_edited"]   = (messages.is_edited EQ 1)>
-              <cfset row["is_deleted"]  = (messages.is_deleted EQ 1)>
-              <cfset row["time"]        = timeFormat(messages.created_at, "HH:mm") & " " & dateFormat(messages.created_at, "dd-mmm")>
-              <cfset result.add(row)>
-              <cfset lastMsgId = messages.id>
-             </cfloop>
+        <cfloop query="messages">
+            <cfset var row = structNew("ordered")>
+            <cfset row["id"]          = messages.id>
+            <cfset row["sender_id"]   = messages.sender_id>
+            <cfset row["sender_name"] = messages.sender_name>
+            <cfset row["message"]     = messages.message>
+            <cfset row["is_mine"]     = (messages.sender_id EQ session.user_id)>
+            <cfset row["is_edited"]   = (messages.is_edited  EQ 1)>
+            <cfset row["is_deleted"]  = (messages.is_deleted EQ 1)>
+            <cfset row["time"]        = timeFormat(messages.created_at, "HH:mm") & " " & dateFormat(messages.created_at, "dd-mmm")>
+            <cfset result.add(row)>
+        </cfloop>
 
-            <cfset jsonRes(true, "", {
-                "messages"    : result,
-                "last_msg_id" : lastMsgId
-            })>
-        <cfcatch>
-            <cfset jsonRes(false, "Error: #cfcatch.message#")>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+        <!--- Only reverse on INITIAL load (after_id = 0 and before_id = 0) --->
+        <cfif after_id EQ 0 AND before_id EQ 0>
+            <cfset var reversed = createObject("java", "java.util.ArrayList").init()>
+            <cfloop index="i" from="#result.size()#" to="1" step="-1">
+                <cfset reversed.add(result.get(i - 1))>
+            </cfloop>
+            <cfset result = reversed>
+        </cfif>
 
+        <cfset var firstMsgId = 0>
+        <cfset var lastMsgId  = 0>
+
+        <cfif result.size() GT 0>
+            <cfset firstMsgId = result.get(0)["id"]>
+            <cfset lastMsgId  = result.get(result.size() - 1)["id"]>
+        </cfif>
+
+        <!--- Improved has_more logic --->
+        <cfset var hasMore = false>
+        <cfif before_id GT 0 OR after_id EQ 0>
+            <cfset hasMore = (messages.recordCount GTE 15)>
+        </cfif>
+
+        <cfset jsonRes(true, "", {
+            "messages"     : result,
+            "last_msg_id"  : lastMsgId,
+            "first_msg_id" : firstMsgId,
+            "has_more"     : hasMore
+        })>
+
+     <cfcatch>
+        <cfset jsonRes(false, "Error: #cfcatch.message#")>
+     </cfcatch>
+    </cftry>
+</cffunction>
 
     <cffunction name="getConversations" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset requireAuth()>

@@ -56,10 +56,14 @@
 (function(){
     var CTRL        = "../../controllers/chat/ChatController.cfc";
     var SESSION_UID = <cfoutput>#session.user_id#</cfoutput>;
-
+   
+    var oldestMsgId  = 0;   
+    var hasMoreMsgs  = false; 
+    var loadingOlder = false;
     var activeConvId = 0;
     var lastMsgId    = 0;
     var pollTimer    = null;
+    
 
     var initConvId = parseInt(
         document.querySelector('.chat-shell').getAttribute('data-init-conv')
@@ -119,37 +123,88 @@
         startPolling();
     }
 
-    /* ── Fetch messages ── */
-    function fetchMessages(){
-        if(!activeConvId) return;
-        $.get(CTRL + "?method=getMessages",
-            { conversation_id: activeConvId, after_id: lastMsgId },
-            function(res){
-                if(!res.success) return;
-                var msgs      = res.data.messages;
-                var newLastId = res.data.last_msg_id;
+   function fetchMessages(){
+    if(!activeConvId) return;
 
-                if(msgs && msgs.length){
-                    if(lastMsgId === 0){
-                        renderMessages(msgs);
-                    } else {
-                        appendMessages(msgs);
-                    }
-                    lastMsgId = newLastId;
-                } else if(lastMsgId === 0){
-                    $('#messagesArea').html(
-                        '<div class="text-center text-muted p-5 small">No messages yet.</div>'
-                    );
+    $.get(CTRL + "?method=getMessages",
+        { conversation_id: activeConvId, after_id: lastMsgId },
+        function(res){
+            if(!res.success) return;
+            var msgs      = res.data.messages;
+            var newLastId = res.data.last_msg_id;
+
+            if(msgs && msgs.length){
+                if(lastMsgId === 0){
+                    // Initial load
+                    oldestMsgId = res.data.first_msg_id;
+                    hasMoreMsgs = res.data.has_more;
+                    renderMessages(msgs);
+                } else {
+                    // Polling — append new messages only
+                    appendMessages(msgs);
                 }
-            }, "json");
-    }
+                lastMsgId = newLastId;
+            } else if(lastMsgId === 0){
+                $('#messagesArea').html(
+                    '<div class="text-center text-muted p-5 small">No messages yet. Say hello!</div>'
+                );
+            }
+        }, "json");
+}
+    
+    function loadOlderMessages(){
+    if(!activeConvId || !hasMoreMsgs || loadingOlder) return;
+
+    loadingOlder = true;
+
+    // Save current scroll height before adding content above
+    var area          = document.getElementById('messagesArea');
+    var scrollBefore  = area.scrollHeight;
+
+    // Show a subtle loading indicator at the top
+    $('#olderLoader').show();
+
+    $.get(CTRL + "?method=getMessages",
+        { conversation_id: activeConvId, before_id: oldestMsgId },
+        function(res){
+            $('#olderLoader').hide();
+            loadingOlder = false;
+
+            if(!res.success || !res.data.messages.length){
+                hasMoreMsgs = false;
+                // Show "Beginning of conversation" message
+                $('#messagesArea').prepend(
+                    '<div id="convStart" class="text-center text-muted py-2 small">'
+                    + '&#128075; Beginning of conversation'
+                    + '</div>'
+                );
+                return;
+            }
+
+            var msgs = res.data.messages;
+            hasMoreMsgs  = res.data.has_more;
+            oldestMsgId  = res.data.first_msg_id;
+
+            // Prepend older messages to the top
+            var html = '';
+            $.each(msgs, function(i, m){ html += buildBubble(m); });
+            $('#messagesArea').prepend(html);
+
+            var scrollAfter = area.scrollHeight;
+            area.scrollTop  = scrollAfter - scrollBefore;
+        }, "json");
+}
 
     function renderMessages(msgs){
-        var html = '';
-        $.each(msgs, function(i, m){ html += buildBubble(m); });
-        $('#messagesArea').html(html);
-        scrollBottom();
-    }
+    var loaderHtml = '<div id="olderLoader" class="text-center text-muted py-2 small" style="display:none;">'
+        + '<div class="spinner-border spinner-border-sm me-1"></div> Loading older messages...'
+        + '</div>';
+
+    var html = '';
+    $.each(msgs, function(i, m){ html += buildBubble(m); });
+    $('#messagesArea').html(loaderHtml + html);
+    scrollBottom();
+}
 
     function appendMessages(msgs){
         $.each(msgs, function(i, m){ $('#messagesArea').append(buildBubble(m)); });
@@ -251,6 +306,14 @@ $(document).on('click', '.msg-menu-btn', function(e){
     var $drop = $('#menu-' + id);
     $('.msg-menu-dropdown').not($drop).hide();
     $drop.toggle();
+});
+
+// Scroll-up detection for loading older messages
+$('#messagesArea').on('scroll', function(){
+    // When user scrolls within 60px of the top, load older messages
+    if($(this).scrollTop() <= 60){
+        loadOlderMessages();
+    }
 });
 
 $(document).on('click', function(){
