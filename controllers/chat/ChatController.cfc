@@ -21,49 +21,44 @@
 
   
     <cffunction name="startConversation" access="remote" returntype="void" output="true" httpMethod="POST">
-        <cfset requireAuth()>
-        <cftry>
-            <cfif NOT structKeyExists(form, "vendor_id") OR NOT isNumeric(form.vendor_id)>
-                <cfset jsonRes(false, "Invalid vendor")>
-                <cfreturn>
-            </cfif>
+    <cfset requireAuth()>
+    <cftry>
+        <cfif NOT structKeyExists(form, "vendor_id") OR NOT isNumeric(form.vendor_id)>
+            <cfset jsonRes(false, "Invalid vendor")>
+            <cfreturn>
+        </cfif>
 
-            <cfset var convModel = createObject("component", "models.Conversation")>
-            <cfset var msgModel  = createObject("component", "models.Message")>
-            <cfset var vendor_id = val(form.vendor_id)>
-            <cfset var user_id   = session.user_id>
+        <cfset var convModel = createObject("component", "models.Conversation")>
+        <cfset var msgModel  = createObject("component", "models.Message")>
+        <cfset var vendor_id = val(form.vendor_id)>
+        <cfset var user_id   = session.user_id>
 
-            <cfif vendor_id EQ user_id>
-                <cfset jsonRes(false, "Cannot chat with yourself")>
-                <cfreturn>
-            </cfif>
+        <cfif vendor_id EQ user_id>
+            <cfset jsonRes(false, "Cannot chat with yourself")>
+            <cfreturn>
+        </cfif>
 
-            <!--- Check if chat already exists --->
-            <cfquery name="existing" datasource="#application.dsn#">
-                SELECT id FROM chat
-                WHERE user_id   = <cfqueryparam value="#user_id#"   cfsqltype="cf_sql_integer">
-                AND   vendor_id = <cfqueryparam value="#vendor_id#" cfsqltype="cf_sql_integer">
-            </cfquery>
+        <!--- Use model to check existence — no raw query in controller --->
+        <cfset var existing = convModel.existsByUserAndVendor(user_id, vendor_id)>
+        <cfset var isNew    = (existing.recordCount EQ 0)>
+        <cfset var chat_id  = convModel.findOrCreate(user_id, vendor_id)>
 
-            <cfset var isNew   = (existing.recordCount EQ 0)>
-            <cfset var chat_id = convModel.findOrCreate(user_id, vendor_id)>
+        <!--- Send auto first message only for new chats --->
+        <cfif isNew AND structKeyExists(form, "product_name") AND len(trim(form.product_name))>
+            <cfset msgModel.send(
+                chat_id   = chat_id,
+                sender_id = user_id,
+                message   = "Hi, I am interested in your product: " & trim(form.product_name)
+            )>
+            <cfset convModel.touch(chat_id)>
+        </cfif>
 
-            <!--- Send auto first message only for new chats --->
-            <cfif isNew AND structKeyExists(form, "product_name") AND len(trim(form.product_name))>
-                <cfset msgModel.send(
-                    chat_id   = chat_id,
-                    sender_id = user_id,
-                    message   = "Hi, I am interested in your product: " & trim(form.product_name)
-                )>
-                <cfset convModel.touch(chat_id)>
-            </cfif>
-
-            <cfset jsonRes(true, "", { "conversation_id": chat_id })>
-        <cfcatch>
-            <cfset jsonRes(false, "Error: #cfcatch.message#")>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+        <cfset jsonRes(true, "", { "conversation_id": chat_id })>
+    <cfcatch>
+        <cfset jsonRes(false, "Error: #cfcatch.message#")>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 
     <cffunction name="sendMessage" access="remote" returntype="void" output="true" httpMethod="POST">
@@ -77,8 +72,8 @@
                 <cfset jsonRes(false, "Message cannot be empty")>
                 <cfreturn>
             </cfif>
-            <cfif len(trim(form.message)) GT 2000>
-                <cfset jsonRes(false, "Message too long (max 2000 characters)")>
+            <cfif len(trim(form.message)) GT 200>
+                <cfset jsonRes(false, "Message too long ")>
                 <cfreturn>
             </cfif>
 
@@ -92,7 +87,6 @@
                 <cfreturn>
             </cfif>
 
-            <!--- Verify the sender belongs to this chat --->
             <cfif conv.user_id NEQ session.user_id AND conv.vendor_id NEQ session.user_id>
                 <cfset jsonRes(false, "Access denied")>
                 <cfreturn>
@@ -111,6 +105,70 @@
             <cfset jsonRes(false, "Error: #cfcatch.message#")>
         </cfcatch>
         </cftry>
+    </cffunction>
+
+    <cffunction name="editMessage" access="remote" returntype="void" output="true" httpMethod="POST">
+      <cfset requireAuth()>
+      <cftry>
+        <cfif NOT structKeyExists(form, "message_id") OR NOT isNumeric(form.message_id)>
+            <cfset jsonRes(false, "Invalid message")>
+            <cfreturn>
+        </cfif>
+        <cfif NOT structKeyExists(form, "message") OR NOT len(trim(form.message))>
+            <cfset jsonRes(false, "Message cannot be empty")>
+            <cfreturn>
+        </cfif>
+        <cfif len(trim(form.message)) GT 200>
+            <cfset jsonRes(false, "Message too long")>
+            <cfreturn>
+        </cfif>
+
+        <cfset var msgModel = createObject("component", "models.Message")>
+
+        <!--- Use model to verify ownership — no raw query in controller --->
+        <cfset var chk = msgModel.getById(val(form.message_id), session.user_id)>
+
+        <cfif chk.recordCount EQ 0>
+            <cfset jsonRes(false, "Not allowed")>
+            <cfreturn>
+        </cfif>
+        <cfif chk.is_deleted EQ 1>
+            <cfset jsonRes(false, "Cannot edit a deleted message")>
+            <cfreturn>
+        </cfif>
+
+        <cfset msgModel.editMessage(val(form.message_id), session.user_id, trim(form.message))>
+        <cfset jsonRes(true, "Message updated")>
+      <cfcatch>
+        <cfset jsonRes(false, "Error: #cfcatch.message#")>
+      </cfcatch>
+      </cftry>
+    </cffunction>
+
+    <cffunction name="deleteMessage" access="remote" returntype="void" output="true" httpMethod="POST">
+      <cfset requireAuth()>
+      <cftry>
+        <cfif NOT structKeyExists(form, "message_id") OR NOT isNumeric(form.message_id)>
+            <cfset jsonRes(false, "Invalid message")>
+            <cfreturn>
+        </cfif>
+
+        <cfset var msgModel = createObject("component", "models.Message")>
+
+        <!--- Use model to verify ownership — no raw query in controller --->
+        <cfset var chk = msgModel.getById(val(form.message_id), session.user_id)>
+
+        <cfif chk.recordCount EQ 0>
+            <cfset jsonRes(false, "Not allowed")>
+            <cfreturn>
+        </cfif>
+
+        <cfset msgModel.deleteMessage(val(form.message_id), session.user_id)>
+        <cfset jsonRes(true, "Message deleted")>
+      <cfcatch>
+        <cfset jsonRes(false, "Error: #cfcatch.message#")>
+      </cfcatch>
+      </cftry>
     </cffunction>
 
     <cffunction name="getMessages" access="remote" returntype="void" output="true" httpMethod="GET">
@@ -145,17 +203,19 @@
             <cfset var result    = createObject("java", "java.util.ArrayList").init()>
             <cfset var lastMsgId = 0>
 
-            <cfloop query="messages">
-                <cfset var row = structNew("ordered")>
-                <cfset row["id"]          = messages.id>
-                <cfset row["sender_id"]   = messages.sender_id>
-                <cfset row["sender_name"] = messages.sender_name>
-                <cfset row["message"]     = messages.message>
-                <cfset row["is_mine"]     = (messages.sender_id EQ session.user_id)>
-                <cfset row["time"]        = timeFormat(messages.created_at, "HH:mm") & " " & dateFormat(messages.created_at, "dd-mmm")>
-                <cfset result.add(row)>
-                <cfset lastMsgId = messages.id>
-            </cfloop>
+             <cfloop query="messages">
+              <cfset var row = structNew("ordered")>
+              <cfset row["id"]          = messages.id>
+              <cfset row["sender_id"]   = messages.sender_id>
+              <cfset row["sender_name"] = messages.sender_name>
+              <cfset row["message"]     = messages.message>
+              <cfset row["is_mine"]     = (messages.sender_id EQ session.user_id)>
+              <cfset row["is_edited"]   = (messages.is_edited EQ 1)>
+              <cfset row["is_deleted"]  = (messages.is_deleted EQ 1)>
+              <cfset row["time"]        = timeFormat(messages.created_at, "HH:mm") & " " & dateFormat(messages.created_at, "dd-mmm")>
+              <cfset result.add(row)>
+              <cfset lastMsgId = messages.id>
+             </cfloop>
 
             <cfset jsonRes(true, "", {
                 "messages"    : result,

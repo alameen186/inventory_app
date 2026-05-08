@@ -160,18 +160,42 @@
     }
 
     function buildBubble(m){
-        var isMine = (m.is_mine === true || m.is_mine === "true"
-                      || parseInt(m.sender_id) === SESSION_UID);
-        var name   = isMine ? 'You' : $('<div>').text(m.sender_name).html();
-        var text   = $('<div>').text(m.message).html();
-        var time   = m.time || '';
-   
-        return '<div class="d-flex flex-column mb-2 ' + (isMine ? 'mine' : 'theirs') + '">'
-             + '<div class="small fw-semibold text-muted mb-1">' + name + '</div>'
-             + '<div class="msg-bubble p-2 px-3 small">' + text + '</div>'
-             + '<div class="small text-muted mt-1 px-1">' + time + '</div>'
-             + '</div>';
+    var isMine  = (m.is_mine === true || m.is_mine === "true"
+                   || parseInt(m.sender_id) === SESSION_UID);
+    var name    = isMine ? 'You' : $('<div>').text(m.sender_name).html();
+    var msgId   = m.id;
+    var time    = m.time || '';
+
+    var bubbleContent;
+    if(m.is_deleted === true || m.is_deleted === "true"){
+        bubbleContent = '<em class="text-muted" style="font-size:12px;">This message was deleted</em>';
+    } else {
+        var text = $('<div>').text(m.message).html();
+        var editedBadge = (m.is_edited === true || m.is_edited === "true")
+            ? ' <span style="font-size:10px;opacity:0.7;">(edited)</span>' : '';
+        bubbleContent = text + editedBadge;
     }
+
+    var menuHtml = '';
+    if(isMine && !(m.is_deleted === true || m.is_deleted === "true")){
+        menuHtml = '<div class="msg-menu-wrap">'
+            + '<button class="msg-menu-btn" data-id="' + msgId + '" title="Options">&#8942;</button>'
+            + '<div class="msg-menu-dropdown" id="menu-' + msgId + '" style="display:none;">'
+            + '<button class="msg-menu-option edit-btn" data-id="' + msgId + '">&#9998; Edit</button>'
+            + '<button class="msg-menu-option delete-btn" data-id="' + msgId + '">&#128465; Delete</button>'
+            + '</div>'
+            + '</div>';
+    }
+
+    return '<div class="d-flex flex-column mb-2 ' + (isMine ? 'mine' : 'theirs') + '" data-msg-id="' + msgId + '">'
+         + '<div class="small fw-semibold text-muted mb-1">' + name + '</div>'
+         + '<div class="d-flex align-items-center gap-1 ' + (isMine ? 'justify-content-end' : '') + '">'
+         + menuHtml
+         + '<div class="msg-bubble p-2 px-3 small" id="bubble-' + msgId + '">' + bubbleContent + '</div>'
+         + '</div>'
+         + '<div class="small text-muted mt-1 px-1">' + time + '</div>'
+         + '</div>';
+}
 
     function scrollBottom(){
         var el = document.getElementById('messagesArea');
@@ -224,6 +248,93 @@
     });
 
     $(window).on('beforeunload', stopPolling);
+     
+     /* ── Edit / Delete menu ── */
+$(document).on('click', '.msg-menu-btn', function(e){
+    e.stopPropagation();
+    var id = $(this).data('id');
+    var $drop = $('#menu-' + id);
+    $('.msg-menu-dropdown').not($drop).hide();
+    $drop.toggle();
+});
+
+$(document).on('click', function(){
+    $('.msg-menu-dropdown').hide();
+});
+
+/* ── DELETE ── */
+$(document).on('click', '.delete-btn', function(){
+    var msgId = $(this).data('id');
+    $('.msg-menu-dropdown').hide();
+
+    if(!confirm('Delete this message? This cannot be undone.')) return;
+
+    $.post(CTRL + "?method=deleteMessage", { message_id: msgId }, function(res){
+        if(res.success){
+            var $bubble = $('#bubble-' + msgId);
+            $bubble.html('<em class="text-muted" style="font-size:12px;">This message was deleted</em>');
+            $bubble.closest('[data-msg-id]').find('.msg-menu-wrap').remove();
+        } else {
+            alert(res.message || 'Delete failed.');
+        }
+    }, "json");
+});
+
+/* ── EDIT ── */
+$(document).on('click', '.edit-btn', function(){
+    var msgId = $(this).data('id');
+    $('.msg-menu-dropdown').hide();
+
+    var $bubble   = $('#bubble-' + msgId);
+    var $clone    = $bubble.clone();
+    $clone.find('span').remove();
+    var currentText = $clone.text().trim();
+
+    $bubble.html(
+        '<div class="edit-wrap">'
+        + '<textarea class="form-control form-control-sm edit-textarea" rows="2" maxlength="2000">' 
+        + $('<div>').text(currentText).html()   /* safely encode for textarea */
+        + '</textarea>'
+        + '<div class="d-flex gap-1 mt-1 justify-content-end">'
+        + '<button class="btn btn-success btn-sm save-edit-btn" data-id="' + msgId + '">Save</button>'
+        + '<button class="btn btn-secondary btn-sm cancel-edit-btn" data-id="' + msgId 
+        +   '" data-orig="' + $('<div>').text(currentText).html() + '">Cancel</button>'
+        + '</div>'
+        + '</div>'
+    );
+    $bubble.find('.edit-textarea').focus();
+});
+
+/* Save edit */
+$(document).on('click', '.save-edit-btn', function(){
+    var msgId   = $(this).data('id');
+    var newText = $('#bubble-' + msgId).find('.edit-textarea').val().trim();
+
+    if(!newText){ alert('Message cannot be empty.'); return; }
+
+    $(this).prop('disabled', true).text('Saving…');
+
+    $.post(CTRL + "?method=editMessage",
+        { message_id: msgId, message: newText },
+        function(res){
+            if(res.success){
+                var safeText = $('<div>').text(newText).html();
+                $('#bubble-' + msgId).html(
+                    safeText + ' <span style="font-size:10px;opacity:0.7;">(edited)</span>'
+                );
+            } else {
+                alert(res.message || 'Edit failed.');
+                $('.save-edit-btn[data-id="' + msgId + '"]').prop('disabled', false).text('Save');
+            }
+        }, "json");
+});
+
+/* Cancel edit */
+$(document).on('click', '.cancel-edit-btn', function(){
+    var msgId    = $(this).data('id');
+    var origText = $(this).data('orig');
+    $('#bubble-' + msgId).html(origText);
+});
 
     /* ── Init ── */
     loadConversations(function(){

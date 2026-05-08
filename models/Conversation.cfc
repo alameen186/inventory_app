@@ -152,4 +152,17 @@
         <cfreturn q.total>
     </cffunction>
 
+    <cffunction name="existsByUserAndVendor" returntype="query" output="false">
+    <cfargument name="user_id"   type="numeric" required="true">
+    <cfargument name="vendor_id" type="numeric" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT id FROM chat
+        WHERE user_id   = <cfqueryparam value="#arguments.user_id#"   cfsqltype="cf_sql_integer">
+        AND   vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn q>
+</cffunction>
+
 </cfcomponent>
