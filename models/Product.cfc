@@ -514,4 +514,16 @@
         <cfreturn q.total>
     </cffunction>
 
+<cffunction name="getVendorId" returntype="numeric" output="false">
+    <cfargument name="product_id" type="numeric" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT vendor_id 
+        FROM products 
+        WHERE id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn q.recordCount ? val(q.vendor_id) : 0>
+</cffunction>
+
 </cfcomponent>

@@ -1,10 +1,5 @@
 <cfcomponent output="false">
 
-    <!---
-        AuthGuard.cfc
-        Single shared auth checker used by ALL controllers.
-    --->
-
     <cffunction name="checkAuth" access="public" returntype="void" output="true">
 
         <!--- SESSION EXISTS - already authenticated --->
@@ -12,7 +7,6 @@
             <cfreturn>
         </cfif>
 
-        <!--- NO SESSION - try JWT --->
         <cfset var helper = createObject("component", "models.JwtHelper")>
         <cfset var result = helper.verifyToken()>
 
@@ -25,7 +19,7 @@
                 <cfset sendUnauthorized("Token payload is incomplete")>
             </cfif>
 
-            <!--- CHECK TOKEN TYPE - must be access token --->
+            <!--- CHECK TOKEN  --->
             <cfif structKeyExists(p, "type") AND p.type NEQ "access">
                 <cfset sendUnauthorized("Invalid token type. Use access token.")>
             </cfif>

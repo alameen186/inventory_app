@@ -173,24 +173,57 @@
     </cffunction>
 
     <!--- APPROVE CANCEL --->
-    <cffunction name="approveCancel" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset createObject("component","models.AuthGuard").checkAuth()>
-        <cfif NOT structKeyExists(form,"order_group_id") OR NOT len(trim(form.order_group_id))>
-            <cfset sendJSON({status:"error", message:"Order ID required", html:"", pagination:""})>
-        </cfif>
-        <cftry>
-            <cfset var orderModel = createObject("component","models.Order")>
-            <cfset var result     = orderModel.approveCancel(order_group_id=form.order_group_id)>
-            <cfif result>
-                <cfset orderModel.restoreStock(order_group_id=form.order_group_id)>
-                <cfset sendJSON({status:"success", message:"Order cancelled and stock restored", html:"", pagination:""})>
-            <cfelse>
-                <cfset sendJSON({status:"error", message:"Could not approve cancellation", html:"", pagination:""})>
+<cffunction name="approveCancel" access="remote" returntype="void" output="true" httpmethod="POST">
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+
+    <cfif NOT structKeyExists(form,"order_group_id") OR NOT len(trim(form.order_group_id))>
+        <cfset sendJSON({status:"error", message:"Order ID required"})>
+    </cfif>
+
+    <cftry>
+        <cfset var orderModel = createObject("component","models.Order")>
+        <cfset var notifModel = createObject("component","models.Notification")>
+
+        <!--- Approve Cancel + Restore Stock --->
+        <cfset var result = orderModel.approveCancel(order_group_id = form.order_group_id)>
+
+        <cfif result>
+            
+            <cfset orderModel.restoreStock(order_group_id = form.order_group_id)>
+
+            <!--- Send Notification to User --->
+            <cfset var orderInfo = orderModel.getOrderInfo(form.order_group_id)>
+            
+            <cfif orderInfo.recordCount GT 0 AND val(orderInfo.user_id) GT 0>
+                
+                <cfset var notifMessage = "Your cancellation request for Order " & #form.order_group_id# & " has been approved.">
+                
+                <cfset notifModel.create(
+                    user_id   = orderInfo.user_id,
+                    sender_id = session.user_id,
+                    type      = "cancel_approved",
+                    title     = "Cancellation Approved",
+                    message   = notifMessage,
+                    link      = "index.cfm?page=dashboard&section=orders"
+                )>
             </cfif>
-        <cfcatch>
-            <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+
+            <cfset sendJSON({
+                status: "success", 
+                message: "Order cancelled and stock restored successfully"
+            })>
+
+        <cfelse>
+            <cfset sendJSON({status:"error", message:"Could not approve cancellation"})>
+        </cfif>
+
+    <cfcatch>
+        <cfset sendJSON({
+            status: "error",
+            message: "Error: #cfcatch.message#"
+        })>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 </cfcomponent>

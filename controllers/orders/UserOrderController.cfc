@@ -12,6 +12,188 @@
        <cfabort>
     </cffunction>
 
+<cffunction name="checkout" access="remote" returntype="void" output="true" httpmethod="POST">
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+
+    <cftry>
+        <cfif NOT structKeyExists(session, "cart") OR structIsEmpty(session.cart)>
+            <cfset sendJSON({status:"error", message:"Your cart is empty!"})>
+        </cfif>
+
+        <cfset var productModel = createObject("component","models.Product")>
+        <cfset var orderModel   = createObject("component","models.Order")>
+        <cfset var notifModel   = createObject("component","models.Notification")>
+        
+        <cfset var orderGroupId = "ORD-" & DateFormat(Now(),"yyyymmdd") & "-" & RandRange(10000,99999)>
+
+        <!--- STOCK CHECK --->
+        <cfloop collection="#session.cart#" item="pid">
+            <cfset var item = session.cart[pid]>
+            <cfset var availableStock = productModel.getStock(pid)>
+            <cfif availableStock LT item.qty>
+                <cfset sendJSON({status:"error", message:"Insufficient stock for #item.name#"})>
+            </cfif>
+        </cfloop>
+
+        <!--- CALCULATE TOTALS --->
+        <cfset var grandTotal = 0>
+        <cfloop collection="#session.cart#" item="pid">
+            <cfset grandTotal += session.cart[pid].price * session.cart[pid].qty>
+        </cfloop>
+
+        <cfset var discount = 0>
+        <cfset var couponCode = "">
+        <cfset var finalTotal = grandTotal>
+
+        <cfif structKeyExists(session, "coupon")>
+            <cfset couponCode = session.coupon.code>
+            <cfif session.coupon.type EQ "percent">
+                <cfset discount = (grandTotal * session.coupon.value) / 100>
+            <cfelse>
+                <cfset discount = session.coupon.value>
+            </cfif>
+            <cfif structKeyExists(session.coupon, "max") AND discount GT session.coupon.max>
+                <cfset discount = session.coupon.max>
+            </cfif>
+            <cfset finalTotal = grandTotal - discount>
+        </cfif>
+
+        <!--- TEMP USER (for vendor orders) --->
+        <cfset var tempUserId = "">
+        <cfif session.role_name EQ "vendor">
+            <cfset var tempUserModel = createObject("component","models.TempUser")>
+            <cfset tempUserId = tempUserModel.getOrCreateTempUser(
+                vendor_id  = session.user_id,
+                first_name = structKeyExists(form,"first_name") ? form.first_name : "Walk-in",
+                last_name  = structKeyExists(form,"last_name")  ? form.last_name  : "",
+                email      = structKeyExists(form,"email")       ? form.email       : ""
+            )>
+        </cfif>
+
+        <!--- SAVE ORDERS + SEND NOTIFICATIONS --->
+        <cfloop collection="#session.cart#" item="pid">
+            <cfset var item = session.cart[pid]>
+            <cfset var itemTotal = item.price * item.qty>
+
+            <!--- Get Vendor ID --->
+            <cfset var vendorId = productModel.getVendorId(pid)>
+
+            <!--- Save Order --->
+            <cfset var result = orderModel.addOrder(
+                user_id      = (session.role_name EQ "vendor" ? "" : session.user_id),
+                temp_user_id = tempUserId,
+                product_id   = pid,
+                price        = item.price,
+                quantity     = item.qty,
+                total        = itemTotal,
+                group_id     = orderGroupId,
+                coupon_code  = couponCode,
+                discount     = discount,
+                final_total  = finalTotal
+            )>
+
+            <cfif isStruct(result) AND NOT result.success>
+                <cfset sendJSON({status:"error", message:"Failed to save order item"})>
+            </cfif>
+
+            <!--- Reduce Stock --->
+            <cfset productModel.reduceStock(pid, item.qty)>
+
+            <!--- Send Notification to Vendor --->
+            <cfif vendorId GT 0>
+                <cfset notifModel.create(
+                    user_id   = vendorId,
+                    sender_id = session.user_id,
+                    type      = "order_placed",
+                    title     = "New Order Received",
+                    message   = "#item.qty# x #item.name# has been ordered",
+                    link      = "index.cfm?page=dashboard&section=allorders"
+                )>
+            </cfif>
+        </cfloop>
+
+        <!--- PDF Invoice Generation (Same style as vendorOrder) --->
+        <cfset var invoiceDir  = expandPath("../../assets/invoices/")>
+        <cfset var fileName    = "invoice_#orderGroupId#.pdf">
+        <cfset var invoicePath = invoiceDir & fileName>
+
+        <cfdocument format="pdf" filename="#invoicePath#" overwrite="true">
+        <cfoutput>
+        <style>
+        body{font-family:Arial;font-size:12px;}
+        .tc{text-align:center;} .tr{text-align:right;}
+        .header{border-bottom:2px solid ##000;margin-bottom:15px;padding-bottom:10px;}
+        .tbl{width:100%;border-collapse:collapse;margin-top:10px;}
+        .tbl th{background:##f2f2f2;border:1px solid ##ccc;padding:8px;}
+        .tbl td{border:1px solid ##ccc;padding:8px;}
+        .total-box{width:40%;float:right;margin-top:10px;}
+        .footer{margin-top:40px;font-size:10px;text-align:center;color:##777;}
+        </style>
+        <div>
+            <div class="header tc"><h2>INVENTORY STORE</h2></div>
+            <table width="100%">
+            <tr>
+                <td><strong>Invoice ID:</strong> #orderGroupId#<br>
+                    <strong>Date:</strong> #dateFormat(now(),"dd-mmm-yyyy")#
+                </td>
+            </tr>
+            </table>
+
+            <table class="tbl">
+            <tr><th>Product</th><th>Price</th><th>Qty</th><th>Total</th></tr>
+            <cfset var pdfTotal = 0>
+            <cfloop collection="#session.cart#" item="pid">
+                <cfset var item = session.cart[pid]>
+                <cfset var rowTotal = item.price * item.qty>
+                <cfset pdfTotal += rowTotal>
+                <tr>
+                    <td>#item.name#</td>
+                    <td>#item.price#</td>
+                    <td>#item.qty#</td>
+                    <td>#rowTotal#</td>
+                </tr>
+            </cfloop>
+            </table>
+
+            <table class="total-box">
+            <tr><td>Subtotal</td><td class="tr">#pdfTotal#</td></tr>
+            <tr><td>Discount</td><td class="tr">#discount#</td></tr>
+            <tr><td><strong>Final Total</strong></td><td class="tr"><strong>#finalTotal#</strong></td></tr>
+            </table>
+            <div style="clear:both;"></div>
+            <div class="footer"><p>System generated invoice. No signature required.</p></div>
+        </div>
+        </cfoutput>
+        </cfdocument>
+
+        <!--- Send Email --->
+        <cftry>
+            <cfmail to="#session.user_email#"
+                    from="no-reply@yourdomain.com"
+                    subject="Order Confirmation - #orderGroupId#"
+                    type="html">
+                <h3>Thank you for your order!</h3>
+                <p>Order ID: <strong>#orderGroupId#</strong></p>
+                <cfmailparam file="#invoicePath#" disposition="attachment">
+            </cfmail>
+            <cfcatch></cfcatch>
+        </cftry>
+
+        <!--- Clear Cart --->
+        <cfset structDelete(session, "cart")>
+        <cfset structDelete(session, "coupon")>
+
+        <cfset sendJSON({
+            status: "success",
+            message: "Order placed successfully! Order ID: #orderGroupId#",
+            order_group_id: orderGroupId
+        })>
+
+    <cfcatch>
+        <cfset sendJSON({status:"error", message:"Checkout failed: #cfcatch.message#"})>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
     <!--- SEARCH ORDERS --->
     <cffunction name="searchOrders" access="remote" returntype="void" output="true" httpmethod="GET">
@@ -158,41 +340,65 @@
         </cftry>
     </cffunction>
 
-    <!--- CANCEL ORDER --->
-    <cffunction name="cancelOrder" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset createObject("component","models.AuthGuard").checkAuth()>
-        <cfif NOT structKeyExists(form,"order_group_id") OR NOT len(trim(form.order_group_id))>
-            <cfset sendJSON({status:"error", message:"Order ID required",html:"",pagination:""})>
-        </cfif>
-        <cfif NOT structKeyExists(form,"reason") OR NOT len(trim(form.reason))>
-            <cfset sendJSON({status:"error", message:"Reason required",html:"",pagination:""})>
-        </cfif>
-        <cftry>
-            <cfset var orderModel = createObject("component","models.Order")>
-            <cfset var result     = orderModel.cancelOrder(
-                order_group_id = form.order_group_id,
-                reason         = form.reason,
-                user_id        = session.user_id
-            )>
-            <cfif result>
-                <cfset sendJSON({
-                    status:"success",
-                    message:"Cancellation request submitted",
-                    html:"",
-                    pagination:""
-                })>
-            <cfelse>
-                <cfset sendJSON({status:"error", message:"Could not submit request",html:"", pagination:""})>
+<!--- CANCEL ORDER REQUEST --->
+<cffunction name="cancelOrder" access="remote" returntype="void" output="true" httpmethod="POST">
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+
+    <cfif NOT structKeyExists(form,"order_group_id") OR NOT len(trim(form.order_group_id))>
+        <cfset sendJSON({status:"error", message:"Order ID required"})>
+    </cfif>
+
+    <cfif NOT structKeyExists(form,"reason") OR NOT len(trim(form.reason))>
+        <cfset sendJSON({status:"error", message:"Reason required"})>
+    </cfif>
+
+    <cftry>
+        <cfset var orderModel = createObject("component","models.Order")>
+        <cfset var result     = orderModel.cancelOrder(
+            order_group_id = form.order_group_id,
+            reason         = form.reason,
+            user_id        = session.user_id
+        )>
+
+        <cfif result>
+            
+            <!--- Send Notification to Vendor --->
+            <cfset var productModel = createObject("component","models.Product")>
+            <cfset var notifModel   = createObject("component","models.Notification")>
+
+            <cfset var orderItems = orderModel.getOrderItems(form.order_group_id)>
+            
+            <cfif orderItems.recordCount GT 0>
+                <cfset var vendorId = productModel.getVendorId(orderItems.product_id)>
+                
+                <cfif vendorId GT 0>
+                    <cfset notifModel.create(
+                        user_id   = vendorId,
+                        sender_id = session.user_id,
+                        type      = "cancel_request_vendor",
+                        title     = "Cancel Request Received",
+                        message   = "Customer requested to cancel Order #form.order_group_id#",
+                        link      = "index.cfm?page=dashboard&section=allorders"
+                    )>
+                </cfif>
             </cfif>
-        <cfcatch>
-           <cfset sendJSON({
-                status:"error",
-                message:"#cfcatch.message#",
-                html:"",
-                pagination:""
+
+            <cfset sendJSON({
+                status: "success",
+                message: "Cancellation request submitted successfully"
             })>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+
+        <cfelse>
+            <cfset sendJSON({status:"error", message:"Could not submit request"})>
+        </cfif>
+
+    <cfcatch>
+        <cfset sendJSON({
+            status: "error",
+            message: "Error: #cfcatch.message#"
+        })>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 </cfcomponent>

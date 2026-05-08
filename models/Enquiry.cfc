@@ -146,6 +146,9 @@
 <cffunction name="restockProduct" returntype="boolean" output="false">
     <cfargument name="product_id" required="true">
     <cfargument name="add_stock"  type="numeric" required="true">
+
+    <cfset var notifModel = createObject("component","models.Notification")>
+
     <cftry>
         <!--- UPDATE PRODUCT STOCK --->
         <cfquery datasource="#application.dsn#">
@@ -154,6 +157,15 @@
             WHERE  id    = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
         </cfquery>
 
+        <!--- Get users who had pending enquiries BEFORE marking them fulfilled --->
+        <cfquery name="local.enquiryUsers" datasource="#application.dsn#">
+            SELECT DISTINCT user_id 
+            FROM   product_enquiries
+            WHERE  product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+            AND    status     = 'pending'
+        </cfquery>
+
+        <!--- Mark enquiries as fulfilled --->
         <cfquery datasource="#application.dsn#">
             UPDATE product_enquiries
             SET    status = 'fulfilled'
@@ -161,7 +173,22 @@
             AND    status     = 'pending'
         </cfquery>
 
+        <!--- Send Notification to All Users Who Enquired --->
+        <cfloop query="local.enquiryUsers">
+            <cfif local.enquiryUsers.user_id GT 0>
+                <cfset notifModel.create(
+                    user_id    = local.enquiryUsers.user_id,
+                    sender_id  = 0,          
+                    type       = "stock_restocked",
+                    title      = "Product Restocked",
+                    message    = "The product you enquired about is now back in stock.",
+                    link       = "index.cfm?page=product&product_id=#arguments.product_id#"
+                )>
+            </cfif>
+        </cfloop>
+
         <cfreturn true>
+
     <cfcatch>
         <cfreturn false>
     </cfcatch>

@@ -31,70 +31,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        html, body { height: 100%; overflow: hidden; }
-
-        .menuLink { transition: all 0.2s ease; }
-        .menuLink:hover { background-color: rgba(255,255,255,0.1); }
-        .menuLink.active {
-            background-color: #0d6efd !important;
-            color: #fff !important;
-            font-weight: 600;
-            border-left: 4px solid #fff;
-            padding-left: 10px;
-        }
-
-        /* ── SKELETON LOADER ── */
-        .skeleton-wrap { padding: 1.5rem; }
-        .skeleton-line {
-            height: 18px;
-            background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
-            background-size: 400% 100%;
-            animation: shimmer 1.2s infinite;
-            border-radius: 4px;
-            margin-bottom: 12px;
-        }
-        .skeleton-line.short  { width: 40%; }
-        .skeleton-line.medium { width: 70%; }
-        .skeleton-line.full   { width: 100%; }
-        .skeleton-card {
-            background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
-            background-size: 400% 100%;
-            animation: shimmer 1.2s infinite;
-            border-radius: 8px;
-            height: 90px;
-            margin-bottom: 16px;
-        }
-        .skeleton-table-row {
-            height: 44px;
-            background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
-            background-size: 400% 100%;
-            animation: shimmer 1.2s infinite;
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-        @keyframes shimmer {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-
-        #mainContent {
-            flex: 1;
-            overflow-y: auto;       /* default: normal sections scroll */
-            display: flex;
-            flex-direction: column;
-        }
-        #mainContent.chat-mode {
-            overflow: hidden;       /* chat sections: no outer scroll */
-            padding: 0 !important;  /* remove the p-3/p-md-4 padding */
-        }
-        /* chat shell must fill its parent when injected */
-        #mainContent.chat-mode .chat-shell {
-            flex: 1;
-            min-height: 0;
-        }
-    </style>
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    
 </head>
 <body class="bg-light">
 
@@ -192,33 +130,82 @@
 <div class="col-12 col-md-10 d-flex flex-column" style="height:100%; overflow:hidden;">
 
     <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom" style="flex-shrink:0;">
-        <button class="btn btn-dark d-md-none" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">☰</button>
-        <h5 class="mb-0">Inventory Store</h5>
-        <div class="d-flex align-items-center gap-2">
-            <cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
-                <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm">Cart</a>
-            </cfif>
-            <div class="dropdown">
-                <button class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">Profile</button>
-                <div class="dropdown-menu dropdown-menu-end p-3 text-center shadow" style="min-width:220px;">
-                    <cfoutput>
-                    <div class="mb-2">
-                        <div class="bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center"
-                             style="width:50px;height:50px;">
-                            #ucase(left(userData.first_name,1))#
-                        </div>
-                    </div>
-                    <h6 class="mb-0 fw-bold">#userData.first_name# #userData.last_name#</h6>
-                    <small class="text-muted d-block mb-2">#userData.email#</small>
-                    <small><span class="badge bg-dark mb-2">#userData.role_name#</span></small>
-                    <hr>
-                    <a href="../../controllers/LogoutController.cfm" class="btn btn-danger btn-sm w-100">Logout</a>
-                    </cfoutput>
+<div class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom" style="flex-shrink:0;">
+    <button class="btn btn-dark d-md-none" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">☰</button>
+    <h5 class="mb-0">Inventory Store</h5>
+    <div class="d-flex align-items-center gap-2">
+
+        <cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
+            <a href="../../index.cfm?page=dashboard&section=cart" class="btn btn-success btn-sm">Cart</a>
+        </cfif>
+
+        <!--- ── NOTIFICATION BELL ── --->
+        <div class="position-relative">
+    <button class="btn btn-outline-secondary btn-sm position-relative fs-5" 
+            id="notifBellBtn" title="Notifications">
+        &#128276;
+    </button>
+    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+          style="display:none; font-size:0.65rem; padding: 3px 6px;">0</span>
+</div>
+
+        <!--- ── NOTIFICATION MODAL ── --->
+        <div class="modal fade" id="notifModal" tabindex="-1" aria-hidden="true">
+         <div class="modal-dialog modal-dialog-scrollable" style="max-width:420px;">
+          <div class="modal-content">
+
+            <div class="modal-header py-2 px-3 bg-dark text-white">
+                <h6 class="modal-title mb-0">    &#128276; Notifications</h6>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <button class="btn btn-sm btn-outline-light py-0 px-2" 
+                            id="markAllReadBtn" title="Mark all as read"
+                            style="font-size:0.75rem;">
+                            &#10004;     All Read
+                    </button>
+                    <button type="button" class="btn-close btn-close-white ms-1" 
+                            data-bs-dismiss="modal"></button>
                 </div>
             </div>
+
+            <!--- scrollable list --->
+            <div class="modal-body p-0" style="max-height:480px; overflow-y:auto;">
+                <div id="notifList">
+                    <div class="text-center text-muted py-5">
+                        <div class="spinner-border spinner-border-sm"></div>
+                        <p class="mt-2 small">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer py-2 px-3 justify-content-center">
+                <small class="text-muted">Only last 20 notifications shown</small>
+            </div>
+
         </div>
+        </div>
+        </div>
+
+        <div class="dropdown">
+            <button class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">Profile</button>
+            <div class="dropdown-menu dropdown-menu-end p-3 text-center shadow" style="min-width:220px;">
+                <cfoutput>
+                <div class="mb-2">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center"
+                         style="width:50px;height:50px;">
+                        #ucase(left(userData.first_name,1))#
+                    </div>
+                </div>
+                <h6 class="mb-0 fw-bold">#userData.first_name# #userData.last_name#</h6>
+                <small class="text-muted d-block mb-2">#userData.email#</small>
+                <small><span class="badge bg-dark mb-2">#userData.role_name#</span></small>
+                <hr>
+                <a href="../../controllers/LogoutController.cfm" class="btn btn-danger btn-sm w-100">Logout</a>
+                </cfoutput>
+            </div>
+        </div>
+
     </div>
+</div>
 
     <div id="mainContent" class="p-3 p-md-4 <cfif section EQ 'chat' OR section EQ 'vendorChat'>chat-mode</cfif>">
 
@@ -418,6 +405,135 @@ $(function(){
         next();
     }, 2000);
     </cfif>
+
+
+
+(function(){
+    var NOTIF = "../../controllers/NotificationController.cfc";
+
+    var iconMap = {
+            order_placed            : '&#128722;',  
+            order_cancelled_vendor  : '&#10060;',
+            order_cancelled_user    : '&#9989;',
+            cancel_request_vendor   : '&#9888;',
+            restock_alert           : '&#128230;',
+            scheduled_order_created : '&#128197;',
+            new_enquiry             : '&#10067;',
+            cancel_approved         : '&#9989;',
+            new_enquiry           : '&#10067;'
+        };
+
+    // ── Update badge count
+    function updateBadge(count){
+        if(count > 0){
+            $('#notifBadge').text(count > 99 ? '99+' : count).show();
+        } else {
+            $('#notifBadge').hide();
+        }
+    }
+
+    // ── Poll unread count every 15s
+    function pollCount(){
+        $.get(NOTIF + "?method=getCount", function(res){
+            if(res && res.success) updateBadge(res.data.count);
+        }, "json");
+    }
+
+
+function loadNotifList(){
+    
+    $('#notifList').html(
+        '<div class="text-center text-muted py-4">' +
+        '<div class="spinner-border spinner-border-sm"></div>' +
+        '<p class="mt-2 small">Loading...</p></div>'
+    );
+
+    $.get(NOTIF + "?method=getList", function(res){
+        if(!res || !res.success){
+            $('#notifList').html('<div class="notif-empty">⚠️ Failed to load notifications.</div>');
+            return;
+        }
+
+        var notifs = res.data || [];
+        if(!notifs.length){
+            $('#notifList').html(
+                '<div class="notif-empty"> &#128276;<br><strong>All caught up!</strong><br>' +
+                '<small>No notifications yet.</small></div>'
+            );
+            return;
+        }
+
+        var html = '';
+        $.each(notifs, function(i, n){
+            var icon    = iconMap[n.type] || '&#128276;';
+            var unread  = (n.is_read == 0 || n.is_read === false || n.is_read === 'false');
+            var itemCls = unread ? 'notif-item unread' : 'notif-item';
+
+            html += `<div class="${itemCls}" id="notifRow_${n.id}">`;
+            html +=   `<div class="d-flex align-items-start gap-2 p-3">`;
+            html +=     `<span class="notif-icon">${icon}</span>`;
+            html +=     `<div class="flex-grow-1">`;
+            html +=       `<div class="notif-title">${$('<div>').text(n.title).html()}</div>`;
+            html +=       `<div class="notif-msg">${$('<div>').text(n.message).html()}</div>`;
+            html +=       `<div class="notif-time small text-muted">${n.time}</div>`;
+            html +=     `</div>`;
+            
+            if(unread){
+                html += `<button class="notif-read-btn markOneBtn btn btn-sm" data-id="${n.id}" title="Mark as read">✔</button>`;
+            }
+            html +=   `</div>`;
+
+            // === IMPORTANT: Better Click Handler ===
+            if(n.link && n.link.length){
+                html += `<a href="${n.link}" class="stretched-link" ` +
+                        `onclick="markOneRead(${n.id}); event.stopImmediatePropagation();"></a>`;
+            }
+            html += `</div>`;
+        });
+
+        $('#notifList').html(html);
+        pollCount();
+    }, "json");
+}
+    // ── Mark one read 
+    window.markOneRead = function(id){
+    $.post(NOTIF + "?method=markRead", { id: id }, function(res){
+        if(res && res.success){
+            $('#notifRow_' + id).removeClass('unread');
+            pollCount();
+        }
+    }, "json");
+};
+
+    // ── Tick button click 
+    $(document).on('click', '.markOneBtn', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        markOneRead(parseInt($(this).data('id')));
+    });
+
+    // ── Mark all read
+    $(document).on('click', '#markAllReadBtn', function(){
+        $.post(NOTIF + "?method=markAllRead", function(res){
+            if(res && res.success){
+                loadNotifList();
+            }
+        }, "json");
+    });
+
+    
+    $(document).on('click', '#notifBellBtn', function(){
+        var modal = new bootstrap.Modal(document.getElementById('notifModal'));
+        modal.show();
+        loadNotifList();
+    });
+
+    // ── Boot
+    pollCount();
+    setInterval(pollCount, 15000);
+
+})();
+
 
 });
 </script>

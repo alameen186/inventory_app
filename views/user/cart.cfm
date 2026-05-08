@@ -318,17 +318,23 @@ updateUI();
 },"json");
 });
 
-// CHECKOUT (unchanged)
+// CHECKOUT 
 $("#checkoutBtn").click(function(){
-$.post("../../controllers/OrderController.cfm",{action:"checkout"},
-function(res){
-if(res.status==="success"){
-alert(res.message);
-window.location.href="../../index.cfm?page=dashboard&section=orders";
-}else{
-alert(res.message);
-}
-},"json");
+    if(!confirm("Are you sure you want to place this order?")) return;
+
+    $.post("../../controllers/orders/UserOrderController.cfc?method=checkout", 
+        {},  
+        function(res){
+            if(res.status === "success"){
+                alert(res.message);
+                window.location.href = "../../index.cfm?page=dashboard&section=orders";
+            } else {
+                alert(res.message || "Checkout failed. Please try again.");
+            }
+        }, "json")
+        .fail(function(){
+            alert("Server connection error. Please try again.");
+        });
 });
 
 });

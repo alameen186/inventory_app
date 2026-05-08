@@ -336,4 +336,30 @@
 
     </cffunction>
 
+    <cffunction name="getOrderItems" returntype="query" output="false">
+    <cfargument name="order_group_id" type="string" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT product_id 
+        FROM orders 
+        WHERE order_group_id = <cfqueryparam value="#arguments.order_group_id#" cfsqltype="cf_sql_varchar">
+        LIMIT 1
+    </cfquery>
+    
+    <cfreturn q>
+</cffunction>
+
+<!--- Get basic order info (especially user_id) --->
+<cffunction name="getOrderInfo" returntype="query" output="false">
+    <cfargument name="order_group_id" required="true">
+
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT user_id, temp_user_id, order_group_id 
+        FROM orders 
+        WHERE order_group_id = <cfqueryparam value="#arguments.order_group_id#" cfsqltype="cf_sql_varchar">
+        LIMIT 1
+    </cfquery>
+    <cfreturn q>
+</cffunction>
+
     </cfcomponent>

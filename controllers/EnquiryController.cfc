@@ -87,29 +87,55 @@
 <!--- ADD ENQUIRY --->
 <cffunction name="addEnquiry" access="remote" returntype="void" output="true" httpmethod="POST">
     <cfset createObject("component","models.AuthGuard").checkAuth()>
+
     <cfif NOT structKeyExists(form,"product_id") OR NOT len(trim(form.product_id))>
         <cfset sendJSON({status:"error", message:"Product ID required"})>
     </cfif>
+
     <cftry>
         <cfset var enquiryModel = createObject("component","models.Enquiry")>
+        <cfset var productModel = createObject("component","models.Product")>
+        <cfset var notifModel   = createObject("component","models.Notification")>
 
+        <!--- Check if already enquired --->
         <cfset var already = enquiryModel.enquiryExists(
             user_id    = session.user_id,
             product_id = form.product_id
         )>
+
         <cfif already>
             <cfset sendJSON({status:"error", message:"You have already requested this product."})>
         </cfif>
 
+        <!--- Add Enquiry --->
         <cfset var result = enquiryModel.addEnquiry(
             session.user_id,
             form.product_id
         )>
+
         <cfif result>
+            
+            <!--- Get Vendor ID of the product --->
+            <cfset var vendorId = productModel.getVendorId(form.product_id)>
+
+            <!--- Send Notification to Vendor --->
+            <cfif vendorId GT 0>
+                <cfset notifModel.create(
+                    user_id   = vendorId,
+                    sender_id = session.user_id,
+                    type      = "new_enquiry",
+                    title     = "New Enquiry Received",
+                    message   = "A customer has enquired about your product.",
+                    link      = "index.cfm?page=dashboard&section=adminEnquiries"
+                )>
+            </cfif>
+
             <cfset sendJSON({status:"success", message:"Enquiry submitted successfully"})>
+
         <cfelse>
             <cfset sendJSON({status:"error", message:"Could not submit enquiry"})>
         </cfif>
+
     <cfcatch>
         <cfset sendJSON({status:"error", message:"#cfcatch.message#"})>
     </cfcatch>

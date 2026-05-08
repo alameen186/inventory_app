@@ -121,35 +121,43 @@
 </cffunction>
 
     <!--- RESTOCK PRODUCT --->
-    <cffunction name="restockProduct" access="remote" returntype="void" output="true" httpmethod="POST">
-        <cfset createObject("component","models.AuthGuard").checkAuth()>
-        <cfif NOT structKeyExists(form,"product_id") OR NOT len(trim(form.product_id))>
-            <cfset sendJSON({status:"error", message:"Product ID required", html:"", pagination:""})>
+<cffunction name="restockProduct" access="remote" returntype="void" output="true" httpmethod="POST">
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+    
+    <cfif NOT structKeyExists(form,"product_id") OR NOT len(trim(form.product_id))>
+        <cfset sendJSON({status:"error", message:"Product ID required", html:"", pagination:""})>
+    </cfif>
+    
+    <cfif NOT structKeyExists(form,"add_stock") OR NOT val(form.add_stock) GT 0>
+        <cfset sendJSON({status:"error", message:"Valid stock quantity required", html:"", pagination:""})>
+    </cfif>
+
+    <cftry>
+        <cfset var enquiryModel = createObject("component","models.Enquiry")>
+        <cfset var notifModel   = createObject("component","models.Notification")>
+        
+        <cfset var result = enquiryModel.restockProduct(
+            product_id = form.product_id, 
+            add_stock  = val(form.add_stock)
+        )>
+
+        <cfif result>
+            <!--- Notification is now handled inside the model --->
+            <cfset sendJSON({
+                status      : "success", 
+                message     : "Stock updated successfully", 
+                product_id  : form.product_id, 
+                html        : "", 
+                pagination  : ""
+            })>
+        <cfelse>
+            <cfset sendJSON({status:"error", message:"Could not update stock", html:"", pagination:""})>
         </cfif>
-        <cfif NOT structKeyExists(form,"add_stock") OR NOT val(form.add_stock) GT 0>
-            <cfset sendJSON({status:"error", message:"Valid stock quantity required", html:"", pagination:""})>
-        </cfif>
-        <cftry>
-            <cfset var enquiryModel = createObject("component","models.Enquiry")>
-            <cfset var result = enquiryModel.restockProduct(
-                product_id = form.product_id,
-                add_stock  = val(form.add_stock)
-            )>
-            <cfif result>
-                <cfset sendJSON({
-                    status     : "success",
-                    message    : "Stock updated successfully",
-                    product_id : form.product_id,
-                    html       : "",
-                    pagination : ""
-                })>
-            <cfelse>
-                <cfset sendJSON({status:"error", message:"Could not update stock", html:"", pagination:""})>
-            </cfif>
-        <cfcatch>
-            <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+
+    <cfcatch>
+        <cfset sendJSON({status:"error", message:"#cfcatch.message#", html:"", pagination:""})>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 </cfcomponent>
