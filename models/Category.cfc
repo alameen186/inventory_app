@@ -168,4 +168,15 @@
 
     <cfreturn q.recordCount GT 0>
 </cffunction>
+
+<cffunction name="getByVendor" returntype="query" output="false">
+    <cfargument name="vendor_id" type="numeric" required="true">
+    <cfquery name="q" datasource="#application.dsn#">
+        SELECT id, category_name FROM categories
+        WHERE vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+        AND   is_active = 1
+        ORDER BY category_name ASC
+    </cfquery>
+    <cfreturn q>
+</cffunction>
 </cfcomponent>

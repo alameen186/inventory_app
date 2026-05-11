@@ -52,7 +52,10 @@
     <cfinclude template="../views/vendor/scheduledOrders.cfm">   
 
 <cfelseif url.section EQ "vendorChat">
-    <cfinclude template="../views/vendor/chats.cfm">    
+    <cfinclude template="../views/vendor/chats.cfm">  
+
+<cfelseif url.section EQ "report">
+    <cfinclude template="../views/reports.cfm">    
 
 <cfelse>
     <cfoutput>
