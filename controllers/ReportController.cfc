@@ -1,7 +1,5 @@
 <cfcomponent output="false">
 
-    <!--- ── HELPERS ── --->
-
     <cffunction name="jsonRes" access="private" returntype="void" output="true">
         <cfargument name="success" type="boolean" required="true">
         <cfargument name="message" type="string"  default="">

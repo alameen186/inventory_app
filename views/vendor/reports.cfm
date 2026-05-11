@@ -2,7 +2,6 @@
     <cfabort>
 </cfif>
 
-<!--- Load categories at top before any HTML --->
 <cfset vendorCategories = createObject("component","models.Category").getByVendor(session.user_id)>
 
 <div class="container-fluid mt-3">
@@ -171,7 +170,7 @@
         });
     });
 
-    // ── PDF — opens in new tab, browser shows save dialog
+    // ── PDF 
     $('#pdfBtn').on('click', function(){
         if(!validate()) return;
         var params = $.param($.extend(getParams(), { method: 'generatePDF' }));
