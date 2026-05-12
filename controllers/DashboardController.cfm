@@ -55,7 +55,13 @@
     <cfinclude template="../views/vendor/chats.cfm">  
 
 <cfelseif url.section EQ "report">
-    <cfinclude template="../views/reports.cfm">    
+    <cfinclude template="../views/vendor/reports.cfm">    
+
+<cfelseif url.section EQ "staff">
+    <cfinclude template="../views/vendor/staff.cfm">    
+
+<cfelseif url.section EQ "staffLeave">
+    <cfinclude template="../views/vendor/leaves.cfm">    
 
 <cfelse>
     <cfoutput>

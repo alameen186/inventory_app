@@ -124,7 +124,7 @@
         <cfargument name="q"           type="query"  required="true">
 
         <!--- Style constants — ## escapes the # inside cfoutput --->
-        <cfset var H  = "background:##1a1a2e;color:##ffffff;">  <!--- header row --->
+        <cfset var H  = "background:##1a1a2e;color:##ffffff;">
         <cfset var TP = "padding:7px;">
         <cfset var TD = "padding:6px;border-bottom:1px solid ##eeeeee;">
 
