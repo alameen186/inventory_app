@@ -526,4 +526,40 @@
     <cfreturn q.recordCount ? val(q.vendor_id) : 0>
 </cffunction>
 
+   <cffunction name="getActiveOfferForProduct" returntype="struct" output="false">
+    <cfargument name="product_id" type="numeric" required="true">
+
+    <cfquery name="local.q" datasource="#application.dsn#">
+        SELECT 
+            o.discount_type,
+            o.discount_value,
+            o.offer_name
+        FROM offers o
+        WHERE o.is_active = 1
+          AND o.start_date <= CURDATE()
+          AND o.end_date >= CURDATE()
+          AND (
+                (o.offer_type = 'individual' AND o.product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">)
+             OR (o.offer_type = 'seasonal' 
+                 AND o.category_id = (SELECT category_id FROM products p WHERE p.id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">))
+          )
+        ORDER BY o.discount_value DESC
+        LIMIT 1
+    </cfquery>
+
+    <cfif local.q.recordCount EQ 0>
+        <cfreturn { hasOffer: false }>
+    </cfif>
+
+    <cfreturn {
+        hasOffer      : true,
+        discount_type : local.q.discount_type,
+        discount_value: local.q.discount_value,
+        offer_name    : local.q.offer_name
+    }>
+</cffunction>
+   
+
 </cfcomponent>
+
+

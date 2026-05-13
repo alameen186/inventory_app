@@ -33,6 +33,8 @@
             <cfset var reviewModel  = createObject("component","models.Review")>
             <cfset var productModel = createObject("component","models.Product")>
             <cfset var imageModel   = createObject("component","models.ProductImage")>
+            <cfset var offerModel   = createObject("component","models.Offer")>
+
 
             <!--- product details --->
             <cfset var product = productModel.getProductById(pid)>
@@ -48,7 +50,6 @@
                     <cfset imagesArray.add(javaCast("string", trim(imgQuery.image)))>
                 </cfloop>
             <cfelse>
-                <!--- Legacy fallback: images stored directly in products table columns --->
                 <cfif len(trim(product.image))>
                     <cfset imagesArray.add(javaCast("string", trim(product.image)))>
                 </cfif>
@@ -60,10 +61,8 @@
                 </cfif>
             </cfif>
 
-            <!--- Primary image for the cart hidden input (first image, 0-based index) --->
             <cfset var primaryImage = imagesArray.size() GT 0 ? imagesArray.get(0) : "">
 
-            <!--- average rating + total --->
             <cfset var avgData      = reviewModel.getAverageRating(product_id = pid)>
             <cfset var avgRating    = avgData.avg_rating>
             <cfset var totalReviews = avgData.total_reviews>
@@ -144,24 +143,46 @@
             </cfoutput>
             </cfsavecontent>
 
+            <!--- ── Check for active offer ── --->
+            <cfset var offerInfo     = offerModel.getActiveOfferForProduct(pid)>
+            <cfset var originalPrice = product.price>
+            <cfset var finalPrice    = originalPrice>
+            <cfset var hasOffer      = false>
+            <cfset var discountLabel = "">
+            
+            <cfif offerInfo.hasOffer>
+                <cfset hasOffer = true>
+                <cfif offerInfo.discount_type EQ "percentage">
+                    <cfset finalPrice    = originalPrice * (1 - offerInfo.discount_value / 100)>
+                    <cfset discountLabel = numberFormat(offerInfo.discount_value,"0.00") & "% OFF">
+                <cfelse>
+                    <cfset finalPrice    = max(0, originalPrice - offerInfo.discount_value)>
+                    <cfset discountLabel = "Rs." & numberFormat(offerInfo.discount_value,"0.00") & " OFF">
+                </cfif>
+            </cfif>
+            
             <cfset sendJSON({
-                status        : "success",
-                vendor_id     : product.vendor_id,
-                product_name  : product.product_name,
-                category_name : product.category_name,
-                business_name : product.business_name,
-                price         : product.price,
-                stock         : product.stock,
-                image         : primaryImage,
-                images        : imagesArray,
-                expiry_date   : len(trim(product.expiry_date)) ? dateFormat(product.expiry_date,"dd-mmm-yyyy") : "",
-                avg_rating    : avgRating,
-                total_reviews : totalReviews,
-                star_counts   : starCounts,
-                can_review    : canReview,
-                has_reviewed  : hasReviewed,
-                reviews_html  : reviewsHTML,
-                pagination    : paginationHTML
+                status         : "success",
+                vendor_id      : product.vendor_id,
+                product_name   : product.product_name,
+                category_name  : product.category_name,
+                business_name  : product.business_name,
+                price          : numberFormat(finalPrice, "0.00"),
+                original_price : numberFormat(originalPrice, "0.00"),
+                has_offer      : hasOffer,
+                discount_label : discountLabel,
+                offer_name     : hasOffer ? offerInfo.offer_name : "",
+                stock          : product.stock,
+                image          : primaryImage,
+                images         : imagesArray,
+                expiry_date    : len(trim(product.expiry_date)) ? dateFormat(product.expiry_date,"dd-mmm-yyyy") : "",
+                avg_rating     : avgRating,
+                total_reviews  : totalReviews,
+                star_counts    : starCounts,
+                can_review     : canReview,
+                has_reviewed   : hasReviewed,
+                reviews_html   : reviewsHTML,
+                pagination     : paginationHTML
             })>
 
         <cfcatch>

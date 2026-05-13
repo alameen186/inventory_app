@@ -64,7 +64,8 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vendorChat'>active</cfif>"      data-section="vendorChat">Chat</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'report'>active</cfif>"      data-section="report">Report</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'staff'>active</cfif>"      data-section="staff">Staff</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'staff'>active</cfif>"      data-section="staffLeave">Staff Leave</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'staffLeave'>active</cfif>"      data-section="staffLeave">Staff Leave</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'offer'>active</cfif>"      data-section="offer">Offer</a></li>
         <cfif session.plan_name EQ "pro">
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
@@ -112,6 +113,7 @@
             <li><a href="#" class="nav-link text-white menuLink" data-section="report">Report</a></li>
             <li><a href="#" class="nav-link text-white menuLink" data-section="staff">Staff</a></li>
             <li><a href="#" class="nav-link text-white menuLink" data-section="staffLeave">Staff Leave</a></li>
+            <li><a href="#" class="nav-link text-white menuLink" data-section="offer">Offer</a></li>
             <cfif session.plan_name EQ "pro">
             <li><a href="#" class="nav-link text-white menuLink" data-section="adminEnquiries">Enquiries</a></li>
             <li><a href="#" class="nav-link text-white menuLink" data-section="scheduledOrders">Scheduled Orders</a></li>
@@ -339,6 +341,8 @@
             <cfinclude template="../vendor/staff.cfm">
         <cfelseif section EQ "staffLeave">
             <cfinclude template="../vendor/leaves.cfm">
+        <cfelseif section EQ "offer">
+            <cfinclude template="../vendor/offers.cfm">
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>
