@@ -102,11 +102,17 @@
                     <!---  Job Info --->
                     <h6 class="fw-bold text-primary border-bottom pb-1 mb-3">Job Information</h6>
                     <div class="row g-3 mb-3">
+                        
+                        <div class="col-md-4">
+                           <label class="form-label fw-semibold">Department</label>
+                           <input type="text" class="form-control" id="department" name="department"
+                                  placeholder="e.g. Technical, Sales, Support">
+                       </div>
 
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Position / Role</label>
                             <input type="text" class="form-control" id="position" name="position"
-                                   placeholder="e.g. Delivery Boy, Manager">
+                                   placeholder="e.g. Supervisor, Manager">
                         </div>
 
                         <div class="col-md-4">
@@ -115,7 +121,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Salary (₹)</label>
+                            <label class="form-label fw-semibold">Salary (<i class="bi bi-currency-rupee"></i>)</label>
                             <input type="number" class="form-control" id="salary" name="salary"
                                    min="0" step="0.01">
                         </div>
@@ -131,6 +137,16 @@
                             <input type="file" class="form-control" id="profileImage"
                                    name="profile_image" accept="image/*">
                             <div id="profilePreview" class="mt-2"></div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">
+                                Login Password
+                                <small class="text-muted fw-normal">(for staff portal access)</small>
+                            </label>
+                            <input type="password" class="form-control" id="staffPassword"
+                                   name="password" autocomplete="new-password"
+                                   placeholder="Leave blank to keep existing password">
                         </div>
 
                         <div class="col-md-8">
@@ -240,6 +256,8 @@ $(document).on('click', '.editBtn', function(){
             $('#dob').val(s.date_of_birth);
             $('#address').val(s.address);
             $('#position').val(s.position);
+            $('#department').val(s.department);
+            $('#staffPassword').val('');
             $('#salary').val(s.salary);
             $('#joinDate').val(s.join_date);
             $('#aadhaarNumber').val(s.aadhaar_number);
@@ -353,7 +371,7 @@ $(document).on('click', '.editBtn', function(){
                 if(!res.success){ $('#docsModalBody').html('<p class="text-danger">'+res.message+'</p>'); return; }
                 var d    = res.data;
                 var base = 'assets/images/staff/';
-                $('#docsModalTitle').text(d.full_name + ' — Documents');
+                $('#docsModalTitle').text(d.full_name + 'Documents');
                 $('#docsModalBody').html(
                     '<div class="row g-3">' +
                         '<div class="col-12">' +
