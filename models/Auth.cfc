@@ -33,7 +33,7 @@
     role_id = arguments.userQuery.role_id[1],
     role_name = arguments.userQuery.role_name[1]
 }>       
-        <cfelse>
+        <cfelse>    
          <cfset result.message = "Invalid password">   
         </cfif>
 

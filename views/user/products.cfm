@@ -153,7 +153,23 @@
                 <div class="card-body d-flex flex-column text-center p-2">
                     <h6 class="card-title mb-1">#product_name#</h6>
                     <p class="text-muted small mb-1">#category_name#</p>
-                    <p class="fw-semibold mb-1">#price# /-</p>
+                    <div class="mb-2">
+                        <cfset offerInfo = productModel.getActiveOfferForProduct(id)>
+                        <cfif offerInfo.hasOffer>
+                            <cfset finalPrice = (offerInfo.discount_type EQ "percentage") 
+                                                ? price * (1 - offerInfo.discount_value/100) 
+                                                : max(0, price - offerInfo.discount_value)>
+                            <cfset discPercent = (offerInfo.discount_type EQ "percentage") 
+                                                ? offerInfo.discount_value 
+                                                : round((offerInfo.discount_value / price) * 100)>
+                            
+                            <span class="text-muted text-decoration-line-through small"><i class="bi bi-currency-rupee"></i>#numberFormat(price, '0.00')#</span><br>
+                            <span class="fw-bold fs-5 text-danger"><i class="bi bi-currency-rupee"></i>#numberFormat(finalPrice, '0.00')#</span>
+                            <span class="badge bg-danger ms-1">-#discPercent#%</span>
+                        <cfelse>
+                            <span class="fw-bold fs-5"><i class="bi bi-currency-rupee"></i>#numberFormat(price, '0.00')# /-</span>
+                        </cfif>
+                    </div>
                     <div class="mb-2">
                         <cfif val(avg_rating) GT 0>
                             <span class="text-warning small">
@@ -522,7 +538,17 @@ $(document).ready(function(){
                 $("#modalProductName").text(res.product_name);
                 $("#modalCategoryBadge").text(res.category_name || "");
                 $("#modalBusinessName").text(res.business_name || "");
-                $("#modalPrice").text(res.price ? res.price + " /-" : "");
+                // ── Price display with offer support
+                if(res.has_offer){
+                    $("#modalPrice").html(
+                        '<span class="text-muted text-decoration-line-through fs-6 me-1"><i class="bi bi-currency-rupee"></i>' + res.original_price + '</span>' +
+                        '<span class="text-danger fw-bold"><i class="bi bi-currency-rupee"></i>' + res.price + '</span>' +
+                        '<span class="badge bg-danger ms-2">' + res.discount_label + '</span>' +
+                        '<div class="mt-1"><small class="text-success fw-semibold"><i class="bi bi-bookmark-check-fill"></i> ' + res.offer_name + '</small></div>'
+                    );
+                } else {
+                    $("#modalPrice").text(res.price ? '<i class="bi bi-currency-rupee"></i>' + res.price + ' /-' : '');
+                }
                 $("#modalExpiry").text(res.expiry_date || "N/A");
 
                 var avg = parseFloat(res.avg_rating) || 0;
@@ -593,7 +619,7 @@ $("#modalCartArea").after(
     ' data-vendor-id="' + (res.vendor_id || '') + '"' +
     ' data-product-id="' + pid + '"' +
     ' data-product-name="' + (res.product_name || '') + '">' +
-    '💬 Chat with Vendor' +
+    '<i class="bi bi-chat-dots-fill"></i> Chat with Vendor' +
     '</button></div>'
 );
                 // ── REVIEW ELIGIBILITY
@@ -718,7 +744,7 @@ $("#modalCartArea").after(
             success  : function(res){
                 if(!res.success){
                     alert(res.message || "Could not start chat.");
-                    btn.prop("disabled", false).text("💬 Chat with Vendor");
+                    btn.prop("disabled", false).text(" Chat with Vendor");
                     return;
                 }
  
@@ -741,7 +767,7 @@ $("#modalCartArea").after(
             error : function(xhr){
                 console.log("Chat error:", xhr.responseText);
                 alert("Server error. Check console.");
-                btn.prop("disabled", false).text("💬 Chat with Vendor");
+                btn.prop("disabled", false).text(" Chat with Vendor");
             }
         });
     });

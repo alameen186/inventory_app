@@ -4,6 +4,7 @@
     <title>Auth</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-light">
 
@@ -49,6 +50,42 @@
                                     Login
                                 </button>
                             </form>
+                            <!-- Staff Login Toggle Link -->
+                         <div class="text-center mt-3">
+                             <hr>
+                             <p class="text-muted small mb-2">Are you a staff member?</p>
+                             <button class="btn btn-outline-secondary btn-sm" id="toggleStaffLogin">
+                                 <i class="bi bi-person-badge me-1"></i> Staff Login
+                             </button>
+                         </div>
+                         
+                         <!-- Staff Login Panel (hidden by default) -->
+                         <div id="staffLoginPanel" style="display:none;" class="mt-3">
+                             <div class="card border-secondary">
+                                 <div class="card-header bg-secondary text-white fw-semibold">
+                                     <i class="bi bi-person-badge me-2"></i>Staff Login
+                                 </div>
+                                 <div class="card-body">
+                                     <p class="text-muted small mb-3">
+                                         Login with the email and password your employer set up for you.
+                                     </p>
+                                     <form id="staffLoginForm">
+                                         <div class="mb-3">
+                                             <label class="form-label">Staff Email</label>
+                                             <input type="email" name="email" class="form-control" placeholder="your@email.com" required>
+                                         </div>
+                                         <div class="mb-3">
+                                             <label class="form-label">Password</label>
+                                             <input type="password" name="password" class="form-control" required>
+                                         </div>
+                                         <button type="submit" class="btn btn-secondary w-100">
+                                             <span class="spinner-border spinner-border-sm d-none" id="staffSpinner"></span>
+                                             Login as Staff
+                                         </button>
+                                     </form>
+                                 </div>
+                             </div>
+                         </div>
                         </div>
 
                         <!-- SIGNUP -->
@@ -164,6 +201,44 @@
         var selected = $(this).find("option:selected").text().toLowerCase();
         $("#vendorFields").toggle(selected === "vendor");
     });
+
+    // Staff login toggle
+$('#toggleStaffLogin').on('click', function () {
+    var panel = $('#staffLoginPanel');
+    var normalForm = $('#loginForm');
+    var isHidden = !panel.is(':visible');
+
+    panel.slideToggle(300, function () {
+        var nowVisible = panel.is(':visible');
+        normalForm.slideToggle(!nowVisible); 
+        $('#toggleStaffLogin').text(nowVisible ? 'Hide Staff Login' : 'Staff Login');
+    });
+});
+
+// Staff login submit
+$('#staffLoginForm').on('submit', function(e){
+    e.preventDefault();
+    var spinner = $('#staffSpinner');
+    spinner.removeClass('d-none');
+    $.ajax({
+        url      : 'controllers/StaffAuthController.cfc?method=login',
+        type     : 'POST',
+        data     : $(this).serialize(),
+        dataType : 'json',
+        success  : function(res){
+            if(res.success){
+                showAlert(res.message, 'success');
+                setTimeout(function(){
+                    window.location.href = res.data.redirect;
+                }, 600);
+            } else {
+                showAlert(res.message, 'danger');
+            }
+        },
+        error: function(){ showAlert('Network error. Try again.', 'danger'); },
+        complete: function(){ spinner.addClass('d-none'); }
+    });
+});
 
 </script>
 

@@ -78,7 +78,7 @@
                 return;
             }
             var html = '';
-            $.each(res.data, function(i,
+            $.each(res.data, function(i,c
             ){
                 var name    = $('<div>').text(c.business_name || c.other_name || 'Vendor').html();
                 var preview = $('<div>').text(c.last_message ? c.last_message.substring(0,50) : 'No messages yet').html();

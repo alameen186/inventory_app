@@ -54,37 +54,39 @@
                 <tr><td colspan="8" class="text-center text-muted py-4">No leave records found.</td></tr>
             <cfelse>
                 <cfloop query="q">
-                <tr>
-                    <td>#encodeForHTML(q.staff_name)#<br>
-                        <small class="text-muted">#encodeForHTML(q.position)#</small>
-                    </td>
-                    <td>#encodeForHTML(q.leave_type)#</td>
-                    <td>#dateFormat(q.from_date,'dd-mmm-yy')#</td>
-                    <td>#dateFormat(q.to_date,'dd-mmm-yy')#</td>
-                    <td class="text-center">#q.total_days#</td>
-                    <td>#len(q.reason) ? encodeForHTML(q.reason) : '-'#</td>
-                    <td class="text-center">
-                        <cfif q.status EQ "approved">
-                            <span class="badge bg-success">Approved</span>
-                        <cfelseif q.status EQ "rejected">
-                            <span class="badge bg-danger">Rejected</span>
-                            <cfif len(q.reject_reason)>
-                                <br><small class="text-muted">#encodeForHTML(q.reject_reason)#</small>
-                            </cfif>
-                        <cfelse>
-                            <span class="badge bg-warning text-dark">Pending</span>
-                        </cfif>
-                    </td>
-                    <td class="text-center">
-                        <cfif q.status EQ "pending">
-                            <button class="btn btn-sm btn-success approveBtn mb-1" data-id="#q.id#">Approve</button>
-                            <button class="btn btn-sm btn-danger rejectBtn"  data-id="#q.id#">Reject</button>
-                        <cfelse>
-                            <span class="text-muted">—</span>
-                        </cfif>
-                    </td>
-                </tr>
-                </cfloop>
+<tr>
+    <td>
+        #encodeForHTML(q.staff_name)#<br>
+        <small class="text-muted">#encodeForHTML(q.position)#</small>
+    </td>
+    <td>#len(trim(q.department)) ? encodeForHTML(q.department) : '-'#</td>  <!--- NEW --->
+    <td>#encodeForHTML(q.leave_type)#</td>
+    <td>#dateFormat(q.from_date,'dd-mmm-yy')#</td>
+    <td>#dateFormat(q.to_date,'dd-mmm-yy')#</td>
+    <td class="text-center">#q.total_days#</td>
+    <td>#len(q.reason) ? encodeForHTML(q.reason) : '-'#</td>
+    <td class="text-center">
+        <cfif q.status EQ "approved">
+            <span class="badge bg-success">Approved</span>
+        <cfelseif q.status EQ "rejected">
+            <span class="badge bg-danger">Rejected</span>
+            <cfif len(q.reject_reason)>
+                <br><small class="text-muted">#encodeForHTML(q.reject_reason)#</small>
+            </cfif>
+        <cfelse>
+            <span class="badge bg-warning text-dark">Pending</span>
+        </cfif>
+    </td>
+    <td class="text-center">
+        <cfif q.status EQ "pending">
+            <button class="btn btn-sm btn-success approveBtn mb-1" data-id="#q.id#">Approve</button>
+            <button class="btn btn-sm btn-danger rejectBtn" data-id="#q.id#">Reject</button>
+        <cfelse>
+            <span class="text-muted"><i class="bi bi-ban"></i></span>
+        </cfif>
+    </td>
+</tr>
+</cfloop>
             </cfif>
             </cfoutput>
             </cfsavecontent>
@@ -97,16 +99,36 @@
     </cffunction>
 
     <cffunction name="approve" access="remote" returntype="void" output="true" httpMethod="POST">
-        <cfset requireVendor()>
-        <cftry>
-            <cfset var model  = createObject("component","models.Leave")>
-            <cfset var result = model.updateStatus(val(form.id), session.user_id, "approved")>
-            <cfset jsonRes(result.success, result.success ? "Leave approved" : result.message)>
-        <cfcatch>
-            <cfset jsonRes(false,"Error: " & cfcatch.message)>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+    <cfset requireVendor()>
+    <cftry>
+        <cfset var leaveModel = createObject("component","models.Leave")>
+        <cfset var leaveId    = val(form.id)>
+        <cfset var conflict   = leaveModel.getDeptConflictInfo(leaveId, session.user_id)>
+        <cfset var forced     = structKeyExists(form,"force_approve") AND form.force_approve EQ "1">
+
+        <!--- Only block (with warning) when limit is actually hit AND vendor hasn't force-approved --->
+        <cfif conflict.triggered AND NOT forced>
+            <cfset jsonRes(false,
+                "Department '" & conflict.department & "' already has " & conflict.conflict_count
+                & " of " & conflict.max_on_leave & " allowed staff on leave during these dates: "
+                & conflict.names,
+                {
+                    "conflict"       : true,
+                    "conflict_count" : conflict.conflict_count,
+                    "max_on_leave"   : conflict.max_on_leave,
+                    "department"     : conflict.department,
+                    "names"          : conflict.names
+                }
+            )>
+        </cfif>
+
+        <cfset var result = leaveModel.updateStatus(leaveId, session.user_id, "approved")>
+        <cfset jsonRes(result.success, result.success ? "Leave approved" : result.message)>
+    <cfcatch>
+        <cfset jsonRes(false,"Error: " & cfcatch.message)>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
     <cffunction name="reject" access="remote" returntype="void" output="true" httpMethod="POST">
         <cfset requireVendor()>
@@ -163,5 +185,124 @@
         </cfcatch>
         </cftry>
     </cffunction>
+
+    <!--- Staff self-applies leave (uses staff session, not vendor session) --->
+<cffunction name="applyByStaff" access="remote" returntype="void" output="true" httpMethod="POST">
+    <cftry>
+        <!--- Must be logged in as staff --->
+        <cfif NOT structKeyExists(session,"is_staff") OR NOT session.is_staff>
+            <cfset jsonRes(false,"Unauthorized")>
+        </cfif>
+
+        <cfset var model  = createObject("component","models.Leave")>
+        <cfset var result = model.applyLeave(
+            vendor_id     = session.staff_vendor,
+            staff_id      = session.staff_id,
+            leave_type_id = val(form.leave_type_id),
+            from_date     = trim(form.from_date),
+            to_date       = trim(form.to_date),
+            total_days    = val(form.total_days),
+            reason        = structKeyExists(form,"reason") ? trim(form.reason) : ""
+        )>
+        <cfset jsonRes(result.success, result.success ? "Leave application submitted. Pending vendor approval." : result.message)>
+    <cfcatch>
+        <cfset jsonRes(false,"Error: " & cfcatch.message)>
+    </cfcatch>
+    </cftry>
+</cffunction>
+
+<!--- Staff views only their own leaves --->
+<cffunction name="getMyLeaves" access="remote" returntype="void" output="true" httpMethod="GET">
+    <cftry>
+        <cfif NOT structKeyExists(session,"is_staff") OR NOT session.is_staff>
+            <cfset jsonRes(false,"Unauthorized")>
+        </cfif>
+
+        <cfset var model = createObject("component","models.Leave")>
+        <cfset var q     = model.getLeaves(
+            vendor_id = session.staff_vendor,
+            staff_id  = session.staff_id
+        )>
+
+        <cfsavecontent variable="local.html">
+        <cfoutput>
+        <cfif q.recordCount EQ 0>
+            <tr><td colspan="6" class="text-center text-muted py-4">No leave records yet.</td></tr>
+        <cfelse>
+            <cfloop query="q">
+            <tr>
+                <td>#encodeForHTML(q.leave_type)#</td>
+                <td>#dateFormat(q.from_date,'dd-mmm-yy')#</td>
+                <td>#dateFormat(q.to_date,'dd-mmm-yy')#</td>
+                <td class="text-center">#q.total_days#</td>
+                <td>#len(q.reason) ? encodeForHTML(q.reason) : '-'#</td>
+                <td class="text-center">
+                    <cfif q.status EQ "approved">
+                        <span class="badge bg-success">Approved</span>
+                    <cfelseif q.status EQ "rejected">
+                        <span class="badge bg-danger">Rejected</span>
+                        <cfif len(q.reject_reason)>
+                            <br><small class="text-muted">#encodeForHTML(q.reject_reason)#</small>
+                        </cfif>
+                    <cfelse>
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    </cfif>
+                </td>
+            </tr>
+            </cfloop>
+        </cfif>
+        </cfoutput>
+        </cfsavecontent>
+
+        <cfset jsonRes(true,"",{ "html": local.html })>
+    <cfcatch>
+        <cfset jsonRes(false,"Error: " & cfcatch.message)>
+    </cfcatch>
+    </cftry>
+</cffunction>
+
+<cffunction name="getMyBalance" access="remote" returntype="void" output="true" httpMethod="GET">
+    <cftry>
+        <cfif NOT structKeyExists(session,"is_staff") OR NOT session.is_staff>
+            <cfset jsonRes(false,"Unauthorized")>
+        </cfif>
+
+        <cfset var model = createObject("component","models.Leave")>
+        <cfset var q     = model.getBalance(session.staff_id, session.staff_vendor)>
+
+        <cfsavecontent variable="local.html">
+        <cfoutput>
+        <cfif q.recordCount EQ 0>
+            <div class="col-12 text-muted">No leave types configured.</div>
+        <cfelse>
+            <cfloop query="q">
+            <div class="col-md-4">
+                <div class="card text-center border-0 bg-light">
+                    <div class="card-body py-3">
+                        <div class="fw-bold text-dark">#encodeForHTML(q.type_name)#</div>
+                        <div class="display-6 fw-bold #q.remaining_days LTE 1 ? 'text-danger' : 'text-success'#">
+                            #q.remaining_days#
+                        </div>
+                        <small class="text-muted">remaining of #q.max_days# days/yr</small>
+                        <div class="progress mt-2" style="height:6px;">
+                            <div class="progress-bar #q.remaining_days LTE 1 ? 'bg-danger' : 'bg-success'#"
+                                 style="width:#(q.used_days/q.max_days)*100#%">
+                            </div>
+                        </div>
+                        <small class="text-muted">#q.used_days# used</small>
+                    </div>
+                </div>
+            </div>
+            </cfloop>
+        </cfif>
+        </cfoutput>
+        </cfsavecontent>
+
+        <cfset jsonRes(true,"",{ "html": local.html })>
+    <cfcatch>
+        <cfset jsonRes(false,"Error: " & cfcatch.message)>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
 </cfcomponent>

@@ -79,6 +79,8 @@
                 date_of_birth  : trim(structKeyExists(form,"date_of_birth")  ? form.date_of_birth  : ""),
                 address        : trim(structKeyExists(form,"address")        ? form.address        : ""),
                 position       : trim(structKeyExists(form,"position")       ? form.position       : ""),
+                department : trim(structKeyExists(form,"department") ? form.department : ""),
+                password   : trim(structKeyExists(form,"password")   ? form.password   : ""),
                 salary         : trim(structKeyExists(form,"salary")         ? form.salary         : ""),
                 join_date      : trim(structKeyExists(form,"join_date")      ? form.join_date      : ""),
                 aadhaar_number : trim(structKeyExists(form,"aadhaar_number") ? form.aadhaar_number : ""),
@@ -170,36 +172,37 @@
 
     <!--- for edit modal --->
     <cffunction name="getOne" access="remote" returntype="void" output="true" httpMethod="GET">
-        <cfset requireVendor()>
-        <cftry>
-            <cfset var model = createObject("component","models.Staff")>
-            <cfset var q     = model.getById(val(url.id), session.user_id)>
+    <cfset requireVendor()>
+    <cftry>
+        <cfset var model = createObject("component","models.Staff")>
+        <cfset var q     = model.getById(val(url.id), session.user_id)>
 
-            <cfif q.recordCount EQ 0>
-                <cfset jsonRes(false,"Staff not found")>
-            </cfif>
+        <cfif q.recordCount EQ 0>
+            <cfset jsonRes(false,"Staff not found")>
+        </cfif>
 
-            <cfset jsonRes(true,"",{
-                "id"             : q.id,
-                "full_name"      : q.full_name,
-                "phone"          : q.phone,
-                "email"          : q.email,
-                "gender"         : q.gender,
-                "date_of_birth"  : len(q.date_of_birth) ? dateFormat(q.date_of_birth,"yyyy-mm-dd") : "",
-                "address"        : q.address,
-                "position"       : q.position,
-                "salary"         : q.salary,
-                "join_date"      : len(q.join_date) ? dateFormat(q.join_date,"yyyy-mm-dd") : "",
-                "profile_image"  : q.profile_image,
-                "aadhaar_number" : q.aadhaar_number,
-                "aadhaar_image"  : q.aadhaar_front,
-                "is_active"      : q.is_active
-            })>
-        <cfcatch>
-            <cfset jsonRes(false,"Error: " & cfcatch.message)>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+        <cfset jsonRes(true,"",{
+            "id"             : q.id,
+            "full_name"      : q.full_name,
+            "phone"          : q.phone,
+            "email"          : q.email,
+            "gender"         : q.gender,
+            "date_of_birth"  : len(q.date_of_birth) ? dateFormat(q.date_of_birth,"yyyy-mm-dd") : "",
+            "address"        : q.address,
+            "position"       : q.position,
+            "department"     : q.department,
+            "salary"         : q.salary,
+            "join_date"      : len(q.join_date) ? dateFormat(q.join_date,"yyyy-mm-dd") : "",
+            "profile_image"  : q.profile_image,
+            "aadhaar_number" : q.aadhaar_number,
+            "aadhaar_image"  : q.aadhaar_front,
+            "is_active"      : q.is_active
+        })>
+    <cfcatch>
+        <cfset jsonRes(false,"Error: " & cfcatch.message)>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
     <!---  TOGGLE STATUS  --->
     <cffunction name="toggleStatus" access="remote" returntype="void" output="true" httpMethod="POST">

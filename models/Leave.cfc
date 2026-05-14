@@ -50,6 +50,7 @@
                 sl.id,
                 s.full_name      AS staff_name,
                 s.position,
+                s.department,
                 lt.type_name     AS leave_type,
                 sl.from_date,
                 sl.to_date,
@@ -123,5 +124,65 @@
         </cfquery>
         <cfreturn local.q>
     </cffunction>
+
+    <!--- Add this function to your existing Leave.cfc --->
+
+<cffunction name="getDeptConflictInfo" returntype="struct" output="false">
+    <cfargument name="leave_id"  type="numeric" required="true">
+    <cfargument name="vendor_id" type="numeric" required="true">
+
+    <!--- Get this leave request's staff department and dates --->
+    <cfquery name="local.lq" datasource="#application.dsn#">
+        SELECT sl.from_date, sl.to_date, s.department
+        FROM staff_leaves sl
+        JOIN staff s ON s.id = sl.staff_id
+        WHERE sl.id       = <cfqueryparam value="#arguments.leave_id#"  cfsqltype="cf_sql_integer">
+        AND   s.vendor_id = <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <!--- No dept assigned — skip conflict check entirely --->
+    <cfif local.lq.recordCount EQ 0 OR NOT len(trim(local.lq.department))>
+        <cfreturn { conflict_count: 0, names: "", department: "", max_on_leave: 0, triggered: false }>
+    </cfif>
+
+    <!--- Get this vendor's max_on_leave setting for this department --->
+    <!--- Default to 1 if vendor hasn't created a departments record yet --->
+    <cfquery name="local.dq" datasource="#application.dsn#">
+        SELECT max_on_leave
+        FROM departments
+        WHERE vendor_id = <cfqueryparam value="#arguments.vendor_id#"      cfsqltype="cf_sql_integer">
+        AND   name      = <cfqueryparam value="#trim(local.lq.department)#" cfsqltype="cf_sql_varchar">
+        LIMIT 1
+    </cfquery>
+
+    <cfset var maxOnLeave = local.dq.recordCount ? local.dq.max_on_leave : 1>
+
+    <!--- Count already approved overlapping leaves in same dept --->
+    <cfquery name="local.cq" datasource="#application.dsn#">
+        SELECT s.full_name
+        FROM staff_leaves sl
+        JOIN staff s ON s.id = sl.staff_id
+        WHERE s.vendor_id  = <cfqueryparam value="#arguments.vendor_id#"      cfsqltype="cf_sql_integer">
+        AND   s.department = <cfqueryparam value="#trim(local.lq.department)#" cfsqltype="cf_sql_varchar">
+        AND   sl.status    = 'approved'
+        AND   sl.from_date <= <cfqueryparam value="#local.lq.to_date#"         cfsqltype="cf_sql_date">
+        AND   sl.to_date   >= <cfqueryparam value="#local.lq.from_date#"       cfsqltype="cf_sql_date">
+        AND   sl.id        != <cfqueryparam value="#arguments.leave_id#"       cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfset var names = "">
+    <cfloop query="local.cq">
+        <cfset names = listAppend(names, local.cq.full_name)>
+    </cfloop>
+
+    <!--- triggered = true only when already-approved count hits the limit --->
+    <cfreturn {
+        conflict_count : local.cq.recordCount,
+        names          : names,
+        department     : local.lq.department,
+        max_on_leave   : maxOnLeave,
+        triggered      : local.cq.recordCount GTE maxOnLeave
+    }>
+</cffunction>
 
 </cfcomponent>

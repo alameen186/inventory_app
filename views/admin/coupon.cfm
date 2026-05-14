@@ -37,7 +37,7 @@
                 <label class="form-label small">Type</label>
                 <select id="cc_type" class="form-control">
                     <option value="percent">% Percent</option>
-                    <option value="fixed">₹ Fixed</option>
+                    <option value="fixed"><i class="bi bi-currency-rupee"></i> Fixed</option>
                 </select>
             </div>
             <div class="col-6 col-md-2">
@@ -205,7 +205,7 @@
                         <label class="form-label small">Type</label>
                         <select id="ec_type" class="form-control">
                             <option value="percent">% Percent</option>
-                            <option value="fixed">₹ Fixed</option>
+                            <option value="fixed"><i class="bi bi-currency-rupee"></i> Fixed</option>
                         </select>
                     </div>
                     <div class="col-6 col-md-4">

@@ -18,6 +18,15 @@
 
     <cfinclude template="../views/dashboard/dashboard.cfm">
 
+<cfelseif page EQ "staffDashboard">
+
+    <!--- Staff portal — uses staff session, not user session --->
+    <cfif NOT structKeyExists(session,"is_staff") OR NOT session.is_staff>
+        <cflocation url="../index.cfm?page=auth" addtoken="false">
+        <cfabort>
+    </cfif>
+
+    <cfinclude template="../views/staff/staffDashboard.cfm">
 
 <cfelseif page EQ "users">
 
@@ -27,7 +36,6 @@
     </cfif>
 
     <cfinclude template="../views/admin/users.cfm">
-
 
 <cfelse>
 
