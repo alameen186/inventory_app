@@ -64,7 +64,13 @@
     <cfinclude template="../views/vendor/leaves.cfm">    
 
 <cfelseif url.section EQ "offer">
-    <cfinclude template="../views/vendor/offers.cfm">    
+    <cfinclude template="../views/vendor/offers.cfm">  
+      
+<cfelseif url.section EQ "adminTickets">
+    <cfinclude template="../views/admin/tickets.cfm">    
+
+<cfelseif url.section EQ "tickets">
+    <cfinclude template="../views/user/tickets.cfm">    
 
 <cfelse>
     <cfoutput>

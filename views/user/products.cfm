@@ -129,7 +129,7 @@
                 <button type="submit" class="btn btn-primary">Search</button>
             </div>
             <div class="col-6 col-md-1 d-grid">
-                <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+                <button type="button" id="clearBtn"  class="btn btn-secondary">Clear</button>
             </div>
         </div>
     </form>

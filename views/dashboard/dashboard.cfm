@@ -33,6 +33,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet"href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
 </head>
 <body class="bg-light">
 
@@ -52,6 +53,7 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'coupons'>active</cfif>"  data-section="coupons">Coupons</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'reviews'>active</cfif>"  data-section="reviews">Reviews</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'plans'>active</cfif>"    data-section="plans">Plans</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminTickets'>active</cfif>"data-section="adminTickets">Support Tickets</a></li>
     </ul>
 
     <cfelseif session.role_name EQ "vendor">
@@ -81,6 +83,7 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'orders'>active</cfif>"      data-section="orders">Orders</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'enquiry'>active</cfif>"     data-section="enquiry">My Enquiries</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'chat'>active</cfif>"        data-section="chat">Chat</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'tickets'>active</cfif>" data-section="tickets">My Tickets</a></li>
     </ul>
     </cfif>
 
@@ -343,6 +346,10 @@
             <cfinclude template="../vendor/leaves.cfm">
         <cfelseif section EQ "offer">
             <cfinclude template="../vendor/offers.cfm">
+        <cfelseif section EQ "tickets">
+            <cfinclude template="../user/tickets.cfm">
+        <cfelseif section EQ "adminTickets">
+            <cfinclude template="../admin/tickets.cfm">    
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>
@@ -648,5 +655,16 @@ function loadNotifList(){
 
 });
 </script>
+
+<cfif session.role_id NEQ 1 AND session.role_name NEQ 'vendor'>
+<button onclick="openTicketModal()"
+        title="Report Issue"
+        class="btn btn-danger rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+        style="position:fixed; bottom:28px; right:28px; z-index:1055; width:52px; height:52px; font-size:22px;">
+    <i class="bi bi-ticket-perforated-fill"></i>
+</button>
+</cfif>
+
+<script src="../../assets/js/ticket-widget.js"></script>
 </body>
 </html>
