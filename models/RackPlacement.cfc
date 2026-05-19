@@ -67,21 +67,38 @@
 
     <!--- Log a swap --->
     <cffunction name="logSwap" returntype="void" output="false">
-        <cfargument name="vendor_id"   type="numeric" required="true">
-        <cfargument name="product1_id" type="numeric" required="true">
-        <cfargument name="product2_id" type="numeric" required="true">
-        <cftry>
-            <cfquery datasource="#application.dsn#">
-                INSERT INTO swap_log (vendor_id, product1_id, product2_id)
-                VALUES (
-                    <cfqueryparam value="#arguments.vendor_id#"   cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.product1_id#" cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.product2_id#" cfsqltype="cf_sql_integer">
-                )
-            </cfquery>
-        <cfcatch></cfcatch>
-        </cftry>
-    </cffunction>
+    <cfargument name="vendor_id"   type="numeric" required="true">
+    <cfargument name="product1_id" type="numeric" required="true">
+    <cfargument name="product2_id" type="numeric" required="true">
+
+    <!--- Capture sales in last 14 days before the swap --->
+    <cfquery name="local.b1" datasource="#application.dsn#">
+        SELECT COUNT(*) AS cnt FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.product_id = <cfqueryparam value="#arguments.product1_id#" cfsqltype="cf_sql_integer">
+        AND   o.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+    </cfquery>
+    <cfquery name="local.b2" datasource="#application.dsn#">
+        SELECT COUNT(*) AS cnt FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.product_id = <cfqueryparam value="#arguments.product2_id#" cfsqltype="cf_sql_integer">
+        AND   o.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+    </cfquery>
+
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            INSERT INTO swap_log (vendor_id, product1_id, product2_id, sales_before_p1, sales_before_p2)
+            VALUES (
+                <cfqueryparam value="#arguments.vendor_id#"   cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.product1_id#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.product2_id#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#local.b1.cnt#"          cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#local.b2.cnt#"          cfsqltype="cf_sql_integer">
+            )
+        </cfquery>
+    <cfcatch></cfcatch>
+    </cftry>
+</cffunction>
 
     <!--- Swap with monthly limit check --->
     <cffunction name="swapProducts" returntype="struct" output="false">

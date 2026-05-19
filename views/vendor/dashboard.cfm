@@ -4,6 +4,10 @@
 <cfset totalOrders   = dashModel.getVendorOrdersCount(session.user_id)>
 <cfset revenue       = dashModel.getVendorRevenue(session.user_id)>
 
+<cfset dashModel.evaluatePendingSwaps(session.user_id)>
+<cfset slowProducts = dashModel.getSlowMovingProducts(session.user_id)>
+<cfset swapResults  = dashModel.getSwapResults(session.user_id)>
+
 <cfif session.plan_name EQ "pro">
     <cfset logModel          = createObject("component","models.SearchLog")>
     <cfset searchStats       = logModel.getVendorSearchStats(session.user_id)>
@@ -23,7 +27,7 @@
 
 <!--- STATS CARDS --->
 <div class="row g-4 mb-4">
-<cfoutput>
+ <cfoutput>
     <div class="col-md-3">
         <div class="card shadow-sm border-0 text-center p-4">
             <h6 class="text-muted">My Products</h6>
@@ -66,7 +70,154 @@
             </div>
         </div>
     </div>
-</cfoutput>
+ </cfoutput>
+</div>
+
+
+<!--- ANALYTICS SECTION --->
+<div class="row g-4 mb-4">
+
+    <!--- SLOW MOVING PRODUCTS --->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white">
+                <strong><i class="bi bi-graph-down-arrow me-2"></i>Slow-Moving Products</strong>
+                <small class="text-muted ms-2">last 30 days</small>
+            </div>
+            <div class="card-body p-0">
+                <cfif slowProducts.recordCount EQ 0>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                        All products are moving well!
+                    </div>
+                <cfelse>
+    <ul class="list-group list-group-flush">
+    <cfoutput query="slowProducts">
+        
+        <cfset badge = "">
+        <cfset tip   = "">
+        
+        <cfif movement_status EQ "not_placed">
+            <cfset badge = '<span class="badge bg-info text-dark">Not placed</span>'>
+            <cfset tip   = "Place this product in a rack to start selling.">
+            
+        <cfelseif movement_status EQ "no_sales">
+            <cfset badge = '<span class="badge bg-danger">0 sales</span>'>
+            <cfset tip   = "Consider moving to a higher-visibility rack face.">
+            
+        <cfelse>
+            <cfset badge = '<span class="badge bg-warning text-dark">#sale_count# sales</span>'>
+            <cfset tip   = "Low movement — consider swapping with a better position.">
+        </cfif>
+        
+        <li class="list-group-item px-3 py-2">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="fw-semibold small">#encodeForHTML(product_name)#</div>
+                    <small class="text-muted">
+                        <cfif len(trim(rack_code))>
+                            #rack_code# &rarr; #face_code#
+                        <cfelse>
+                            No rack assigned
+                        </cfif>
+                    </small>
+                    <div class="text-muted fst-italic" style="font-size:11px;">#tip#</div>
+                </div>
+                #badge#
+            </div>
+        </li>
+    </cfoutput>
+    </ul>
+</cfif>
+            </div>
+        </div>
+    </div>
+
+    <!--- SWAP RESULTS --->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white">
+                <strong><i class="bi bi-arrow-left-right me-2"></i>Swap Results</strong>
+            </div>
+            <div class="card-body p-0">
+                <cfif swapResults.recordCount EQ 0>
+                    <div class="p-4 text-center text-muted">No swaps done yet.</div>
+                <cfelse>
+                    <ul class="list-group list-group-flush">
+                    <cfoutput query="swapResults">
+
+    <cfset isPending  = NOT len(trim(evaluated_at))>
+    <cfset isWin      = false>
+    <cfset isFail     = false>
+    <cfset pctChange  = 0>
+    <cfset borderCol  = "border-start border-4 border-info">
+    <cfset resultLabel = "">
+    <cfset resultClass = "">
+
+    <cfif NOT isPending>
+        <cfif total_before GT 0>
+            <cfset pctChange = int(((total_after - total_before) / total_before) * 100)>
+        <cfelse>
+            <cfset pctChange = total_after GT 0 ? 100 : 0>
+        </cfif>
+
+        <cfif pctChange GTE 10>
+            <cfset isWin      = true>
+            <cfset borderCol  = "border-start border-4 border-success">
+            <cfset resultLabel = "Swap success">
+            <cfset resultClass = "text-success">
+        <cfelseif pctChange LTE -5>
+            <cfset isFail     = true>
+            <cfset borderCol  = "border-start border-4 border-danger">
+            <cfset resultLabel = "No improvement">
+            <cfset resultClass = "text-danger">
+        <cfelse>
+            <cfset borderCol  = "border-start border-4 border-secondary">
+            <cfset resultLabel = "Neutral">
+            <cfset resultClass = "text-secondary">
+        </cfif>
+    </cfif>
+
+                        <li class="list-group-item px-3 py-2 #borderCol#">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <cfif isPending>
+                                    <span class="badge bg-info text-dark">Pending evaluation</span>
+                                <cfelse>
+                                    <span class="fw-semibold small #resultClass#">#resultLabel#</span>
+                                </cfif>
+                                <small class="text-muted">#dateFormat(swapped_at,"dd mmm yyyy")#</small>
+                            </div>
+                            <div class="small">
+                                <strong>#encodeForHTML(product1_name)#</strong>
+                                <i class="bi bi-arrow-left-right mx-1 text-muted"></i>
+                                <strong>#encodeForHTML(product2_name)#</strong>
+                            </div>
+                            <cfif isPending>
+                                <small class="text-muted fst-italic">
+                                    Sales data collected in
+                                    #max(0, 1 - dateDiff("d", swapped_at, now()))# more day(s).
+                                </small>
+                            <cfelse>
+                                <small class="text-muted">
+                                    Combined sales: #total_before# before
+                                    &rarr; #total_after# after
+                                    <cfif pctChange GT 0>
+                                        <span class="text-success ms-1">&##9650; +#pctChange#%</span>
+                                    <cfelseif pctChange LT 0>
+                                        <span class="text-danger ms-1">&##9660; #pctChange#%</span>
+                                    <cfelse>
+                                        <span class="text-muted ms-1">no change</span>
+                                    </cfif>
+                                </small>
+                            </cfif>
+                        </li>
+                    </cfoutput>
+                    </ul>
+                </cfif>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!--- QUICK PRODUCT SEARCH --->
@@ -310,4 +461,5 @@ $(function(){
         });
     });
 });
+
 </script>
