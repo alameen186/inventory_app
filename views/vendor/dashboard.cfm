@@ -13,30 +13,77 @@
 <cfset planModel = createObject("component","models.Plan")>
 <cfset allPlans  = planModel.getAll()>
 
+<!--- Get swap usage for this month --->
+<cfset placementModel  = createObject("component","models.RackPlacement")>
+<cfset swapsUsed       = placementModel.getMonthlySwapCount(session.user_id)>
+<cfset swapsAllowed    = 3>
+<cfset swapsRemaining  = max(0, swapsAllowed - swapsUsed)>
+
 <h4 class="mb-4 fw-bold">Vendor Dashboard</h4>
 
 <!--- STATS CARDS --->
-<div class="row g-4">
+<div class="row g-4 mb-4">
 <cfoutput>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card shadow-sm border-0 text-center p-4">
             <h6 class="text-muted">My Products</h6>
             <h2 class="fw-bold">#totalProducts#</h2>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card shadow-sm border-0 text-center p-4">
             <h6 class="text-muted">Orders</h6>
             <h2 class="fw-bold">#totalOrders#</h2>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card shadow-sm border-0 text-center p-4">
             <h6 class="text-muted">Revenue</h6>
             <h2 class="fw-bold">#numberFormat(revenue,"0,0")#</h2>
         </div>
     </div>
+    <!--- SWAP USAGE CARD --->
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 text-center p-4
+            #swapsRemaining EQ 0 ? 'border-danger' : ''#">
+            <h6 class="text-muted">Swaps This Month</h6>
+            <h2 class="fw-bold
+                #swapsRemaining EQ 0 ? 'text-danger' : (swapsRemaining EQ 1 ? 'text-warning' : 'text-success')#">
+                #swapsUsed# / #swapsAllowed#
+            </h2>
+            <small class="
+                #swapsRemaining EQ 0 ? 'text-danger' : 'text-muted'#">
+                <cfif swapsRemaining EQ 0>
+                    Limit reached. Resets 1st of next month.
+                <cfelse>
+                    #swapsRemaining# swap#swapsRemaining NEQ 1 ? 's' : ''# remaining
+                </cfif>
+            </small>
+            <div class="progress mt-2" style="height:5px;">
+                <div class="progress-bar
+                    #swapsRemaining EQ 0 ? 'bg-danger' : (swapsUsed GT 0 ? 'bg-warning' : 'bg-success')#"
+                    style="width:#int((swapsUsed/swapsAllowed)*100)#%;"></div>
+            </div>
+        </div>
+    </div>
 </cfoutput>
+</div>
+
+<!--- QUICK PRODUCT SEARCH --->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-dark text-white">
+        <strong><i class="bi bi-search me-2"></i>Quick Product Search</strong>
+    </div>
+    <div class="card-body">
+        <div class="input-group mb-3">
+            <input type="text" id="productSearchInput" class="form-control"
+                   placeholder="Search your products by name...">
+            <button class="btn btn-primary" id="productSearchBtn">
+                <i class="bi bi-search me-1"></i>Search
+            </button>
+        </div>
+        <div id="productSearchResults"></div>
+    </div>
 </div>
 
 <!--- PRO FEATURES --->
@@ -63,7 +110,7 @@
     </table>
 
     <h5 class="mt-4">Users Searching for Products Not in Your Store</h5>
-    <p class="text-muted small">These are keywords with zero results — potential new products to stock.</p>
+    <p class="text-muted small">These are keywords with zero results - potential new products to stock.</p>
     <table class="table table-bordered table-sm">
         <thead class="table-dark">
             <tr>
@@ -133,6 +180,98 @@
 
 <script>
 $(function(){
+
+    /* ── PRODUCT QUICK SEARCH ── */
+    var RPC = '../../controllers/RackPlacementController.cfc';
+
+    function doSearch(){
+        var keyword = $.trim($('#productSearchInput').val());
+        if(!keyword){
+            $('#productSearchResults').html(
+                '<div class="alert alert-warning py-2">Please enter a product name to search.</div>'
+            );
+            return;
+        }
+
+        $('#productSearchResults').html(
+            '<div class="text-center py-3">'
+          + '<div class="spinner-border spinner-border-sm text-primary me-2"></div>'
+          + 'Searching...</div>'
+        );
+
+        $.get(RPC + '?method=searchProducts', { keyword: keyword }, function(res){
+            if(!res.success){
+                $('#productSearchResults').html(
+                    '<div class="alert alert-danger py-2">' + res.message + '</div>'
+                );
+                return;
+            }
+
+            if(!res.data || res.data.length === 0){
+                $('#productSearchResults').html(
+                    '<div class="alert alert-info py-2">No products found matching <strong>'
+                  + $('<div>').text(keyword).html()
+                  + '</strong>.</div>'
+                );
+                return;
+            }
+
+            var html = '<div class="table-responsive">'
+                     + '<table class="table table-hover table-sm mb-0">'
+                     + '<thead class="table-dark">'
+                     + '<tr>'
+                     + '<th>Product Name</th>'
+                     + '<th>Stock</th>'
+                     + '<th>Rack</th>'
+                     + '<th>Face</th>'
+                     + '<th>Status</th>'
+                     + '</tr>'
+                     + '</thead><tbody>';
+
+            $.each(res.data, function(i, p){
+                var statusBadge = p.placement_status === 'Placed'
+                    ? '<span class="badge bg-success">Placed</span>'
+                    : '<span class="badge bg-secondary">Not Placed</span>';
+
+                var rackInfo = p.rack_code
+                    ? '<span class="fw-semibold">' + p.rack_code + '</span>'
+                      + (p.rack_name ? '<small class="text-muted d-block">' + p.rack_name + '</small>' : '')
+                    : '<span class="text-muted"><i class="bi bi-ban"></i></span>';
+
+                var faceInfo = p.face_code
+                    ? '<span class="badge bg-secondary">' + p.face_code + '</span>'
+                    : '<span class="text-muted"><i class="bi bi-ban"></i></span>';
+
+                var stockBadge = p.stock_quantity <= 0
+                    ? '<span class="badge bg-danger">' + p.stock_quantity + '</span>'
+                    : (p.stock_quantity <= 5
+                        ? '<span class="badge bg-warning text-dark">' + p.stock_quantity + '</span>'
+                        : '<span class="badge bg-success">' + p.stock_quantity + '</span>');
+
+                html += '<tr>'
+                      + '<td class="fw-semibold">' + p.product_name + '</td>'
+                      + '<td>' + stockBadge + '</td>'
+                      + '<td>' + rackInfo + '</td>'
+                      + '<td>' + faceInfo + '</td>'
+                      + '<td>' + statusBadge + '</td>'
+                      + '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            html += '<small class="text-muted mt-1 d-block">'
+                  + res.data.length + ' result(s) found.</small>';
+
+            $('#productSearchResults').html(html);
+        }, 'json');
+    }
+
+    $('#productSearchBtn').on('click', doSearch);
+
+    $('#productSearchInput').on('keypress', function(e){
+        if(e.which === 13) doSearch();
+    });
+
+    /* ── PLAN SWITCHER ── */
     $(document).on('click', '.switchPlanBtn', function(){
         var btn       = $(this);
         var plan_id   = btn.data('plan-id');

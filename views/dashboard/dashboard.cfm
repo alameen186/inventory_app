@@ -54,6 +54,7 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'reviews'>active</cfif>"  data-section="reviews">Reviews</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'plans'>active</cfif>"    data-section="plans">Plans</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminTickets'>active</cfif>"data-section="adminTickets">Support Tickets</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'racks'>active</cfif>"data-section="racks">Racks</a></li>
     </ul>
 
     <cfelseif session.role_name EQ "vendor">
@@ -68,6 +69,7 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'staff'>active</cfif>"      data-section="staff">Staff</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'staffLeave'>active</cfif>"      data-section="staffLeave">Staff Leave</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'offer'>active</cfif>"      data-section="offer">Offer</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'rackManagement'>active</cfif>" data-section="rackManagement"> Rack Management</a></li>
         <cfif session.plan_name EQ "pro">
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
@@ -350,6 +352,10 @@
             <cfinclude template="../user/tickets.cfm">
         <cfelseif section EQ "adminTickets">
             <cfinclude template="../admin/tickets.cfm">    
+        <cfelseif section EQ "racks">
+            <cfinclude template="../admin/racks.cfm">  
+        <cfelseif section EQ "rackManagement">
+            <cfinclude template="../vendor/rackManagement.cfm">   
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>

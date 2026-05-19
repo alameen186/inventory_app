@@ -1,16 +1,19 @@
 <cfcomponent output="false">
 
     <cffunction name="jsonRes" access="private" returntype="void" output="true">
-        <cfargument name="success" type="boolean" required="true">
-        <cfargument name="message" type="string"  default="">
-        <cfargument name="data"    type="any"     default="">
-        <cfcontent type="application/json; charset=utf-8" reset="true">
-        <cfoutput>#serializeJSON({
-            "success" : arguments.success,
-            "message" : arguments.message,
-            "data"    : arguments.data
-        })#</cfoutput>
-    </cffunction>
+    <cfargument name="success" type="boolean" required="true">
+    <cfargument name="message" type="string"  default="">
+    <cfargument name="data"    type="any"     default="">
+
+    <cfset var map = createObject("java","java.util.LinkedHashMap").init()>
+    <cfset map["success"] = arguments.success>
+    <cfset map["message"] = arguments.message>
+    <cfset map["data"]    = arguments.data>
+
+    <cfcontent type="application/json; charset=utf-8" reset="true">
+    <cfoutput>#serializeJSON(map)#</cfoutput>
+    <cfabort>
+</cffunction>
 
 <cffunction name="uploadImages" access="private" returntype="array">
     <cfargument name="fieldName" type="string" required="true">
@@ -76,53 +79,131 @@
     <!--- ADD --->
 <cffunction name="add" access="remote" returntype="void" output="true" httpMethod="POST">
     <cfset createObject("component","models.AuthGuard").checkAuth()>
-    
-    <cftry>
-        <cfset var productModel = createObject("component","models.Product")>
-        <cfset var imageModel   = createObject("component","models.ProductImage")>
-        
-        <cfset var productName = trim(form.product_name)>
-        <cfset var price       = val(form.price)>
-        <cfset var stock       = val(form.stock)>
-        <cfset var category_id = val(form.category_id)>
-        <cfset var expiry_date = trim(form.expiry_date)>
 
-        <!--- Create Product --->
+    <cftry>
+        <cfset var productModel   = createObject("component","models.Product")>
+        <cfset var imageModel     = createObject("component","models.ProductImage")>
+        <cfset var rackModel      = createObject("component","models.Rack")>
+        <cfset var placementModel = createObject("component","models.RackPlacement")>
+
+        <!--- ── SERVER-SIDE VALIDATION ── --->
+
+        <!--- Product Name --->
+        <cfif NOT structKeyExists(form,"product_name") OR NOT len(trim(form.product_name))>
+            <cfset jsonRes(false,"Product name is required")>
+        </cfif>
+        <cfif len(trim(form.product_name)) LT 2>
+            <cfset jsonRes(false,"Product name must be at least 2 characters")>
+        </cfif>
+        <cfif len(trim(form.product_name)) GT 100>
+            <cfset jsonRes(false,"Product name cannot exceed 100 characters")>
+        </cfif>
+
+        <!--- Price --->
+        <cfif NOT structKeyExists(form,"price") OR NOT len(trim(form.price))>
+            <cfset jsonRes(false,"Price is required")>
+        </cfif>
+        <cfif NOT isNumeric(form.price) OR val(form.price) LTE 0>
+            <cfset jsonRes(false,"Price must be a number greater than 0")>
+        </cfif>
+        <cfif val(form.price) GT 999999>
+            <cfset jsonRes(false,"Price cannot exceed 999999")>
+        </cfif>
+
+        <!--- Stock --->
+        <cfif NOT structKeyExists(form,"stock") OR NOT len(trim(form.stock))>
+            <cfset jsonRes(false,"Stock quantity is required")>
+        </cfif>
+        <cfif NOT isNumeric(form.stock) OR val(form.stock) LT 0>
+            <cfset jsonRes(false,"Stock must be 0 or greater")>
+        </cfif>
+        <cfif val(form.stock) GT 99999>
+            <cfset jsonRes(false,"Stock cannot exceed 99999")>
+        </cfif>
+
+        <!--- Category --->
+        <cfif NOT structKeyExists(form,"category_id") OR NOT val(form.category_id)>
+            <cfset jsonRes(false,"Please select a category")>
+        </cfif>
+
+        <!--- Expiry Date — optional but if provided must be valid and future --->
+        <cfset var expiryDate = structKeyExists(form,"expiry_date") ? trim(form.expiry_date) : "">
+        <cfif len(expiryDate)>
+            <cfif NOT isDate(expiryDate)>
+                <cfset jsonRes(false,"Expiry date is not a valid date")>
+            </cfif>
+            <cfif dateCompare(expiryDate, now()) LT 0>
+                <cfset jsonRes(false,"Expiry date cannot be in the past")>
+            </cfif>
+        </cfif>
+
+        <!--- Rack face capacity check — server side --->
+        <cfset var raceFaceId = structKeyExists(form,"rack_face_id") ? val(form.rack_face_id) : 0>
+        <cfif raceFaceId GT 0>
+            <cfset var faceInfo = rackModel.getFaceWithUsage(raceFaceId)>
+            <cfif faceInfo.recordCount EQ 0>
+                <cfset jsonRes(false,"Selected rack face does not exist")>
+            </cfif>
+            <cfif faceInfo.used_slots GTE faceInfo.capacity>
+                <cfset jsonRes(false,"Selected face (#faceInfo.face_code#) is full (#faceInfo.used_slots#/#faceInfo.capacity#). Please choose another face.")>
+            </cfif>
+        </cfif>
+
+        <!--- ── CREATE PRODUCT ── --->
         <cfset var newId = productModel.addProduct(
-            productName, price, stock, category_id, "", "", "", 
-            session.user_id, expiry_date
+            trim(form.product_name),
+            val(form.price),
+            val(form.stock),
+            val(form.category_id),
+            "", "", "",
+            session.user_id,
+            expiryDate
         )>
 
         <cfif NOT newId>
-            <cfset jsonRes(false, "Failed to create product")>
-            <cfreturn>
+            <cfset jsonRes(false,"Failed to create product. Please try again.")>
         </cfif>
 
-        <!--- Upload Images --->
-                <cfset var images = uploadImages("product_images", 10)>
+        <!--- ── UPLOAD IMAGES ── --->
+        <cfset var images   = uploadImages("product_images", 10)>
         <cfset var inserted = 0>
-
-        <cfif arrayLen(images) EQ 0>
-            <cfset jsonRes(true, "Product ID #newId# created - No images received by server")>
-            <cfreturn>
-        </cfif>
 
         <cfloop from="1" to="#arrayLen(images)#" index="i">
             <cfset var imgName = images[i]>
-            <cfset var success = imageModel.addImage(
+            <cfset var imgOk   = imageModel.addImage(
                 product_id = newId,
-                image = imgName,
+                image      = imgName,
                 sort_order = i
             )>
-            <cfif success>
+            <cfif imgOk>
                 <cfset inserted++>
             </cfif>
         </cfloop>
 
-        <cfset jsonRes(true, "Success! Product ID #newId# created. Files received: #arrayLen(images)# | Saved in DB: #inserted#")>
+        <!--- ── RACK PLACEMENT ── --->
+        <cfif raceFaceId GT 0>
+            <cfset var placeResult = placementModel.placeProduct(
+                product_id   = newId,
+                rack_face_id = raceFaceId
+            )>
+            <cfif NOT placeResult.success>
+                <cfset jsonRes(true,
+                    "Product created successfully but rack placement failed: "
+                    & placeResult.message
+                    & ". You can assign it from Rack Placement page.")>
+            </cfif>
+        </cfif>
+
+        <!--- ── SUCCESS ── --->
+        <cfset var successMsg = "Product '" & trim(form.product_name) & "' created successfully">
+        <cfif raceFaceId GT 0>
+            <cfset successMsg = successMsg & " and placed in rack face">
+        </cfif>
+
+        <cfset jsonRes(true, successMsg)>
 
     <cfcatch>
-        <cfset jsonRes(false, "Server Error: #cfcatch.message#")>
+        <cfset jsonRes(false,"Server Error: #cfcatch.message#")>
     </cfcatch>
     </cftry>
 </cffunction>

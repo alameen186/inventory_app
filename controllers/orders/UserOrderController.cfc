@@ -112,6 +112,36 @@
             </cfif>
         </cfloop>
 
+        <!--- ── SWAP ALERT LOGIC ── --->
+<cfset var cartProductIds = []>
+<cfloop collection="#session.cart#" item="pid">
+    <cfset arrayAppend(cartProductIds, val(pid))>
+</cfloop>
+
+<cfif arrayLen(cartProductIds) GTE 2>
+    <cfset var placementModel = createObject("component","models.RackPlacement")>
+    <cfloop from="1" to="#arrayLen(cartProductIds) - 1#" index="ci">
+        <cfloop from="#ci + 1#" to="#arrayLen(cartProductIds)#" index="cj">
+            <cfset var cPid1 = cartProductIds[ci]>
+            <cfset var cPid2 = cartProductIds[cj]>
+            <cfset var cV1   = productModel.getVendorId(cPid1)>
+            <cfset var cV2   = productModel.getVendorId(cPid2)>
+            <cfif cV1 EQ cV2 AND cV1 GT 0>
+                <cfset var cLoc1 = placementModel.getProductPlacement(cPid1)>
+                <cfset var cLoc2 = placementModel.getProductPlacement(cPid2)>
+                <cfif cLoc1.recordCount GT 0 AND cLoc2.recordCount GT 0
+                      AND cLoc1.rack_face_id NEQ cLoc2.rack_face_id>
+                    <cfset placementModel.logSwapAlert(
+                        vendor_id   = cV1,
+                        product1_id = cPid1,
+                        product2_id = cPid2
+                    )>
+                </cfif>
+            </cfif>
+        </cfloop>
+    </cfloop>
+</cfif>
+
         <!--- PDF Invoice Generation (Same style as vendorOrder) --->
         <cfset var invoiceDir  = expandPath("../../assets/invoices/")>
         <cfset var fileName    = "invoice_#orderGroupId#.pdf">

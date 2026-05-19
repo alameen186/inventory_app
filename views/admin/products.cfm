@@ -63,23 +63,45 @@
                     </cfoutput>
                 </select>
             </div>
-            <div class="col-6 col-md-2">
-    <input type="date" name="expiry_date" class="form-control" placeholder="Expiry Date">
-</div>
-<div class="col-12 col-md-3">
-    <label class="form-label small fw-semibold">
-        Images <span class="text-muted">(up to 10)</span>
-    </label>
-    <input type="file" name="product_images" class="form-control"
+            <!--- Rack selection in product add form --->
+    <div class="col-12 col-md-2">
+     <select name="rack_id" id="addRackId" class="form-control">
+        <option value="">No Rack</option>
+     </select>
+    </div>
+    <div class="col-12 col-md-2">
+     <select name="rack_face_id" id="addFaceId" class="form-control" disabled>
+        <option value="">-- Select Face --</option>
+     </select>
+    </div>
+
+<!--- Face info panel shown after face selected --->
+    <div class="col-12" id="addFaceInfoPanel" style="display:none;">
+     <div class="alert alert-info py-2 small">
+        <strong>Face Info:</strong>
+        Capacity: <span id="addInfoCap">-</span> |
+        Used: <span id="addInfoUsed">-</span> |
+        Available: <span id="addInfoAvail">-</span>
+        <span id="addInfoFull" class="text-danger fw-bold ms-2" style="display:none;">
+            FULL — Cannot add more products
+        </span>
+        <div id="addInfoProducts" class="mt-1"></div>
+     </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <input type="date" name="expiry_date" class="form-control" placeholder="Expiry Date">
+    </div>
+    <div class="col-12 col-md-3">
+     <input type="file" name="product_images" class="form-control"
         multiple accept="image/*">
-    <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
-</div>
-            <div class="col-12 col-md-2 d-flex align-items-end">
-    <button class="btn btn-success w-100">
+     <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+    </div>
+    <div class="col-12 col-md-2 align-items-end">
+      <button class="btn btn-success w-100">
         Add
-    </button>
+      </button>
+    </div>
 </div>
-        </div>
     </form>
 </div>
 
@@ -272,31 +294,122 @@
 $(function(){
 
     var ADMIN_CTRL = "../../controllers/product/AdminProductController.cfc";
+    var RC         = "../../controllers/RackController.cfc";
 
+    /* ── SORT DROPDOWN ── */
     $(document).on("click", ".sort-option", function(e){
         e.preventDefault();
         $("#sortValue").val($(this).data("value"));
         $("#sortDropdown").text($(this).text());
     });
 
+    /* ── CATEGORY DROPDOWN ── */
     $(document).on("click", ".category-option", function(e){
         e.preventDefault();
         $("#categoryValue").val($(this).data("value"));
         $("#categoryDropdown").text($(this).text());
     });
 
-    function msg(res) {
-        var type = res.success ? "success" : "danger";
+    /* ── MESSAGE HELPER ── */
+    function msg(success, message){
+        var cls = success ? "success" : "danger";
+        var icon = success
+            ? '<i class="bi bi-check-circle-fill me-2"></i>'
+            : '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
         $("#ajaxMessage").html(
-            '<div class="alert alert-' + type + '">' + res.message + '</div>'
+            '<div class="alert alert-' + cls + ' alert-dismissible">'
+          + icon + message
+          + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>'
+          + '</div>'
         );
-        setTimeout(function(){ $("#ajaxMessage").fadeOut(); }, 3000);
+        if(success){
+            setTimeout(function(){ $("#ajaxMessage").find(".alert").alert("close"); }, 3000);
+        }
+        $("html, body").animate({ scrollTop: $("#ajaxMessage").offset().top - 20 }, 300);
     }
 
-    // ADD
-    $("#createProductForm").submit(function(e){
+    /* ── VALIDATION HELPER ── */
+    function validateProductForm(fd){
+        var errors = [];
+
+        var name = (fd.get("product_name") || "").trim();
+        if(!name)
+            errors.push("Product name is required");
+        else if(name.length < 2)
+            errors.push("Product name must be at least 2 characters");
+        else if(name.length > 100)
+            errors.push("Product name cannot exceed 100 characters");
+
+        var price = (fd.get("price") || "").trim();
+        if(!price)
+            errors.push("Price is required");
+        else if(isNaN(price) || +price <= 0)
+            errors.push("Price must be a number greater than 0");
+        else if(+price > 999999)
+            errors.push("Price cannot exceed 999,999");
+
+        var stock = (fd.get("stock") || "").trim();
+        if(stock === "")
+            errors.push("Stock is required");
+        else if(isNaN(stock) || +stock < 0)
+            errors.push("Stock must be 0 or greater");
+        else if(+stock > 99999)
+            errors.push("Stock cannot exceed 99,999");
+
+        var cat = fd.get("category_id");
+        if(!cat || !+cat)
+            errors.push("Please select a category");
+
+        var expiry = (fd.get("expiry_date") || "").trim();
+        if(expiry){
+            var ed = new Date(expiry);
+            if(isNaN(ed.getTime()))
+                errors.push("Expiry date is not a valid date");
+            else if(ed < new Date())
+                errors.push("Expiry date cannot be in the past");
+        }
+
+        return errors;
+    }
+
+    function showErrors(errors){
+        var html = '<div class="alert alert-danger alert-dismissible">'
+                 + '<ul class="mb-0 mt-2">';
+        errors.forEach(function(e){ html += "<li>" + e + "</li>"; });
+        html += '</ul><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        $("#ajaxMessage").html(html);
+        $("html, body").animate({ scrollTop: $("#ajaxMessage").offset().top - 20 }, 300);
+    }
+
+    /* ── ADD PRODUCT ── */
+    $("#createProductForm").on("submit", function(e){
         e.preventDefault();
+
         var fd = new FormData(this);
+
+        /* 1. Client-side field validation */
+        var errors = validateProductForm(fd);
+        if(errors.length){
+            showErrors(errors);
+            return;
+        }
+
+        /* 2. Face full check before sending to server */
+        var faceId = $("#addFaceId").val();
+        if(faceId){
+            var avail = parseInt($("#addInfoAvail").text(), 10);
+            if(!isNaN(avail) && avail <= 0){
+                showErrors(["The selected rack face is full. Please choose a different face."]);
+                return;
+            }
+        }
+
+        /* 3. Submit */
+        var btn = $(this).find(".btn-success");
+        btn.prop("disabled", true).html(
+            '<span class="spinner-border spinner-border-sm me-1"></span>Saving...'
+        );
+
         $.ajax({
             url         : ADMIN_CTRL + "?method=add",
             type        : "POST",
@@ -305,100 +418,148 @@ $(function(){
             contentType : false,
             dataType    : "json",
             success     : function(res){
-                msg(res);
-                if(res.success) location.reload();
+                btn.prop("disabled", false).html("Add");
+                if(res.success){
+                    msg(true, res.message);
+                    setTimeout(function(){ location.reload(); }, 1500);
+                } else {
+                    showErrors([res.message]);
+                }
+            },
+            error: function(){
+                btn.prop("disabled", false).html("Add");
+                showErrors(["Server error. Please try again."]);
             }
         });
     });
 
-    // EDIT TOGGLE
-   $(document).on('click', '.editBtn', function(){
-    var id = $(this).data('id');
-    $('#viewRow_' + id).hide();
-    $('#editRow_' + id).show();
+    /* ── EDIT TOGGLE ── */
+    $(document).on("click", ".editBtn", function(){
+        var id = $(this).data("id");
+        $("#viewRow_" + id).hide();
+        $("#editRow_"  + id).show();
 
-    // Load existing images
-    $.get('../../controllers/product/AdminProductController.cfc', {
-        method: 'getImages', product_id: id
-    }, function(res){
-        if(!res.success) return;
-        var html = '';
-        $.each(res.data, function(i, img){
-            html += '<div class="position-relative d-inline-block">'
-                  + '<img src="../../assets/images/products/' + img.image
-                  + '" width="50" class="rounded border">'
-                  + '<button type="button" class="btn btn-danger btn-sm deleteImgBtn position-absolute top-0 end-0 p-0"'
-                  + ' style="width:16px;height:16px;font-size:10px;line-height:1;"'
-                  + ' data-image-id="' + img.id + '" data-product-id="' + id + '">&times;</button>'
-                  + '</div>';
-        });
-        $('#existingImgs_' + id).html(html);
-    }, 'json');
-});
+        $.get(ADMIN_CTRL, { method: "getImages", product_id: id }, function(res){
+            if(!res.success) return;
+            var html = "";
+            $.each(res.data, function(i, img){
+                html += '<div class="position-relative d-inline-block me-1">'
+                      + '<img src="../../assets/images/products/' + img.image
+                      + '" width="50" class="rounded border">'
+                      + '<button type="button"'
+                      + ' class="btn btn-danger btn-sm deleteImgBtn position-absolute top-0 end-0 p-0"'
+                      + ' style="width:16px;height:16px;font-size:10px;line-height:1;"'
+                      + ' data-image-id="' + img.id + '"'
+                      + ' data-product-id="' + id + '">&times;</button>'
+                      + '</div>';
+            });
+            $("#existingImgs_" + id).html(html);
+        }, "json");
+    });
 
-$(document).on('click', '.deleteImgBtn', function(){
-    if(!confirm('Delete this image?')) return;
-    var btn = $(this);
-    $.get('../../controllers/product/AdminProductController.cfc', {
-        method     : 'deleteImage',
-        image_id   : btn.data('image-id'),
-        product_id : btn.data('product-id')
-    }, function(res){
-        if(res.success) btn.closest('div.position-relative').remove();
-        else alert(res.message);
-    }, 'json');
-});
+    /* ── DELETE IMAGE ── */
+    $(document).on("click", ".deleteImgBtn", function(){
+        if(!confirm("Delete this image?")) return;
+        var btn = $(this);
+        $.get(ADMIN_CTRL, {
+            method     : "deleteImage",
+            image_id   : btn.data("image-id"),
+            product_id : btn.data("product-id")
+        }, function(res){
+            if(res.success) btn.closest("div.position-relative").remove();
+            else alert(res.message);
+        }, "json");
+    });
 
+    /* ── CANCEL EDIT ── */
     $(document).on("click", ".cancelBtn", function(){
         var id = $(this).data("id");
-        $("#editRow_" + id).hide();
+        $("#editRow_"  + id).hide();
         $("#viewRow_" + id).show();
     });
 
-    // SAVE EDIT
-   $(document).on("click", ".saveBtn", function(){
-    var id  = $(this).data("id");
-    var row = $("#editRow_" + id);
-    var fd  = new FormData();
-    fd.append("id",           id);
-    fd.append("product_name", row.find(".name").val());
-    fd.append("price",        row.find(".price").val());
-    fd.append("stock",        row.find(".stock").val());
-    fd.append("category_id",  row.find(".category").val());
-    fd.append("expiry_date",  row.find(".expiry").val());
+    /* ── SAVE EDIT ── */
+    $(document).on("click", ".saveBtn", function(){
+        var id  = $(this).data("id");
+        var row = $("#editRow_" + id);
 
-    // append all selected files from the multi-file input
-    var fileInput = row.find("input[type='file']")[0];
-    if(fileInput && fileInput.files.length){
-        for(var i = 0; i < fileInput.files.length; i++){
-            fd.append("product_images", fileInput.files[i]);
-        }
-    }
+        /* Basic inline validation for edit */
+        var name  = row.find(".name").val().trim();
+        var price = row.find(".price").val().trim();
+        var stock = row.find(".stock").val().trim();
 
-    $.ajax({
-        url         : ADMIN_CTRL + "?method=update",
-        type        : "POST",
-        data        : fd,
-        processData : false,
-        contentType : false,
-        dataType    : "json",
-        success     : function(res){
-            msg(res);
-            if(res.success) location.reload();
+        var editErrors = [];
+        if(!name || name.length < 2)
+            editErrors.push("Product name must be at least 2 characters");
+        if(name.length > 100)
+            editErrors.push("Product name cannot exceed 100 characters");
+        if(!price || isNaN(price) || +price <= 0)
+            editErrors.push("Price must be greater than 0");
+        if(+price > 999999)
+            editErrors.push("Price cannot exceed 999,999");
+        if(stock === "" || isNaN(stock) || +stock < 0)
+            editErrors.push("Stock must be 0 or greater");
+        if(+stock > 99999)
+            editErrors.push("Stock cannot exceed 99,999");
+
+        if(editErrors.length){
+            showErrors(editErrors);
+            return;
         }
+
+        var fd = new FormData();
+        fd.append("id",           id);
+        fd.append("product_name", name);
+        fd.append("price",        price);
+        fd.append("stock",        stock);
+        fd.append("category_id",  row.find(".category").val());
+        fd.append("expiry_date",  row.find(".expiry").val());
+
+        var fileInput = row.find("input[type='file']")[0];
+        if(fileInput && fileInput.files.length){
+            for(var i = 0; i < fileInput.files.length; i++){
+                fd.append("product_images", fileInput.files[i]);
+            }
+        }
+
+        var btn = $(this);
+        btn.prop("disabled", true).html(
+            '<span class="spinner-border spinner-border-sm me-1"></span>Saving...'
+        );
+
+        $.ajax({
+            url         : ADMIN_CTRL + "?method=update",
+            type        : "POST",
+            data        : fd,
+            processData : false,
+            contentType : false,
+            dataType    : "json",
+            success     : function(res){
+                btn.prop("disabled", false).html("Save");
+                msg(res.success, res.message);
+                if(res.success) setTimeout(function(){ location.reload(); }, 1500);
+            },
+            error: function(){
+                btn.prop("disabled", false).html("Save");
+                msg(false, "Server error. Please try again.");
+            }
+        });
     });
-});
 
-    // TOGGLE STATUS
+    /* ── TOGGLE STATUS ── */
     $(document).on("click", ".toggleBtn", function(){
         var btn = $(this);
         $.ajax({
             url      : ADMIN_CTRL,
             type     : "GET",
-            data     : { method: "toggleStatus", id: btn.data("id"), currentStatus: btn.data("status") },
+            data     : {
+                method        : "toggleStatus",
+                id            : btn.data("id"),
+                currentStatus : btn.data("status")
+            },
             dataType : "json",
             success  : function(res){
-                msg(res);
+                msg(res.success, res.message);
                 if(!res.success) return;
                 var s = res.data.newStatus;
                 btn.data("status", s);
@@ -409,8 +570,8 @@ $(document).on('click', '.deleteImgBtn', function(){
         });
     });
 
-    // SEARCH
-    function doSearch(page) {
+    /* ── SEARCH ── */
+    function doSearch(page){
         $.ajax({
             url      : ADMIN_CTRL,
             type     : "GET",
@@ -425,7 +586,7 @@ $(document).on('click', '.deleteImgBtn', function(){
         });
     }
 
-    $("#searchForm").submit(function(e){
+    $("#searchForm").on("submit", function(e){
         e.preventDefault();
         doSearch(1);
     });
@@ -434,11 +595,124 @@ $(document).on('click', '.deleteImgBtn', function(){
         doSearch($(this).data("page"));
     });
 
-      // CLEAR
-    $("#clearBtn").click(function(){
+    $("#clearBtn").on("click", function(){
         $("#searchForm")[0].reset();
+        $("#sortValue").val("");
+        $("#categoryValue").val("");
+        $("#sortDropdown").text("Sort");
+        $("#categoryDropdown").text("All Categories");
         doSearch(1);
     });
+
+    /* ── RACK DROPDOWNS IN ADD FORM ── */
+    (function(){
+
+        function loadAddRacks(){
+            $.get(RC + "?method=getRacksForVendor", function(res){
+                var opts = "";
+                if(!res.success || !res.data || !res.data.length){
+                    opts = '<option value="">No racks assigned</option>';
+                } else {
+                    opts = '<option value="">No Rack</option>';
+                    $.each(res.data, function(i, r){
+                        opts += '<option value="' + r.id + '">'
+                              + r.rack_code
+                              + (r.rack_name ? " - " + r.rack_name : "")
+                              + "</option>";
+                    });
+                }
+                $("#addRackId").html(opts);
+            }, "json");
+        }
+
+        /* When rack selected — load faces */
+        $("#addRackId").on("change", function(){
+            var rackId = $(this).val();
+
+            /* Reset face dropdown and info panel */
+            $("#addFaceId")
+                .html('<option value="">-- Select Face --</option>')
+                .prop("disabled", true);
+            $("#addFaceInfoPanel").hide();
+            $("#addInfoFull").hide();
+
+            /* Re-enable submit in case it was disabled by a previously full face */
+            $("#createProductForm .btn-success")
+                .prop("disabled", false)
+                .html("Add");
+
+            if(!rackId) return;
+
+            $.get(RC + "?method=getFacesForRack", { rack_id: rackId }, function(res){
+                if(!res.success || !res.data || !res.data.length){
+                    $("#addFaceId").html('<option value="">No faces configured</option>');
+                    return;
+                }
+                var opts = '<option value="">-- Select Face --</option>';
+                $.each(res.data, function(i, f){
+                    var isFull = f.available <= 0;
+                    var label  = f.face_code
+                               + " (" + f.used_slots + "/" + f.capacity + ")"
+                               + (isFull ? " — FULL" : " - " + f.available + " free");
+                    opts += '<option value="' + f.id + '"'
+                          + (isFull ? ' disabled style="color:#aaa;"' : "")
+                          + ">" + label + "</option>";
+                });
+                $("#addFaceId").html(opts).prop("disabled", false);
+            }, "json");
+        });
+
+        /* When face selected — show info panel */
+        $("#addFaceId").on("change", function(){
+            var faceId = $(this).val();
+            $("#addFaceInfoPanel").hide();
+            $("#addInfoFull").hide();
+
+            /* Re-enable submit */
+            $("#createProductForm .btn-success")
+                .prop("disabled", false)
+                .html("Add");
+
+            if(!faceId) return;
+
+            $.get(RC + "?method=getFaceDetail", { rack_face_id: faceId }, function(res){
+                if(!res.success) return;
+                var d = res.data;
+
+                $("#addInfoCap").text(d.capacity);
+                $("#addInfoUsed").text(d.used_slots);
+                $("#addInfoAvail").text(d.available);
+
+                if(d.available <= 0){
+                    /* Face is full — show warning and disable submit */
+                    $("#addInfoFull").show();
+                    $("#createProductForm .btn-success")
+                        .prop("disabled", true)
+                        .html('<i class="bi bi-lock-fill me-1"></i>Face Full');
+                } else {
+                    $("#addInfoFull").hide();
+                    $("#createProductForm .btn-success")
+                        .prop("disabled", false)
+                        .html("Add");
+                }
+
+                /* Products already in face */
+                var pHtml = "";
+                if(d.products && d.products.length){
+                    var names = [];
+                    $.each(d.products, function(i, p){ names.push(p.product_name); });
+                    pHtml = "<strong>Products in this face:</strong> " + names.join(", ");
+                } else {
+                    pHtml = '<span class="text-muted fst-italic">No products in this face yet</span>';
+                }
+                $("#addInfoProducts").html(pHtml);
+                $("#addFaceInfoPanel").show();
+            }, "json");
+        });
+
+        loadAddRacks();
+
+    })();
 
 });
 </script>
