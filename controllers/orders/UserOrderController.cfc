@@ -142,7 +142,7 @@
     </cfloop>
 </cfif>
 
-        <!--- PDF Invoice Generation (Same style as vendorOrder) --->
+        <!--- PDF Invoice Generation  --->
         <cfset var invoiceDir  = expandPath("../../assets/invoices/")>
         <cfset var fileName    = "invoice_#orderGroupId#.pdf">
         <cfset var invoicePath = invoiceDir & fileName>

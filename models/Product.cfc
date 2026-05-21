@@ -29,70 +29,83 @@
     </cffunction>
 
 
-    <cffunction name="addProduct" access="public" returntype="numeric" output="false">
-        <cfargument name="product_name" type="string"  required="true">
-        <cfargument name="price"        type="numeric" required="true">
-        <cfargument name="stock"        type="numeric">
-        <cfargument name="category_id"  type="numeric" required="true">
-        <cfargument name="image"        type="string"  required="false" default="">
-        <cfargument name="image2"       type="string"  required="false" default="">
-        <cfargument name="image3"       type="string"  required="false" default="">
-        <cfargument name="vendor_id"    type="numeric" required="true">
-        <cfargument name="expiry_date"  type="string"  required="false" default="">
+   <cffunction name="addProduct" access="public" returntype="numeric" output="false">
+    <cfargument name="product_name"      type="string"  required="true">
+    <cfargument name="price"             type="numeric" required="true">
+    <cfargument name="stock"             type="numeric">
+    <cfargument name="category_id"       type="numeric" required="true">
+    <cfargument name="image"             type="string"  required="false" default="">
+    <cfargument name="image2"            type="string"  required="false" default="">
+    <cfargument name="image3"            type="string"  required="false" default="">
+    <cfargument name="vendor_id"         type="numeric" required="true">
+    <cfargument name="expiry_date"       type="string"  required="false" default="">
+    <cfargument name="wholesale_price"   type="string"  required="false" default="">
+    <cfargument name="min_wholesale_qty" type="string"  required="false" default="">
 
-        <cftry>
-            <cfquery datasource="#application.dsn#">
-                INSERT INTO products
-                    (product_name, price, stock, category_id, image, image2, image3, vendor_id, expiry_date)
-                VALUES (
-                    <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
-                    <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
-                    <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
-                    '', '', '',
-                    <cfqueryparam value="#arguments.vendor_id#"    cfsqltype="cf_sql_integer">,
-                    <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
-                        null="#NOT len(arguments.expiry_date)#">
-                )
-            </cfquery>
-            <cfquery name="lastId" datasource="#application.dsn#">
-                SELECT LAST_INSERT_ID() AS new_id
-            </cfquery>
-            <cfreturn lastId.new_id>
-        <cfcatch>
-            <cfreturn 0>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            INSERT INTO products
+                (product_name, price, stock, category_id, image, image2, image3,
+                 vendor_id, expiry_date, wholesale_price, min_wholesale_qty)
+            VALUES (
+                <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
+                <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
+                '', '', '',
+                <cfqueryparam value="#arguments.vendor_id#"    cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
+                    null="#NOT len(trim(arguments.expiry_date))#">,
+                <cfqueryparam value="#arguments.wholesale_price#"   cfsqltype="cf_sql_decimal"
+                    null="#NOT isNumeric(arguments.wholesale_price) OR NOT val(arguments.wholesale_price)#">,
+                <cfqueryparam value="#arguments.min_wholesale_qty#" cfsqltype="cf_sql_integer"
+                    null="#NOT isNumeric(arguments.min_wholesale_qty) OR NOT val(arguments.min_wholesale_qty)#">
+            )
+        </cfquery>
+        <cfquery name="lastId" datasource="#application.dsn#">
+            SELECT LAST_INSERT_ID() AS new_id
+        </cfquery>
+        <cfreturn lastId.new_id>
+    <cfcatch>
+        <cfreturn 0>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
     <cffunction name="updateProduct" access="public" returntype="boolean" output="false">
-        <cfargument name="id"           type="numeric" required="true">
-        <cfargument name="product_name" type="string"  required="true">
-        <cfargument name="price"        type="numeric" required="true">
-        <cfargument name="stock"        type="numeric">
-        <cfargument name="category_id"  type="numeric" required="true">
-        <cfargument name="image"        type="string"  required="true">
-        <cfargument name="image2"       type="string"  required="false" default="">
-        <cfargument name="image3"       type="string"  required="false" default="">
-        <cfargument name="expiry_date"  type="string"  required="false" default="">
+    <cfargument name="id"                type="numeric" required="true">
+    <cfargument name="product_name"      type="string"  required="true">
+    <cfargument name="price"             type="numeric" required="true">
+    <cfargument name="stock"             type="numeric">
+    <cfargument name="category_id"       type="numeric" required="true">
+    <cfargument name="image"             type="string"  required="true">
+    <cfargument name="image2"            type="string"  required="false" default="">
+    <cfargument name="image3"            type="string"  required="false" default="">
+    <cfargument name="expiry_date"       type="string"  required="false" default="">
+    <cfargument name="wholesale_price"   type="string"  required="false" default="">
+    <cfargument name="min_wholesale_qty" type="string"  required="false" default="">
 
-        <cftry>
-            <cfquery datasource="#application.dsn#">
-                UPDATE products
-                SET product_name = <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
-                    price        = <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
-                    stock        = <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_decimal">,
-                    category_id  = <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
-                    expiry_date  = <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
-                        null="#NOT len(arguments.expiry_date)#">
-                WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
-            </cfquery>
-            <cfreturn true>
-        <cfcatch>
-            <cfreturn false>
-        </cfcatch>
-        </cftry>
-    </cffunction>
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            UPDATE products
+            SET product_name      = <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
+                price             = <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
+                stock             = <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_integer">,
+                category_id       = <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
+                expiry_date       = <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
+                                        null="#NOT len(trim(arguments.expiry_date))#">,
+                wholesale_price   = <cfqueryparam value="#arguments.wholesale_price#"   cfsqltype="cf_sql_decimal"
+                                        null="#NOT isNumeric(arguments.wholesale_price) OR NOT val(arguments.wholesale_price)#">,
+                min_wholesale_qty = <cfqueryparam value="#arguments.min_wholesale_qty#" cfsqltype="cf_sql_integer"
+                                        null="#NOT isNumeric(arguments.min_wholesale_qty) OR NOT val(arguments.min_wholesale_qty)#">
+            WHERE id = <cfqueryparam value="#arguments.id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+        <cfreturn true>
+    <cfcatch>
+        <cfreturn false>
+    </cfcatch>
+    </cftry>
+</cffunction>
 
     <cffunction name="toggleStatus" access="public" returntype="boolean" output="false">
         <cfargument name="id"     type="numeric" required="true">

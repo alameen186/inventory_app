@@ -85,6 +85,8 @@
         <cfset var imageModel     = createObject("component","models.ProductImage")>
         <cfset var rackModel      = createObject("component","models.Rack")>
         <cfset var placementModel = createObject("component","models.RackPlacement")>
+        <cfset var wholesalePrice  = (structKeyExists(form,"wholesale_price")   AND len(trim(form.wholesale_price)))   ? trim(form.wholesale_price)   : "">
+        <cfset var minWholesaleQty = (structKeyExists(form,"min_wholesale_qty") AND len(trim(form.min_wholesale_qty))) ? trim(form.min_wholesale_qty) : "">
 
         <!--- ── SERVER-SIDE VALIDATION ── --->
 
@@ -149,16 +151,31 @@
             </cfif>
         </cfif>
 
-        <!--- ── CREATE PRODUCT ── --->
-        <cfset var newId = productModel.addProduct(
-            trim(form.product_name),
-            val(form.price),
-            val(form.stock),
-            val(form.category_id),
-            "", "", "",
-            session.user_id,
-            expiryDate
-        )>
+        <!--- Wholesale validation (server-side) --->
+<cfif structKeyExists(form,"enable_wholesale") AND len(trim(form.enable_wholesale))>
+    <cfif NOT isNumeric(wholesalePrice) OR val(wholesalePrice) LTE 0>
+        <cfset jsonRes(false,"Wholesale price is required when wholesale is enabled")>
+    </cfif>
+    <cfif val(wholesalePrice) GTE val(form.price)>
+        <cfset jsonRes(false,"Wholesale price must be lower than retail price")>
+    </cfif>
+    <cfif NOT isNumeric(minWholesaleQty) OR val(minWholesaleQty) LT 1>
+        <cfset jsonRes(false,"Minimum wholesale quantity must be at least 1")>
+    </cfif>
+</cfif>
+
+        
+<cfset var newId = productModel.addProduct(
+    trim(form.product_name),
+    val(form.price),
+    val(form.stock),
+    val(form.category_id),
+    "", "", "",
+    session.user_id,
+    expiryDate,
+    wholesalePrice,
+    minWholesaleQty
+)>
 
         <cfif NOT newId>
             <cfset jsonRes(false,"Failed to create product. Please try again.")>
@@ -221,6 +238,9 @@
             <cfset var stock       = val(form.stock)>
             <cfset var category_id = val(form.category_id)>
             <cfset var expiry_date = trim(form.expiry_date)>
+            <cfset var wholesale_price = val(form.wholesale_price)>
+            <cfset var min_wholesale_qty = val(form.min_wholesale_qty) >
+
 
             <cfif len(productName) LT 3>
                 <cfset jsonRes(false,"Product name must be at least 3 characters")><cfreturn>
@@ -230,8 +250,8 @@
             </cfif>
 
             <cfset productModel.updateProduct(
-                id, productName, price, stock,
-                category_id, "", "", "", expiry_date
+                 id, productName, price, stock,
+                 category_id, "", "", "", expiry_date,wholesale_price,min_wholesale_qty
             )>
 
             <cfset var currentCount = imageModel.getCount(id)>
@@ -309,6 +329,20 @@
                     <td>#id#</td>
                     <td>#product_name#</td>
                     <td>#price#</td>
+                    <td>
+                        <cfif len(trim(wholesale_price)) AND wholesale_price GT 0>
+                            <span class="badge bg-success">₹#numberFormat(wholesale_price,"0.00")#</span>
+                        <cfelse>
+                            <span class="text-muted small">—</span>
+                        </cfif>
+                    </td>
+                    <td>
+                        <cfif len(trim(min_wholesale_qty)) AND min_wholesale_qty GT 0>
+                            <span class="badge bg-secondary">#min_wholesale_qty#</span>
+                        <cfelse>
+                            <span class="text-muted small">—</span>
+                        </cfif>
+                    </td>
                     <td>#stock#</td>
                     <td>#category_name#</td>
                     <td><cfif len(trim(expiry_date))>#dateFormat(expiry_date,"dd-mmm-yyyy")#<cfelse>-</cfif></td>

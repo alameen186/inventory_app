@@ -81,6 +81,12 @@
 <cfelseif url.section EQ "rackManagement">
     <cfinclude template="../views/vendor/rackManagement.cfm">
 
+<cfelseif url.section EQ "vehicle">
+    <cfinclude template="../views/vendor/vehicles.cfm">
+
+<cfelseif url.section EQ "wholesaleOrders">
+    <cfinclude template="../views/vendor/wholesaleOrders.cfm">
+
 <cfelse>
     <cfoutput>
         <h4>Welcome Dashboard</h4>
