@@ -87,6 +87,9 @@
 <cfelseif url.section EQ "wholesaleOrders">
     <cfinclude template="../views/vendor/wholesaleOrders.cfm">
 
+<cfelseif url.section EQ "deliveryZones">
+    <cfinclude template="../views/vendor/deliveryZones.cfm">
+
 <cfelse>
     <cfoutput>
         <h4>Welcome Dashboard</h4>

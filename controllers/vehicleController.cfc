@@ -21,7 +21,7 @@
         </cfif>
     </cffunction>
 
-    <!--- GET ALL VEHICLES FOR THIS VENDOR --->
+    <!--- GET ALL VEHICLES  --->
     <cffunction name="getAll" access="remote" returntype="void" output="true" httpMethod="GET">
         <cfset requireVendor()>
         <cftry>
@@ -30,7 +30,7 @@
             <cfset var html     = "">
 
             <cfif vehicles.recordCount EQ 0>
-                <cfset html = '<tr><td colspan="5" class="text-center text-muted py-4">No vehicles added yet.</td></tr>'>
+                <cfset html = '<tr><td colspan="6" class="text-center text-muted py-4">No vehicles added yet.</td></tr>'>
             <cfelse>
                 <cfloop query="vehicles">
                     <cfset var statusBadge = vehicles.is_active EQ 1
@@ -38,22 +38,31 @@
                         : '<span class="badge bg-secondary">Inactive</span>'>
                     <cfset var typeLabel = "">
                     <cfswitch expression="#vehicles.vehicle_type#">
-                        <cfcase value="truck"><cfset typeLabel = "🚛 Truck"></cfcase>
-                        <cfcase value="van"><cfset typeLabel = "🚐 Van"></cfcase>
-                        <cfcase value="bike"><cfset typeLabel = "🏍️ Bike"></cfcase>
-                        <cfdefaultcase><cfset typeLabel = "🚗 Other"></cfdefaultcase>
+                        <cfcase value="truck"><cfset typeLabel = " Truck"></cfcase>
+                        <cfcase value="van">  <cfset typeLabel = " Van"></cfcase>
+                        <cfcase value="bike"> <cfset typeLabel = " Bike"></cfcase>
+                        <cfdefaultcase>       <cfset typeLabel = " Other"></cfdefaultcase>
                     </cfswitch>
+
+                    <!--- Capacity display --->
+                    <cfset var capDisplay = isNumeric(vehicles.capacity_units) AND val(vehicles.capacity_units) GT 0
+                        ? '<span class="badge bg-info text-dark">' & vehicles.capacity_units & ' units</span>'
+                        : '<span class="text-muted small">No limit set</span>'>
+
                     <cfset html = html & '<tr>
                         <td class="fw-semibold">' & encodeForHTML(vehicles.vehicle_name) & '</td>
                         <td><span class="badge bg-dark">' & encodeForHTML(vehicles.vehicle_number) & '</span></td>
                         <td>' & typeLabel & '</td>
+                        <td>' & capDisplay & '</td>
                         <td>' & statusBadge & '</td>
                         <td>
                             <button class="btn btn-sm btn-warning editVehicleBtn me-1"
-                                data-id="' & vehicles.id & '"
-                                data-name="' & encodeForHTMLAttribute(vehicles.vehicle_name) & '"
-                                data-number="' & encodeForHTMLAttribute(vehicles.vehicle_number) & '"
-                                data-type="' & vehicles.vehicle_type & '">Edit</button>
+                                data-id="'            & vehicles.id & '"
+                                data-name="'          & encodeForHTMLAttribute(vehicles.vehicle_name)   & '"
+                                data-number="'        & encodeForHTMLAttribute(vehicles.vehicle_number) & '"
+                                data-type="'          & vehicles.vehicle_type & '"
+                                data-capacity="'      & (isNumeric(vehicles.capacity_units) ? vehicles.capacity_units : "") & '"
+                                >Edit</button>
                             <button class="btn btn-sm ' & (vehicles.is_active EQ 1 ? 'btn-danger' : 'btn-success') & ' toggleVehicleBtn"
                                 data-id="' & vehicles.id & '">
                                 ' & (vehicles.is_active EQ 1 ? 'Deactivate' : 'Activate') & '
@@ -70,13 +79,15 @@
         </cftry>
     </cffunction>
 
-    <!--- SAVE  --->
+    <!--- SAVE (ADD OR EDIT)--->
     <cffunction name="save" access="remote" returntype="void" output="true" httpMethod="POST">
         <cfset requireVendor()>
         <cftry>
-            <!--- Validation --->
             <cfif NOT structKeyExists(form,"vehicle_name") OR NOT len(trim(form.vehicle_name))>
                 <cfset jsonRes(false,"Vehicle name is required")>
+            </cfif>
+            <cfif len(trim(form.vehicle_name)) LT 2>
+                <cfset jsonRes(false,"Vehicle name must be at least 2 characters")>
             </cfif>
             <cfif NOT structKeyExists(form,"vehicle_number") OR NOT len(trim(form.vehicle_number))>
                 <cfset jsonRes(false,"Vehicle registration number is required")>
@@ -88,6 +99,17 @@
                 <cfset jsonRes(false,"Invalid vehicle type")>
             </cfif>
 
+            <!--- Capacity: optional, but if provided must be a positive integer --->
+            <cfset var capacityVal = structKeyExists(form,"capacity_units") ? trim(form.capacity_units) : "">
+            <cfif len(capacityVal)>
+                <cfif NOT isNumeric(capacityVal) OR val(capacityVal) LT 1>
+                    <cfset jsonRes(false,"Capacity must be a whole number greater than 0 (or leave blank for no limit)")>
+                </cfif>
+                <cfif val(capacityVal) GT 99999>
+                    <cfset jsonRes(false,"Capacity value seems too large")>
+                </cfif>
+            </cfif>
+
             <cfset var model  = createObject("component","models.Vehicle")>
             <cfset var id     = structKeyExists(form,"id") ? val(form.id) : 0>
             <cfset var result = model.save(
@@ -95,6 +117,7 @@
                 vehicle_name   = trim(form.vehicle_name),
                 vehicle_number = uCase(trim(form.vehicle_number)),
                 vehicle_type   = trim(form.vehicle_type),
+                capacity_units = capacityVal,
                 id             = id
             )>
 

@@ -72,6 +72,7 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'rackManagement'>active</cfif>" data-section="rackManagement"> Rack Management</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'vehicle'>active</cfif>" data-section="vehicle"> Vehicle</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'wholesaleOrders'>active</cfif>" data-section="wholesaleOrders"> Wholesale Orders</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'deliveryZones'>active</cfif>" data-section="deliveryZones"> Delivery Zone</a></li>
         <cfif session.plan_name EQ "pro">
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'adminEnquiries'>active</cfif>"  data-section="adminEnquiries">Enquiries</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'scheduledOrders'>active</cfif>" data-section="scheduledOrders">Scheduled Orders</a></li>
@@ -362,6 +363,8 @@
             <cfinclude template="../vendor/vehicles.cfm">   
         <cfelseif section EQ "wholesaleOrders">
             <cfinclude template="../vendor/wholesaleOrders.cfm">   
+        <cfelseif section EQ "deliveryZones">
+            <cfinclude template="../vendor/deliveryZones.cfm">   
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>
