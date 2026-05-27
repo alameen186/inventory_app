@@ -1,3 +1,4 @@
+
 <cfif NOT structKeyExists(session,"user_id") OR session.role_name NEQ "vendor">
     <cflocation url="../index.cfm?page=auth" addtoken="false">
 </cfif>
@@ -34,29 +35,48 @@
             <div class="row g-3">
                 <input type="hidden" id="vehicleId" value="0">
 
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-semibold">Vehicle Name <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">
+                        Vehicle Name <span class="text-danger">*</span>
+                    </label>
                     <input type="text" id="vehicleName" class="form-control"
                            placeholder="e.g. Main Delivery Truck">
                     <div class="form-text">A friendly name to identify this vehicle</div>
                 </div>
 
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-semibold">Registration Number <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">
+                        Registration Number <span class="text-danger">*</span>
+                    </label>
                     <input type="text" id="vehicleNumber" class="form-control"
                            placeholder="e.g. KL 01 AB 1234" style="text-transform:uppercase;">
                     <div class="form-text">Vehicle plate / registration number</div>
                 </div>
 
-                <div class="col-12 col-md-4">
-                    <label class="form-label fw-semibold">Vehicle Type <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">
+                        Vehicle Type <span class="text-danger">*</span>
+                    </label>
                     <select id="vehicleType" class="form-select">
                         <option value="">-- Select Type --</option>
-                        <option value="truck">🚛 Truck</option>
-                        <option value="van">🚐 Van</option>
-                        <option value="bike">🏍️ Bike</option>
-                        <option value="other">🚗 Other</option>
+                        <option value="truck"> Truck</option>
+                        <option value="van"> Van</option>
+                        <option value="bike"> Bike</option>
+                        <option value="other"> Other</option>
                     </select>
+                </div>
+
+                <!--- Capacity Units (NEW) --->
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">
+                        Capacity (units)
+                        <span class="text-muted fw-normal small">— optional</span>
+                    </label>
+                    <input type="number" id="vehicleCapacity" class="form-control"
+                           placeholder="e.g. 500" min="1" max="99999">
+                    <div class="form-text">
+                        Max units this vehicle can carry. Leave blank for no limit.
+                    </div>
                 </div>
 
                 <div class="col-12 d-flex gap-2 justify-content-end">
@@ -82,13 +102,14 @@
                         <th>Vehicle Name</th>
                         <th>Registration</th>
                         <th>Type</th>
+                        <th>Capacity</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="vehicleTableBody">
                     <tr>
-                        <td colspan="5" class="text-center py-4">
+                        <td colspan="6" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Loading vehicles...
                         </td>
@@ -124,12 +145,13 @@ $(function(){
 
     /* ── Helper: validate form ── */
     function validateVehicleForm(){
-        var errors = [];
-        var name   = $("#vehicleName").val().trim();
-        var num    = $("#vehicleNumber").val().trim();
-        var type   = $("#vehicleType").val();
+        var errors   = [];
+        var name     = $("#vehicleName").val().trim();
+        var num      = $("#vehicleNumber").val().trim();
+        var type     = $("#vehicleType").val();
+        var capacity = $("#vehicleCapacity").val().trim();
 
-        if(!name)              errors.push("Vehicle name is required");
+        if(!name)                errors.push("Vehicle name is required");
         else if(name.length < 2) errors.push("Vehicle name must be at least 2 characters");
         else if(name.length > 100) errors.push("Vehicle name cannot exceed 100 characters");
 
@@ -137,7 +159,14 @@ $(function(){
         else if(num.length < 3) errors.push("Registration number seems too short");
         else if(num.length > 50) errors.push("Registration number cannot exceed 50 characters");
 
-        if(!type)              errors.push("Please select a vehicle type");
+        if(!type) errors.push("Please select a vehicle type");
+
+        /* Capacity is optional — validate only when filled */
+        if(capacity !== ""){
+            var cap = parseInt(capacity);
+            if(isNaN(cap) || cap < 1)    errors.push("Capacity must be a whole number greater than 0");
+            else if(cap > 99999)          errors.push("Capacity value seems too large (max 99999)");
+        }
 
         return errors;
     }
@@ -145,7 +174,7 @@ $(function(){
     /* ── Load vehicles table ── */
     function loadVehicles(){
         $("#vehicleTableBody").html(
-            '<tr><td colspan="5" class="text-center py-4">'
+            '<tr><td colspan="6" class="text-center py-4">'
           + '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>'
         );
         $.get(CTRL, { method: "getAll" }, function(res){
@@ -153,13 +182,13 @@ $(function(){
                 $("#vehicleTableBody").html(res.data.html);
             } else {
                 $("#vehicleTableBody").html(
-                    '<tr><td colspan="5" class="text-center text-danger py-3">'
+                    '<tr><td colspan="6" class="text-center text-danger py-3">'
                   + (res.message || "Failed to load") + '</td></tr>'
                 );
             }
         }, "json").fail(function(){
             $("#vehicleTableBody").html(
-                '<tr><td colspan="5" class="text-center text-danger py-3">Server error</td></tr>'
+                '<tr><td colspan="6" class="text-center text-danger py-3">Server error</td></tr>'
             );
         });
     }
@@ -170,6 +199,7 @@ $(function(){
         $("#vehicleName").val("");
         $("#vehicleNumber").val("");
         $("#vehicleType").val("");
+        $("#vehicleCapacity").val("");
         $("#vehicleFormTitle").html('<i class="bi bi-plus-circle me-2"></i>Add New Vehicle');
         $("#saveVehicleBtnText").text("Save Vehicle");
         $("#vehicleFormCard").slideDown(200);
@@ -198,7 +228,8 @@ $(function(){
             id             : $("#vehicleId").val(),
             vehicle_name   : $("#vehicleName").val().trim(),
             vehicle_number : $("#vehicleNumber").val().trim().toUpperCase(),
-            vehicle_type   : $("#vehicleType").val()
+            vehicle_type   : $("#vehicleType").val(),
+            capacity_units : $("#vehicleCapacity").val().trim()   /* NEW */
         }, function(res){
             btn.prop("disabled", false).html(
                 '<i class="bi bi-check-circle me-1"></i><span id="saveVehicleBtnText">Save Vehicle</span>'
@@ -216,18 +247,20 @@ $(function(){
         });
     });
 
-    /* ── Edit vehicle (triggered from table row button) ── */
+    /* ── Edit vehicle ── */
     $(document).on("click", ".editVehicleBtn", function(){
-        var btn  = $(this);
-        var id   = btn.data("id");
-        var name = btn.data("name");
-        var num  = btn.data("number");
-        var type = btn.data("type");
+        var btn      = $(this);
+        var id       = btn.data("id");
+        var name     = btn.data("name");
+        var num      = btn.data("number");
+        var type     = btn.data("type");
+        var capacity = btn.data("capacity");   /* NEW */
 
         $("#vehicleId").val(id);
         $("#vehicleName").val(name);
         $("#vehicleNumber").val(num);
         $("#vehicleType").val(type);
+        $("#vehicleCapacity").val(capacity || "");   /* NEW */
         $("#vehicleFormTitle").html('<i class="bi bi-pencil-square me-2"></i>Edit Vehicle');
         $("#saveVehicleBtnText").text("Update Vehicle");
         $("#vehicleFormCard").slideDown(200);
