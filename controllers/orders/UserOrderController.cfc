@@ -210,8 +210,18 @@
         </cftry>
 
         <!--- Clear Cart --->
-        <cfset structDelete(session, "cart")>
-        <cfset structDelete(session, "coupon")>
+        <!--- Mark cart as recovered --->
+<cftry>
+    <cfif structKeyExists(session,"user_id") AND val(session.user_id) GT 0>
+        <cfset var cartNotifEngine = createObject("component","models.CustomerNotificationEngine")>
+        <cfset cartNotifEngine.markCartRecovered(session.user_id)>
+    </cfif>
+<cfcatch></cfcatch>
+</cftry>
+
+<!--- Clear Cart --->
+<cfset structDelete(session, "cart")>
+<cfset structDelete(session, "coupon")>
 
         <cfset sendJSON({
             status: "success",

@@ -89,6 +89,8 @@
 
 <cfelseif url.section EQ "deliveryZones">
     <cfinclude template="../views/vendor/deliveryZones.cfm">
+<cfelseif url.section EQ "notifications">
+    <cfinclude template="../views/user/notification_preferences.cfm">
 
 <cfelse>
     <cfoutput>

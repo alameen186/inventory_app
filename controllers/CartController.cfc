@@ -38,11 +38,20 @@
 
 </cfif>
 
-        <cfcontent type="application/json">
-        <cfoutput>#serializeJSON({
-            "status":"success",
-            "message":"Added to cart"
-        })#</cfoutput>
+       <!--- Save cart snapshot for abandonment tracking --->
+<cftry>
+    <cfif structKeyExists(session,"user_id") AND NOT structIsEmpty(session.cart)>
+        <cfset var cartEngine = createObject("component","models.CustomerNotificationEngine")>
+        <cfset cartEngine.saveCartSnapshot(session.user_id, session.cart)>
+    </cfif>
+<cfcatch></cfcatch>
+</cftry>
+
+<cfcontent type="application/json">
+<cfoutput>#serializeJSON({
+    "status":"success",
+    "message":"Added to cart"
+})#</cfoutput>
     </cffunction>
 
 
