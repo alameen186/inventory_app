@@ -89,6 +89,8 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'enquiry'>active</cfif>"     data-section="enquiry">My Enquiries</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'chat'>active</cfif>"        data-section="chat">Chat</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'tickets'>active</cfif>" data-section="tickets">My Tickets</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'notifications'>active</cfif>" data-section="notifications"> Notifications
+</a></li>
     </ul>
     </cfif>
 
@@ -365,6 +367,8 @@
             <cfinclude template="../vendor/wholesaleOrders.cfm">   
         <cfelseif section EQ "deliveryZones">
             <cfinclude template="../vendor/deliveryZones.cfm">   
+        <cfelseif section EQ "notifications">
+            <cfinclude template="../user/notification_preferences.cfm">    
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>
