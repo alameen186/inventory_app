@@ -23,19 +23,6 @@
         <!--- ── LEFT: STATS CARD ── --->
         <div class="col-12 col-lg-4">
 
-            <!--- Shopping Profile 
-            <div class="card shadow-sm mb-4 border-0">
-                <div class="card-header bg-dark text-white fw-semibold rounded-top">
-                    <i class="bi bi-bar-chart-fill me-2"></i>Your Shopping Profile
-                </div>
-                <div class="card-body" id="statsBody">
-                    <div class="text-center py-3">
-                        <div class="spinner-border text-primary spinner-border-sm"></div>
-                        <p class="text-muted small mt-2">Loading your stats...</p>
-                    </div>
-                </div>
-            </div>--->
-
             <!--- Recent Smart Notifications --->
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-dark text-white fw-semibold rounded-top">
@@ -267,7 +254,11 @@
         seasonal_ramadan    : { icon: "bi-calendar-event-fill",color: "danger"  },
         seasonal_christmas  : { icon: "bi-calendar-event-fill",color: "danger"  },
         seasonal_festival   : { icon: "bi-calendar-event-fill",color: "danger"  },
-        cart_recovery       : { icon: "bi-cart-check-fill",    color: "primary" }
+        cart_recovery       : { icon: "bi-cart-check-fill",    color: "primary" },
+        low_stock_alert  : { icon: "bi-exclamation-triangle-fill", color: "warning" },
+        price_drop_alert : { icon: "bi-graph-down-arrow",          color: "success" },
+        loyalty_points   : { icon: "bi-star-fill",                 color: "warning" }
+
     };
 
     /* ── Map preference key → toggle checkbox id ── */

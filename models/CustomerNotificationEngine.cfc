@@ -453,16 +453,7 @@
                 AND cnp.seasonal_predictions = 1
             WHERE o.user_id IS NOT NULL
             AND   o.status NOT IN ('cancelled','cancel_requested')
-            <!--- TEST MODE: NO DATE FILTER 
-            <cfif ctx.sqlMonth GT 0>
-                AND MONTH(o.created_at) = <cfqueryparam value="#ctx.sqlMonth#" cfsqltype="cf_sql_integer">
-            <cfelse>
-                <cfif dayOfWeek EQ 6 OR dayOfWeek EQ 7>
-                    AND DAYOFWEEK(o.created_at) IN (6, 7)
-                <cfelse>
-                    AND DAY(o.created_at) >= 28
-                </cfif>
-            </cfif>--->
+   
             AND o.created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
             GROUP BY o.user_id
             HAVING seasonal_orders >= 1
@@ -720,18 +711,307 @@
             SELECT id, type, title, message, is_read, created_at
             FROM   notifications
             WHERE  user_id = <cfqueryparam value="#arguments.user_id#" cfsqltype="cf_sql_integer">
-            AND    type IN (
-                'reorder_reminder','personalized_offer',
-                'smart_recommendation','seasonal_weekend',
-                'seasonal_monthend','seasonal_ramadan',
-                'seasonal_christmas','seasonal_festival',
-                'cart_recovery','seasonal_test'
-            )
+             AND    type IN (
+        'reorder_reminder','personalized_offer',
+        'smart_recommendation','seasonal_weekend',
+        'seasonal_monthend','seasonal_ramadan',
+        'seasonal_christmas','seasonal_festival',
+        'cart_recovery','seasonal_test',
+        'low_stock_alert','price_drop_alert','loyalty_points'
+    )
             ORDER BY created_at DESC
             LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
         </cfquery>
 
         <cfreturn local.q>
     </cffunction>
+<!--- LOW STOCK & LAST CHANCE --->
+
+<cffunction name="processLowStockAlerts" returntype="struct" output="false">
+
+    <cfset var result          = { sent: 0, skipped: 0, errors: 0 }>
+    <cfset var notifModel      = "">
+    <cfset var STOCK_THRESHOLD = 5>
+
+    <cfquery name="local.candidates" datasource="#application.dsn#">
+        SELECT DISTINCT
+            o.user_id,
+            p.id           AS product_id,
+            p.product_name,
+            p.stock
+        FROM orders o
+        JOIN products p
+            ON  p.id        = o.product_id
+            AND p.is_active = 1
+            AND p.stock     > 0
+            AND p.stock    <= <cfqueryparam value="#STOCK_THRESHOLD#" cfsqltype="cf_sql_integer">
+        JOIN customer_notification_preferences cnp
+            ON  cnp.user_id       = o.user_id
+            AND cnp.reorder_reminders = 1
+        WHERE o.user_id IS NOT NULL
+        AND   o.status  NOT IN ('cancelled', 'cancel_requested')
+    </cfquery>
+
+    <cfset notifModel = createObject("component", "models.Notification")>
+
+    <cfloop query="local.candidates">
+        <cftry>
+            <cfif wasRecentlySent(
+                    user_id           = local.candidates.user_id,
+                    notification_type = "low_stock_alert",
+                    reference_id      = local.candidates.product_id,
+                    hours             = 72)>
+                <cfset result.skipped = result.skipped + 1>
+                <cfcontinue>
+            </cfif>
+
+            <cfset notifModel.create(
+                user_id   = local.candidates.user_id,
+                sender_id = 0,
+                type      = "low_stock_alert",
+                title     = "Last Chance - Almost Sold Out!",
+                message   = "Your favourite """ & local.candidates.product_name
+                          & """ is almost gone — only " & local.candidates.stock
+                          & " left in stock. Order now before it runs out!",
+                link      = "index.cfm?page=dashboard&section=productList"
+            )>
+
+            <cfset logSent(
+                user_id           = local.candidates.user_id,
+                notification_type = "low_stock_alert",
+                reference_id      = local.candidates.product_id
+            )>
+
+            <cfset result.sent = result.sent + 1>
+        <cfcatch>
+            <cfoutput>
+                <div style="color:red;padding:10px;border:1px solid red;margin:10px;">
+                    <strong>ERROR:</strong> #cfcatch.message#<br>
+                    <strong>DETAIL:</strong> #cfcatch.detail#
+                </div>
+            </cfoutput>
+            <cfset result.errors = result.errors + 1>
+        </cfcatch>
+        </cftry>
+    </cfloop>
+
+    <cfreturn result>
+</cffunction>
+
+
+<!--- PRICE DROP ALERTS--->
+
+<cffunction name="processPriceDropAlerts" returntype="struct" output="false">
+
+    <cfset var result     = { sent: 0, skipped: 0, errors: 0 }>
+    <cfset var notifModel = "">
+    <cfset var savings    = 0>
+
+    <cfquery name="local.candidates" datasource="#application.dsn#">
+        SELECT
+            o.user_id,
+            o.product_id,
+            p.product_name,
+            p.price                AS current_price,
+            MAX(o.price)           AS last_paid_price
+        FROM orders o
+        JOIN products p
+            ON  p.id        = o.product_id
+            AND p.is_active = 1
+            AND p.stock     > 0
+        JOIN customer_notification_preferences cnp
+            ON  cnp.user_id             = o.user_id
+            AND cnp.personalized_offers = 1
+        WHERE o.user_id IS NOT NULL
+        AND   o.status  NOT IN ('cancelled', 'cancel_requested')
+        GROUP BY o.user_id, o.product_id, p.product_name, p.price
+        HAVING p.price < MAX(o.price)
+    </cfquery>
+
+    <cfset notifModel = createObject("component", "models.Notification")>
+
+    <cfloop query="local.candidates">
+        <cftry>
+            <cfif wasRecentlySent(
+                    user_id           = local.candidates.user_id,
+                    notification_type = "price_drop_alert",
+                    reference_id      = local.candidates.product_id,
+                    hours             = 48)>
+                <cfset result.skipped = result.skipped + 1>
+                <cfcontinue>
+            </cfif>
+
+            <cfset savings = local.candidates.last_paid_price - local.candidates.current_price>
+
+            <cfset notifModel.create(
+                user_id   = local.candidates.user_id,
+                sender_id = 0,
+                type      = "price_drop_alert",
+                title     = "Price Drop on Your Favourite Product!",
+                message   = "Good news! """ & local.candidates.product_name
+                          & """ is now Rs." & numberFormat(local.candidates.current_price, "0.00")
+                          & " — that's Rs." & numberFormat(savings, "0.00")
+                          & " cheaper than last time. Grab it now!",
+                link      = "index.cfm?page=dashboard&section=productList"
+            )>
+
+            <cfset logSent(
+                user_id           = local.candidates.user_id,
+                notification_type = "price_drop_alert",
+                reference_id      = local.candidates.product_id
+            )>
+
+            <cfset result.sent = result.sent + 1>
+        <cfcatch>
+            <cfoutput>
+                <div style="color:red;padding:10px;border:1px solid red;margin:10px;">
+                    <strong>ERROR:</strong> #cfcatch.message#<br>
+                    <strong>DETAIL:</strong> #cfcatch.detail#
+                </div>
+            </cfoutput>
+            <cfset result.errors = result.errors + 1>
+        </cfcatch>
+        </cftry>
+    </cfloop>
+
+    <cfreturn result>
+</cffunction>
+
+
+<!---  LOYALTY REWARDS & POINTS --->
+
+<cffunction name="processLoyaltyRewards" returntype="struct" output="false">
+
+    <cfset var result       = { sent: 0, skipped: 0, errors: 0 }>
+    <cfset var notifModel   = "">
+    <cfset var pointsEarned = 0>
+    <cfset var totalPoints  = 0>
+    <cfset var milestoneMsg = "">
+
+    <!--- Get users with unawarded orders, grouped by user (not per order) --->
+    <cfquery name="local.users" datasource="#application.dsn#">
+        SELECT
+            o.user_id,
+            COUNT(DISTINCT o.order_group_id) AS new_order_count,
+            SUM(o.final_amount)              AS total_spent
+        FROM orders o
+        WHERE o.user_id IS NOT NULL
+        AND   o.status  NOT IN ('cancelled', 'cancel_requested')
+        AND   NOT EXISTS (
+            SELECT 1 FROM loyalty_points lp
+            WHERE lp.user_id        = o.user_id
+            AND   lp.order_group_id = o.order_group_id
+        )
+        GROUP BY o.user_id
+    </cfquery>
+
+    <cfset notifModel = createObject("component", "models.Notification")>
+
+    <cfloop query="local.users">
+        <cftry>
+            <!--- Skip if already sent loyalty notification today --->
+            <cfif wasRecentlySent(
+                    user_id           = local.users.user_id,
+                    notification_type = "loyalty_points",
+                    reference_id      = "",
+                    hours             = 24)>
+                <cfset result.skipped = result.skipped + 1>
+                <cfcontinue>
+            </cfif>
+
+            <!--- Calculate total points for all new orders --->
+            <cfset pointsEarned = int(local.users.total_spent / 10)>
+
+            <cfif pointsEarned LT 1>
+                <cfset result.skipped = result.skipped + 1>
+                <cfcontinue>
+            </cfif>
+
+            <!--- Save one points row per unawarded order --->
+            <cfquery name="local.unawardedOrders" datasource="#application.dsn#">
+                SELECT DISTINCT o.order_group_id, SUM(o.final_amount) AS amt
+                FROM orders o
+                WHERE o.user_id IS NOT NULL
+                AND   o.status  NOT IN ('cancelled', 'cancel_requested')
+                AND   NOT EXISTS (
+                    SELECT 1 FROM loyalty_points lp
+                    WHERE lp.user_id        = o.user_id
+                    AND   lp.order_group_id = o.order_group_id
+                )
+                AND o.user_id = <cfqueryparam value="#local.users.user_id#" cfsqltype="cf_sql_integer">
+                GROUP BY o.order_group_id
+            </cfquery>
+
+            <cfloop query="local.unawardedOrders">
+                <cfset var pts = int(local.unawardedOrders.amt / 10)>
+                <cfif pts GTE 1>
+                    <cfquery datasource="#application.dsn#">
+                        INSERT IGNORE INTO loyalty_points
+                            (user_id, points, reason, order_id)
+                        VALUES (
+                            <cfqueryparam value="#local.users.user_id#"               cfsqltype="cf_sql_integer">,
+                            <cfqueryparam value="#pts#"                                cfsqltype="cf_sql_integer">,
+                            'Order reward',
+                            <cfqueryparam value="#local.unawardedOrders.order_group_id#" cfsqltype="cf_sql_varchar">
+                        )
+                    </cfquery>
+                </cfif>
+            </cfloop>
+
+            <!--- Get updated total --->
+            <cfquery name="local.totQ" datasource="#application.dsn#">
+                SELECT SUM(points) AS total
+                FROM loyalty_points
+                WHERE user_id = <cfqueryparam value="#local.users.user_id#" cfsqltype="cf_sql_integer">
+            </cfquery>
+            <cfset totalPoints = val(local.totQ.total)>
+
+            <!--- Check milestone --->
+            <cfset milestoneMsg = "">
+            <cfset var prevTotal = totalPoints - pointsEarned>
+            <cfif totalPoints GTE 500 AND prevTotal LT 500>
+                <cfset milestoneMsg = " You have reached 500 points — enjoy a Rs.100 discount on your next order!">
+            <cfelseif totalPoints GTE 250 AND prevTotal LT 250>
+                <cfset milestoneMsg = " You have reached 250 points — keep going for bigger rewards!">
+            <cfelseif totalPoints GTE 100 AND prevTotal LT 100>
+                <cfset milestoneMsg = " You have hit 100 points — you are on a roll!">
+            </cfif>
+
+            <!--- One single notification summarising all new points --->
+            <cfset notifModel.create(
+                user_id   = local.users.user_id,
+                sender_id = 0,
+                type      = "loyalty_points",
+                title     = "You Earned " & pointsEarned & " Reward Points!",
+                message   = "You earned " & pointsEarned & " points from "
+                          & local.users.new_order_count
+                          & (local.users.new_order_count EQ 1 ? " order" : " orders")
+                          & ". Your total is now " & totalPoints & " points." & milestoneMsg,
+                link      = "index.cfm?page=dashboard&section=orders"
+            )>
+
+            <cfset logSent(
+                user_id           = local.users.user_id,
+                notification_type = "loyalty_points",
+                reference_id      = ""
+            )>
+
+            <cfset result.sent = result.sent + 1>
+
+        <cfcatch>
+            <cfoutput>
+                <div style="color:red;padding:10px;border:1px solid red;margin:10px;">
+                    <strong>ERROR:</strong> #cfcatch.message#<br>
+                    <strong>DETAIL:</strong> #cfcatch.detail#
+                </div>
+            </cfoutput>
+            <cfset result.errors = result.errors + 1>
+        </cfcatch>
+        </cftry>
+    </cfloop>
+
+    <cfreturn result>
+</cffunction>
+
 
 </cfcomponent>

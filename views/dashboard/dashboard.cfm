@@ -91,6 +91,13 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'tickets'>active</cfif>" data-section="tickets">My Tickets</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'notifications'>active</cfif>" data-section="notifications"> Notifications
 </a></li>
+<li>
+    <a href="#" class="nav-link text-white menuLink 
+       <cfif section EQ 'loyalty'>active</cfif>" 
+       data-section="loyalty">
+        Loyalty Points
+    </a>
+</li>
     </ul>
     </cfif>
 
@@ -368,7 +375,9 @@
         <cfelseif section EQ "deliveryZones">
             <cfinclude template="../vendor/deliveryZones.cfm">   
         <cfelseif section EQ "notifications">
-            <cfinclude template="../user/notification_preferences.cfm">    
+            <cfinclude template="../user/notification_preferences.cfm">   
+        <cfelseif section EQ "loyalty">
+            <cfinclude template="../user/loyalty.cfm">     
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>
@@ -615,9 +624,7 @@ function loadNotifList(){
             html +=       `<div class="notif-time small text-muted">${n.time}</div>`;
             html +=     `</div>`;
             
-            if(unread){
-                html += `<button class="notif-read-btn markOneBtn btn btn-sm" data-id="${n.id}" title="Mark as read">✔</button>`;
-            }
+          
             html +=   `</div>`;
 
             // === IMPORTANT: Better Click Handler ===

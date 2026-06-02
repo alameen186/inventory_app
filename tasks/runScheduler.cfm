@@ -21,9 +21,7 @@ Running scheduler [#testMode ? 'TEST MODE' : 'PRODUCTION'#]
 — #timeFormat(now(),"HH:mm:ss")#
 — #dueTodayQ.recordCount# schedule(s) due.<br>
 </cfoutput>
-<!--- ═══════════════════════════════════════════
-   SCHEDULED ORDERS PROCESSING
-════════════════════════════════════════════════ --->
+<!---  SCHEDULED ORDERS PROCESSING --->
 
 <cfif dueTodayQ.recordCount EQ 0>
 
@@ -171,9 +169,7 @@ Running scheduler [#testMode ? 'TEST MODE' : 'PRODUCTION'#]
 </cfif>
 
 
-<!--- ═══════════════════════════════════════════
-   PERSONALIZED CUSTOMER NOTIFICATIONS
-════════════════════════════════════════════════ --->
+<!--- PERSONALIZED CUSTOMER NOTIFICATIONS --->
 
 <cftry>
 
@@ -255,6 +251,43 @@ Running scheduler [#testMode ? 'TEST MODE' : 'PRODUCTION'#]
         |
         Errors: #cartResult.errors#
     </cfoutput>
+
+    <!--- 6. Low Stock Alerts --->
+    <cfset lowStockResult = notifEngine.processLowStockAlerts()>
+    <cfoutput>
+        <br>
+        <strong>Low Stock Alerts:</strong>
+        Sent: #lowStockResult.sent#
+        |
+        Skipped: #lowStockResult.skipped#
+        |
+        Errors: #lowStockResult.errors#
+    </cfoutput>
+
+    <!--- 7. Price Drop Alerts --->
+    <cfset priceDropResult = notifEngine.processPriceDropAlerts()>
+    <cfoutput>
+        <br>
+        <strong>Price Drop Alerts:</strong>
+        Sent: #priceDropResult.sent#
+        |
+        Skipped: #priceDropResult.skipped#
+        |
+        Errors: #priceDropResult.errors#
+    </cfoutput>
+
+    <!--- 8. Loyalty Rewards --->
+    <cfset loyaltyResult = notifEngine.processLoyaltyRewards()>
+    <cfoutput>
+        <br>
+        <strong>Loyalty Rewards:</strong>
+        Sent: #loyaltyResult.sent#
+        |
+        Skipped: #loyaltyResult.skipped#
+        |
+        Errors: #loyaltyResult.errors#
+    </cfoutput>
+
 
 <cfcatch>
 
