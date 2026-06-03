@@ -29,10 +29,10 @@
     </cffunction>
 
 
-   <cffunction name="addProduct" access="public" returntype="numeric" output="false">
+<cffunction name="addProduct" access="public" returntype="numeric" output="false">
     <cfargument name="product_name"      type="string"  required="true">
     <cfargument name="price"             type="numeric" required="true">
-    <cfargument name="stock"             type="numeric">
+    <cfargument name="stock"             type="numeric" required="false" default="0">
     <cfargument name="category_id"       type="numeric" required="true">
     <cfargument name="image"             type="string"  required="false" default="">
     <cfargument name="image2"            type="string"  required="false" default="">
@@ -45,27 +45,30 @@
     <cftry>
         <cfquery datasource="#application.dsn#">
             INSERT INTO products
-                (product_name, price, stock, category_id, image, image2, image3,
-                 vendor_id, expiry_date, wholesale_price, min_wholesale_qty)
+                (product_name, price, stock, category_id, vendor_id, 
+                 expiry_date, wholesale_price, min_wholesale_qty, is_active)
             VALUES (
                 <cfqueryparam value="#arguments.product_name#" cfsqltype="cf_sql_varchar">,
-                <cfqueryparam value="#arguments.price#"        cfsqltype="cf_sql_decimal">,
-                <cfqueryparam value="#arguments.stock#"        cfsqltype="cf_sql_integer">,
-                <cfqueryparam value="#arguments.category_id#"  cfsqltype="cf_sql_integer">,
-                '', '', '',
-                <cfqueryparam value="#arguments.vendor_id#"    cfsqltype="cf_sql_integer">,
-                <cfqueryparam value="#arguments.expiry_date#"  cfsqltype="cf_sql_date"
+                <cfqueryparam value="#arguments.price#" cfsqltype="cf_sql_decimal">,
+                <cfqueryparam value="#arguments.stock#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.category_id#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.vendor_id#" cfsqltype="cf_sql_integer">,
+                <cfqueryparam value="#arguments.expiry_date#" cfsqltype="cf_sql_date" 
                     null="#NOT len(trim(arguments.expiry_date))#">,
-                <cfqueryparam value="#arguments.wholesale_price#"   cfsqltype="cf_sql_decimal"
+                <cfqueryparam value="#arguments.wholesale_price#" cfsqltype="cf_sql_decimal"
                     null="#NOT isNumeric(arguments.wholesale_price) OR NOT val(arguments.wholesale_price)#">,
                 <cfqueryparam value="#arguments.min_wholesale_qty#" cfsqltype="cf_sql_integer"
-                    null="#NOT isNumeric(arguments.min_wholesale_qty) OR NOT val(arguments.min_wholesale_qty)#">
+                    null="#NOT isNumeric(arguments.min_wholesale_qty) OR NOT val(arguments.min_wholesale_qty)#">,
+                1
             )
         </cfquery>
+        
         <cfquery name="lastId" datasource="#application.dsn#">
             SELECT LAST_INSERT_ID() AS new_id
         </cfquery>
+        
         <cfreturn lastId.new_id>
+        
     <cfcatch>
         <cfreturn 0>
     </cfcatch>
@@ -290,6 +293,7 @@
         <cfargument name="limit"       default="10">
         <cfargument name="category_id" default="">
         <cfargument name="vendor_id"   default="">
+        <cfargument name="season"   default="">
 
         <cfset var searchValue = trim(arguments.search)>
         <cfset var offset = (arguments.page - 1) * arguments.limit>
@@ -300,9 +304,15 @@
                 c.category_name,
                 p.expiry_date,
                 (SELECT pi.image FROM product_images pi
-                 WHERE pi.product_id = p.id
-                 ORDER BY pi.sort_order ASC LIMIT 1) AS first_image
-            FROM products p
+ WHERE pi.product_id = p.id
+ ORDER BY pi.sort_order ASC LIMIT 1) AS first_image,
+(
+SELECT GROUP_CONCAT(s.season_name ORDER BY s.start_date SEPARATOR '|')
+FROM   product_seasons ps
+JOIN   seasons s ON s.id = ps.season_id AND s.is_active = 1
+WHERE  ps.product_id = p.id
+) AS season_tags
+        FROM products p
             JOIN categories c ON p.category_id = c.id
             WHERE 1=1
 
@@ -539,39 +549,131 @@
     <cfreturn q.recordCount ? val(q.vendor_id) : 0>
 </cffunction>
 
-   <cffunction name="getActiveOfferForProduct" returntype="struct" output="false">
+<cffunction name="getActiveOfferForProduct" returntype="struct" output="false">
     <cfargument name="product_id" type="numeric" required="true">
 
     <cfquery name="local.q" datasource="#application.dsn#">
         SELECT 
+            o.offer_name,
             o.discount_type,
             o.discount_value,
-            o.offer_name
+            o.start_date,
+            o.end_date
         FROM offers o
-        WHERE o.is_active = 1
+        WHERE o.product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+          AND o.offer_type = 'individual'
+          AND o.is_active = 1
           AND o.start_date <= CURDATE()
           AND o.end_date >= CURDATE()
-          AND (
-                (o.offer_type = 'individual' AND o.product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">)
-             OR (o.offer_type = 'seasonal' 
-                 AND o.category_id = (SELECT category_id FROM products p WHERE p.id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">))
-          )
         ORDER BY o.discount_value DESC
         LIMIT 1
     </cfquery>
 
-    <cfif local.q.recordCount EQ 0>
-        <cfreturn { hasOffer: false }>
+    <cfif local.q.recordCount GT 0>
+        <cfreturn {
+            hasOffer      : true,
+            offer_name    : local.q.offer_name,
+            discount_type : local.q.discount_type,
+            discount_value: local.q.discount_value
+        }>
     </cfif>
 
-    <cfreturn {
-        hasOffer      : true,
-        discount_type : local.q.discount_type,
-        discount_value: local.q.discount_value,
-        offer_name    : local.q.offer_name
-    }>
+    <!--- No active offer --->
+    <cfreturn { hasOffer: false }>
 </cffunction>
-   
+<!--- Get all active seasons--->
+<cffunction name="getAllSeasons" returntype="query" output="false">
+    <cfquery name="local.q" datasource="#application.dsn#">
+        SELECT id, season_key, season_name, start_date, end_date, discount_pct
+        FROM   seasons
+        WHERE  is_active = 1
+        ORDER  BY start_date ASC
+    </cfquery>
+    <cfreturn local.q>
+</cffunction>
+
+
+<!--- Get season IDs already linked to a product --->
+<cffunction name="getProductSeasonIds" returntype="array" output="false">
+    <cfargument name="product_id" type="numeric" required="true">
+
+    <cfquery name="local.q" datasource="#application.dsn#">
+        SELECT season_id
+        FROM   product_seasons
+        WHERE  product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfset var ids = []>
+    <cfloop query="local.q">
+        <cfset arrayAppend(ids, local.q.season_id)>
+    </cfloop>
+    <cfreturn ids>
+</cffunction>
+
+
+<!--- Save  season links for a product --->
+<cffunction name="saveProductSeasons" returntype="void" output="false">
+    <cfargument name="product_id" type="numeric" required="true">
+    <cfargument name="season_ids" type="array"   required="true">
+
+    <cfquery datasource="#application.dsn#">
+        DELETE FROM product_seasons
+        WHERE product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfloop array="#arguments.season_ids#" index="sid">
+        <cfif isNumeric(sid) AND val(sid) GT 0>
+            <cfquery datasource="#application.dsn#">
+                INSERT IGNORE INTO product_seasons (product_id, season_id)
+                VALUES (
+                    <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">,
+                    <cfqueryparam value="#val(sid)#"             cfsqltype="cf_sql_integer">
+                )
+            </cfquery>
+        </cfif>
+    </cfloop>
+</cffunction>
+
+
+<!--- Get products that are season-tagged AND have an active offer right now --->
+<cffunction name="getActiveSeasonalProducts" returntype="query" output="false">
+    <cfargument name="limit" type="numeric" default="12">
+
+    <cfquery name="local.q" datasource="#application.dsn#">
+        SELECT
+            p.id,
+            p.product_name,
+            p.price                                         AS original_price,
+            ROUND(p.price * (1 - s.discount_pct / 100), 2) AS season_price,
+            s.discount_pct,
+            s.season_name,
+            s.season_key,
+            s.end_date                                      AS offer_ends,
+            p.stock,
+            p.category_id,
+            c.category_name,
+            (
+                SELECT pi.image FROM product_images pi
+                WHERE  pi.product_id = p.id
+                ORDER  BY pi.sort_order ASC LIMIT 1
+            ) AS first_image
+        FROM   products p
+        JOIN   product_seasons ps ON ps.product_id = p.id
+        JOIN   seasons s
+               ON  s.id         = ps.season_id
+               AND s.is_active  = 1
+               AND s.start_date <= CURDATE()
+               AND s.end_date   >= CURDATE()
+        JOIN   categories c ON c.id = p.category_id AND c.is_active = 1
+        WHERE  p.is_active = 1
+        AND    p.stock     > 0
+        ORDER  BY s.discount_pct DESC, p.product_name ASC
+        LIMIT  <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
+    </cfquery>
+
+    <cfreturn local.q>
+</cffunction>
+
 
 </cfcomponent>
 

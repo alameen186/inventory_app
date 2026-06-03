@@ -717,7 +717,8 @@
         'seasonal_monthend','seasonal_ramadan',
         'seasonal_christmas','seasonal_festival',
         'cart_recovery','seasonal_test',
-        'low_stock_alert','price_drop_alert','loyalty_points'
+        'low_stock_alert','price_drop_alert','loyalty_points',
+        'festival_offer'
     )
             ORDER BY created_at DESC
             LIMIT <cfqueryparam value="#arguments.limit#" cfsqltype="cf_sql_integer">
@@ -879,7 +880,6 @@
 
 
 <!---  LOYALTY REWARDS & POINTS --->
-
 <cffunction name="processLoyaltyRewards" returntype="struct" output="false">
 
     <cfset var result       = { sent: 0, skipped: 0, errors: 0 }>
@@ -1013,5 +1013,244 @@
     <cfreturn result>
 </cffunction>
 
+<!---  SYNC SEASON TAGS → OFFERS TABLE --->
+<cffunction name="syncSeasonOffers" returntype="struct" output="false">
 
+    <cfset var result = { created: 0, deactivated: 0, errors: 0 }>
+
+    <!--- Find all seasons active today --->
+    <cfquery name="local.activeSeasons" datasource="#application.dsn#">
+        SELECT id, season_key, season_name, start_date, end_date, discount_pct
+        FROM   seasons
+        WHERE  is_active   = 1
+        AND    start_date <= CURDATE()
+        AND    end_date   >= CURDATE()
+    </cfquery>
+
+    <cfloop query="local.activeSeasons">
+
+        <!--- All products tagged for this season --->
+        <cfquery name="local.taggedProducts" datasource="#application.dsn#">
+            SELECT ps.product_id, p.vendor_id
+            FROM   product_seasons ps
+            JOIN   products p
+                   ON  p.id        = ps.product_id
+                   AND p.is_active = 1
+                   AND p.stock     > 0
+            WHERE  ps.season_id = <cfqueryparam value="#local.activeSeasons.id#" cfsqltype="cf_sql_integer">
+        </cfquery>
+
+        <cfloop query="local.taggedProducts">
+            <cftry>
+                <!--- Only create if not already there --->
+                <cfquery name="local.existing" datasource="#application.dsn#">
+                    SELECT id FROM offers
+                    WHERE  offer_type = 'individual'
+                    AND    product_id = <cfqueryparam value="#local.taggedProducts.product_id#" cfsqltype="cf_sql_integer">
+                    AND    vendor_id  = <cfqueryparam value="#local.taggedProducts.vendor_id#"  cfsqltype="cf_sql_integer">
+                    AND    offer_name LIKE <cfqueryparam value="[SEASON]#local.activeSeasons.season_key#%" cfsqltype="cf_sql_varchar">
+                    LIMIT  1
+                </cfquery>
+
+                <cfif local.existing.recordCount EQ 0>
+                    <cfquery datasource="#application.dsn#">
+                        INSERT INTO offers
+                            (vendor_id, offer_name, offer_type, product_id,
+                             discount_type, discount_value,
+                             start_date, end_date, is_active)
+                        VALUES (
+                            <cfqueryparam value="#local.taggedProducts.vendor_id#"    cfsqltype="cf_sql_integer">,
+                            <cfqueryparam value="[SEASON]#local.activeSeasons.season_key# - #local.activeSeasons.season_name#" cfsqltype="cf_sql_varchar">,
+                            'individual',
+                            <cfqueryparam value="#local.taggedProducts.product_id#"   cfsqltype="cf_sql_integer">,
+                            'percentage',
+                            <cfqueryparam value="#local.activeSeasons.discount_pct#"  cfsqltype="cf_sql_decimal">,
+                            <cfqueryparam value="#local.activeSeasons.start_date#"    cfsqltype="cf_sql_date">,
+                            <cfqueryparam value="#local.activeSeasons.end_date#"      cfsqltype="cf_sql_date">,
+                            1
+                        )
+                    </cfquery>
+                    <cfset result.created = result.created + 1>
+                </cfif>
+
+            <cfcatch>
+                <cfset result.errors = result.errors + 1>
+            </cfcatch>
+            </cftry>
+        </cfloop>
+
+    </cfloop>
+
+    <!--- Deactivate season offers whose season has now ended --->
+    <cftry>
+        <cfquery datasource="#application.dsn#">
+            UPDATE offers
+            SET    is_active = 0
+            WHERE  offer_name LIKE '[SEASON]%'
+            AND    end_date   < CURDATE()
+            AND    is_active  = 1
+        </cfquery>
+        <cfset result.deactivated = 1>
+    <cfcatch>
+        <cfset result.errors = result.errors + 1>
+    </cfcatch>
+    </cftry>
+
+    <cfreturn result>
+</cffunction>
+
+
+<!--- PERSONALIZED FESTIVAL NOTIFICATIONS --->
+
+<cffunction name="processFestivalOffers" returntype="struct" output="false">
+
+    <cfset var result      = { sent: 0, skipped: 0, errors: 0 }>
+    <cfset var notifModel  = "">
+    <cfset var productList = "">
+    <cfset var discLabel   = "">
+    <cfset var notifMsg    = "">
+
+    <!--- Find all seasons active today --->
+    <cfquery name="local.activeSeasons" datasource="#application.dsn#">
+        SELECT id, season_key, season_name, discount_pct
+        FROM   seasons
+        WHERE  is_active   = 1
+        AND    start_date <= CURDATE()
+        AND    end_date   >= CURDATE()
+        ORDER  BY start_date ASC
+    </cfquery>
+
+    <cfif local.activeSeasons.recordCount EQ 0>
+        <cfreturn result>
+    </cfif>
+
+    <cfset notifModel = createObject("component","models.Notification")>
+
+    <cfloop query="local.activeSeasons">
+
+        <cfset var festKey  = local.activeSeasons.season_key>
+        <cfset var festName = local.activeSeasons.season_name>
+        <cfset var discPct  = local.activeSeasons.discount_pct>
+
+        <!--- Build a friendly intro line --->
+        <cfset var intro = "">
+        <cfif festKey EQ "onam">
+            <cfset intro = "Happy Onam!">
+        <cfelseif festKey EQ "eid">
+            <cfset intro = "Eid Mubarak!">
+        <cfelseif festKey EQ "diwali">
+            <cfset intro = "Happy Diwali!">
+        <cfelseif festKey EQ "christmas">
+            <cfset intro = "Merry Christmas!">
+        <cfelseif festKey EQ "newyear">
+            <cfset intro = "Happy New Year!">
+        <cfelse>
+            <cfset intro = "Festival season is here!">
+        </cfif>
+
+        <cfquery name="local.eligibleUsers" datasource="#application.dsn#">
+            SELECT DISTINCT o.user_id
+            FROM   orders o
+            JOIN   customer_notification_preferences cnp
+                   ON  cnp.user_id        = o.user_id
+                   AND cnp.seasonal_predictions = 1
+            WHERE  o.user_id IS NOT NULL
+            AND    o.status  NOT IN ('cancelled','cancel_requested')
+            AND    o.user_id NOT IN (
+                SELECT user_id
+                FROM   notification_send_log
+                WHERE  notification_type = 'festival_offer'
+                AND    reference_id      = <cfqueryparam value="#festKey#" cfsqltype="cf_sql_varchar">
+                AND    sent_at          >= DATE_SUB(NOW(), INTERVAL 72 HOUR)
+            )
+        </cfquery>
+
+        <cfloop query="local.eligibleUsers">
+            <cftry>
+
+                <cfquery name="local.userProducts" datasource="#application.dsn#">
+                    SELECT
+                        p.product_name,
+                        ROUND(p.price * (1 - s.discount_pct / 100), 2) AS season_price,
+                        s.discount_pct,
+                        COUNT(o.id) AS buy_count
+                    FROM   orders o
+                    JOIN   products p
+                           ON  p.id        = o.product_id
+                           AND p.is_active = 1
+                           AND p.stock     > 0
+                    JOIN   product_seasons ps ON ps.product_id = p.id
+                    JOIN   seasons s
+                           ON  s.id        = ps.season_id
+                           AND s.season_key = <cfqueryparam value="#festKey#" cfsqltype="cf_sql_varchar">
+                           AND s.is_active  = 1
+                           AND s.start_date <= CURDATE()
+                           AND s.end_date   >= CURDATE()
+                    WHERE  o.user_id = <cfqueryparam value="#local.eligibleUsers.user_id#" cfsqltype="cf_sql_integer">
+                    AND    o.status  NOT IN ('cancelled','cancel_requested')
+                    GROUP  BY p.id, p.product_name, s.discount_pct
+                    ORDER  BY buy_count DESC
+                    LIMIT  3
+                </cfquery>
+
+                <!--- Skip this user if none of their products are tagged for this season --->
+                <cfif local.userProducts.recordCount EQ 0>
+                    <cfset result.skipped = result.skipped + 1>
+                    <cfcontinue>
+                </cfif>
+
+                <!--- Build "Rice, Coconut Oil & Banana Chips" --->
+                <cfset productList = "">
+                <cfset var pIdx = 0>
+                <cfloop query="local.userProducts">
+                    <cfset pIdx = pIdx + 1>
+                    <cfif pIdx EQ 1>
+                        <cfset productList = local.userProducts.product_name>
+                    <cfelseif pIdx EQ local.userProducts.recordCount>
+                        <cfset productList = productList & " & " & local.userProducts.product_name>
+                    <cfelse>
+                        <cfset productList = productList & ", " & local.userProducts.product_name>
+                    </cfif>
+                </cfloop>
+
+                <cfset discLabel  = "up to " & numberFormat(discPct,"0") & "% OFF">
+                <cfset notifMsg   = intro
+                    & " Enjoy " & discLabel
+                    & " on products you love: "
+                    & productList
+                    & ". Shop now before stocks run out!">
+
+                <cfset notifModel.create(
+                    user_id   = local.eligibleUsers.user_id,
+                    sender_id = 0,
+                    type      = "festival_offer",
+                    title     = festName & "  Special Offers Just for You!",
+                    message   = notifMsg,
+                    link      = "index.cfm?page=dashboard&section=productList"
+                )>
+
+                <cfset logSent(
+                    user_id           = local.eligibleUsers.user_id,
+                    notification_type = "festival_offer",
+                    reference_id      = festKey
+                )>
+
+                <cfset result.sent = result.sent + 1>
+
+            <cfcatch>
+                <cfoutput>
+                    <div style="color:red;padding:10px;border:1px solid red;margin:10px;">
+                        <strong>ERROR (Festival):</strong> #cfcatch.message#<br>
+                        <strong>DETAIL:</strong> #cfcatch.detail#
+                    </div>
+                </cfoutput>
+                <cfset result.errors = result.errors + 1>
+            </cfcatch>
+            </cftry>
+        </cfloop>
+
+    </cfloop>
+
+    <cfreturn result>
+</cffunction>
 </cfcomponent>

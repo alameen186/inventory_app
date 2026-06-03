@@ -288,6 +288,30 @@ Running scheduler [#testMode ? 'TEST MODE' : 'PRODUCTION'#]
         Errors: #loyaltyResult.errors#
     </cfoutput>
 
+    <!--- 9. Sync Season Tags --->
+<cfset syncResult = notifEngine.syncSeasonOffers()>
+<cfoutput>
+    <br>
+    <strong>Season Offer Sync:</strong>
+    Created: #syncResult.created#
+    |
+    Deactivated: #syncResult.deactivated#
+    |
+    Errors: #syncResult.errors#
+</cfoutput>
+
+<!--- 10. Festival Personalized Notifications --->
+<cfset festivalResult = notifEngine.processFestivalOffers()>
+<cfoutput>
+    <br>
+    <strong>Festival Offers:</strong>
+    Sent: #festivalResult.sent#
+    |
+    Skipped: #festivalResult.skipped#
+    |
+    Errors: #festivalResult.errors#
+</cfoutput>
+
 
 <cfcatch>
 

@@ -75,7 +75,54 @@
         </cfif>
         <cfreturn "">
     </cffunction>
+<!--- Helper: Create seasonal offers immediately --->
+<cffunction name="createSeasonOffers" access="private" returntype="void">
+    <cfargument name="product_id" type="numeric" required="true">
+    <cfargument name="season_ids" type="array" required="true">
 
+    <cfloop array="#arguments.season_ids#" index="sid">
+        <cftry>
+            <cfquery name="local.season" datasource="#application.dsn#">
+                SELECT season_key, season_name, discount_pct, start_date, end_date
+                FROM seasons 
+                WHERE id = <cfqueryparam value="#sid#" cfsqltype="cf_sql_integer">
+                  AND is_active = 1
+            </cfquery>
+
+            <cfif local.season.recordCount>
+                <!--- Check if offer already exists --->
+                <cfquery name="local.exists" datasource="#application.dsn#">
+                    SELECT id FROM offers
+                    WHERE product_id = <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">
+                      AND offer_type = 'individual'
+                      AND offer_name LIKE <cfqueryparam value="[SEASON]#local.season.season_key#%" cfsqltype="cf_sql_varchar">
+                </cfquery>
+
+                <cfif local.exists.recordCount EQ 0>
+                    <cfquery datasource="#application.dsn#">
+                        INSERT INTO offers 
+                        (vendor_id, offer_name, offer_type, product_id, 
+                         discount_type, discount_value, start_date, end_date, is_active)
+                        VALUES (
+                            <cfqueryparam value="#session.user_id#" cfsqltype="cf_sql_integer">,
+                            <cfqueryparam value="[SEASON]#local.season.season_key# - #local.season.season_name#" cfsqltype="cf_sql_varchar">,
+                            'individual',
+                            <cfqueryparam value="#arguments.product_id#" cfsqltype="cf_sql_integer">,
+                            'percentage',
+                            <cfqueryparam value="#local.season.discount_pct#" cfsqltype="cf_sql_decimal">,
+                            <cfqueryparam value="#local.season.start_date#" cfsqltype="cf_sql_date">,
+                            <cfqueryparam value="#local.season.end_date#" cfsqltype="cf_sql_date">,
+                            1   <!--- IMPORTANT: Set is_active = 1 --->
+                        )
+                    </cfquery>
+                </cfif>
+            </cfif>
+        <cfcatch>
+            <!--- Silent fail --->
+        </cfcatch>
+        </cftry>
+    </cfloop>
+</cffunction>
     <!--- ADD --->
 <cffunction name="add" access="remote" returntype="void" output="true" httpMethod="POST">
     <cfset createObject("component","models.AuthGuard").checkAuth()>
@@ -83,148 +130,75 @@
     <cftry>
         <cfset var productModel   = createObject("component","models.Product")>
         <cfset var imageModel     = createObject("component","models.ProductImage")>
-        <cfset var rackModel      = createObject("component","models.Rack")>
-        <cfset var placementModel = createObject("component","models.RackPlacement")>
-        <cfset var wholesalePrice  = (structKeyExists(form,"wholesale_price")   AND len(trim(form.wholesale_price)))   ? trim(form.wholesale_price)   : "">
+
+        <!--- Variables --->
+        <cfset var productName   = trim(form.product_name)>
+        <cfset var price         = val(form.price)>
+        <cfset var stock         = val(form.stock)>
+        <cfset var categoryId    = val(form.category_id)>
+        <cfset var expiryDate    = structKeyExists(form,"expiry_date") ? trim(form.expiry_date) : "">
+        <cfset var wholesalePrice  = (structKeyExists(form,"wholesale_price") AND len(trim(form.wholesale_price))) ? trim(form.wholesale_price) : "">
         <cfset var minWholesaleQty = (structKeyExists(form,"min_wholesale_qty") AND len(trim(form.min_wholesale_qty))) ? trim(form.min_wholesale_qty) : "">
 
-        <!--- ── SERVER-SIDE VALIDATION ── --->
-
-        <!--- Product Name --->
-        <cfif NOT structKeyExists(form,"product_name") OR NOT len(trim(form.product_name))>
-            <cfset jsonRes(false,"Product name is required")>
+        <!--- Basic Validation --->
+        <cfif len(productName) LT 2 OR len(productName) GT 100>
+            <cfset jsonRes(false,"Product name must be 2-100 characters")>
         </cfif>
-        <cfif len(trim(form.product_name)) LT 2>
-            <cfset jsonRes(false,"Product name must be at least 2 characters")>
+        <cfif price LTE 0>
+            <cfset jsonRes(false,"Valid price is required")>
         </cfif>
-        <cfif len(trim(form.product_name)) GT 100>
-            <cfset jsonRes(false,"Product name cannot exceed 100 characters")>
+        <cfif stock LT 0>
+            <cfset jsonRes(false,"Stock cannot be negative")>
         </cfif>
-
-        <!--- Price --->
-        <cfif NOT structKeyExists(form,"price") OR NOT len(trim(form.price))>
-            <cfset jsonRes(false,"Price is required")>
-        </cfif>
-        <cfif NOT isNumeric(form.price) OR val(form.price) LTE 0>
-            <cfset jsonRes(false,"Price must be a number greater than 0")>
-        </cfif>
-        <cfif val(form.price) GT 999999>
-            <cfset jsonRes(false,"Price cannot exceed 999999")>
-        </cfif>
-
-        <!--- Stock --->
-        <cfif NOT structKeyExists(form,"stock") OR NOT len(trim(form.stock))>
-            <cfset jsonRes(false,"Stock quantity is required")>
-        </cfif>
-        <cfif NOT isNumeric(form.stock) OR val(form.stock) LT 0>
-            <cfset jsonRes(false,"Stock must be 0 or greater")>
-        </cfif>
-        <cfif val(form.stock) GT 99999>
-            <cfset jsonRes(false,"Stock cannot exceed 99999")>
-        </cfif>
-
-        <!--- Category --->
-        <cfif NOT structKeyExists(form,"category_id") OR NOT val(form.category_id)>
+        <cfif categoryId EQ 0>
             <cfset jsonRes(false,"Please select a category")>
         </cfif>
 
-        <!--- Expiry Date — optional but if provided must be valid and future --->
-        <cfset var expiryDate = structKeyExists(form,"expiry_date") ? trim(form.expiry_date) : "">
-        <cfif len(expiryDate)>
-            <cfif NOT isDate(expiryDate)>
-                <cfset jsonRes(false,"Expiry date is not a valid date")>
-            </cfif>
-            <cfif dateCompare(expiryDate, now()) LT 0>
-                <cfset jsonRes(false,"Expiry date cannot be in the past")>
-            </cfif>
+        <!--- Create Product --->
+        <cfset var newId = productModel.addProduct(
+            productName,
+            price,
+            stock,
+            categoryId,
+            "", "", "",                  <!--- image, image2, image3 --->
+            session.user_id,
+            expiryDate,
+            wholesalePrice,
+            minWholesaleQty
+        )>
+
+        <cfif NOT newId OR newId EQ 0>
+            <cfset jsonRes(false,"Failed to insert product into database. Please check required fields.")>
         </cfif>
 
-        <!--- Rack face capacity check — server side --->
-        <cfset var raceFaceId = structKeyExists(form,"rack_face_id") ? val(form.rack_face_id) : 0>
-        <cfif raceFaceId GT 0>
-            <cfset var faceInfo = rackModel.getFaceWithUsage(raceFaceId)>
-            <cfif faceInfo.recordCount EQ 0>
-                <cfset jsonRes(false,"Selected rack face does not exist")>
-            </cfif>
-            <cfif faceInfo.used_slots GTE faceInfo.capacity>
-                <cfset jsonRes(false,"Selected face (#faceInfo.face_code#) is full (#faceInfo.used_slots#/#faceInfo.capacity#). Please choose another face.")>
-            </cfif>
+        <!--- Save Seasons + Create Offers --->
+        <cfset var seasonIds = []>
+        <cfif structKeyExists(form,"season_ids") AND len(trim(form.season_ids))>
+            <cfloop list="#form.season_ids#" index="sid">
+                <cfif isNumeric(trim(sid)) AND val(trim(sid)) GT 0>
+                    <cfset arrayAppend(seasonIds, val(trim(sid)))>
+                </cfif>
+            </cfloop>
         </cfif>
 
-        <!--- Wholesale validation (server-side) --->
-<cfif structKeyExists(form,"enable_wholesale") AND len(trim(form.enable_wholesale))>
-    <cfif NOT isNumeric(wholesalePrice) OR val(wholesalePrice) LTE 0>
-        <cfset jsonRes(false,"Wholesale price is required when wholesale is enabled")>
-    </cfif>
-    <cfif val(wholesalePrice) GTE val(form.price)>
-        <cfset jsonRes(false,"Wholesale price must be lower than retail price")>
-    </cfif>
-    <cfif NOT isNumeric(minWholesaleQty) OR val(minWholesaleQty) LT 1>
-        <cfset jsonRes(false,"Minimum wholesale quantity must be at least 1")>
-    </cfif>
-</cfif>
-
-        
-<cfset var newId = productModel.addProduct(
-    trim(form.product_name),
-    val(form.price),
-    val(form.stock),
-    val(form.category_id),
-    "", "", "",
-    session.user_id,
-    expiryDate,
-    wholesalePrice,
-    minWholesaleQty
-)>
-
-        <cfif NOT newId>
-            <cfset jsonRes(false,"Failed to create product. Please try again.")>
+        <cfif arrayLen(seasonIds)>
+            <cfset productModel.saveProductSeasons(newId, seasonIds)>
+            <cfset createSeasonOffers(newId, seasonIds)>
         </cfif>
 
-        <!--- ── UPLOAD IMAGES ── --->
-        <cfset var images   = uploadImages("product_images", 10)>
-        <cfset var inserted = 0>
-
+        <!--- Upload Images --->
+        <cfset var images = uploadImages("product_images", 10)>
         <cfloop from="1" to="#arrayLen(images)#" index="i">
-            <cfset var imgName = images[i]>
-            <cfset var imgOk   = imageModel.addImage(
-                product_id = newId,
-                image      = imgName,
-                sort_order = i
-            )>
-            <cfif imgOk>
-                <cfset inserted++>
-            </cfif>
+            <cfset imageModel.addImage(product_id = newId, image = images[i], sort_order = i)>
         </cfloop>
 
-        <!--- ── RACK PLACEMENT ── --->
-        <cfif raceFaceId GT 0>
-            <cfset var placeResult = placementModel.placeProduct(
-                product_id   = newId,
-                rack_face_id = raceFaceId
-            )>
-            <cfif NOT placeResult.success>
-                <cfset jsonRes(true,
-                    "Product created successfully but rack placement failed: "
-                    & placeResult.message
-                    & ". You can assign it from Rack Placement page.")>
-            </cfif>
-        </cfif>
-
-        <!--- ── SUCCESS ── --->
-        <cfset var successMsg = "Product '" & trim(form.product_name) & "' created successfully">
-        <cfif raceFaceId GT 0>
-            <cfset successMsg = successMsg & " and placed in rack face">
-        </cfif>
-
-        <cfset jsonRes(true, successMsg)>
+        <cfset jsonRes(true, "Product '#productName#' created successfully with season offers!")>
 
     <cfcatch>
-        <cfset jsonRes(false,"Server Error: #cfcatch.message#")>
+        <cfset jsonRes(false, "Server Error: #cfcatch.message# | Line: #cfcatch.tagContext[1].line#")>
     </cfcatch>
     </cftry>
 </cffunction>
-
     <!--- UPDATE --->
     <cffunction name="update" access="remote" returntype="void" output="true" httpMethod="POST">
         <cfset createObject("component","models.AuthGuard").checkAuth()>
@@ -253,7 +227,16 @@
                  id, productName, price, stock,
                  category_id, "", "", "", expiry_date,wholesale_price,min_wholesale_qty
             )>
-
+<!--- Save season links --->
+<cfset var seasonIds = []>
+<cfif structKeyExists(form,"season_ids") AND len(trim(form.season_ids))>
+    <cfloop list="#form.season_ids#" index="sid">
+        <cfif isNumeric(trim(sid)) AND val(trim(sid)) GT 0>
+            <cfset arrayAppend(seasonIds, val(trim(sid)))>
+        </cfif>
+    </cfloop>
+</cfif>
+<cfset productModel.saveProductSeasons(id, seasonIds)>
             <cfset var currentCount = imageModel.getCount(id)>
             <cfset var slotsLeft    = 10 - currentCount>
 
@@ -331,7 +314,7 @@
                     <td>#price#</td>
                     <td>
                         <cfif len(trim(wholesale_price)) AND wholesale_price GT 0>
-                            <span class="badge bg-success">₹#numberFormat(wholesale_price,"0.00")#</span>
+                            <span class="badge bg-success">#numberFormat(wholesale_price,"0.00")#</span>
                         <cfelse>
                             <span class="text-muted small">—</span>
                         </cfif>
@@ -386,6 +369,17 @@
                         </select>
                     </td>
                     <td><input type="date" value="#expiry_date#" class="form-control expiry"></td>
+                    <td>
+    <cfif len(trim(season_tags))>
+        <cfloop list="#season_tags#" delimiters="|" index="stag">
+            <span class="badge bg-info text-dark" style="font-size:0.68rem;">#stag#</span>
+        </cfloop>
+    <cfelse>
+        <span class="text-muted small">—</span>
+    </cfif>
+</td>
+                    <td><input value="#product_name#" class="form-control name" style="min-width:100px;"></td>
+
                     <td>
                         <div id="existingImgs_#id#" class="d-flex flex-wrap gap-1 mb-2"></div>
                         <input type="file" name="product_images" class="form-control"
@@ -476,5 +470,16 @@
         </cfcatch>
         </cftry>
     </cffunction>
-
+<cffunction name="getProductSeasons" access="remote" returntype="void"
+            output="true" httpMethod="GET">
+    <cfset createObject("component","models.AuthGuard").checkAuth()>
+    <cftry>
+        <cfset var productModel = createObject("component","models.Product")>
+        <cfset var ids = productModel.getProductSeasonIds(val(url.product_id))>
+        <cfset jsonRes(true, "", ids)>
+    <cfcatch>
+        <cfset jsonRes(false, "Error: #cfcatch.message#")>
+    </cfcatch>
+    </cftry>
+</cffunction>
 </cfcomponent>

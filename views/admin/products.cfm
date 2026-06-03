@@ -8,6 +8,22 @@
 <cfset productModel  = createObject("component","models.Product")>
 <cfset categoryModel = createObject("component","models.Category")>
 <cfset categories    = categoryModel.getAllActiveCategory(vendorFilter)>
+<cfset seasons = productModel.getAllSeasons()>
+
+<cfsavecontent variable="seasonChecksHTML">
+<cfoutput query="seasons">
+<div class="form-check">
+    <input class="form-check-input editSeasonCheck" type="checkbox"
+           name="season_ids" value="#id#"
+           id="editSeason_PRODUCTID_#id#">
+    <label class="form-check-label" style="font-size:0.75rem;"
+           for="editSeason_PRODUCTID_#id#">
+        #season_name#
+        <span class="text-danger">(#numberFormat(discount_pct,"0")#%)</span>
+    </label>
+</div>
+</cfoutput>
+</cfsavecontent>
 
 <cfparam name="url.search"      default="">
 <cfparam name="url.sort"        default="">
@@ -174,7 +190,46 @@
                     </div>
                 </div>
             </div>
-
+<!--- SEASON TAGGING --->
+<div class="card border-info mb-3">
+    <div class="card-header bg-info bg-opacity-10 py-2 d-flex align-items-center gap-2">
+        <i class="bi bi-stars text-info"></i>
+        <span class="fw-semibold text-info">Festival / Season Pricing</span>
+        <small class="text-muted ms-1">
+            (Optional — product gets a discounted price automatically during the selected season)
+        </small>
+    </div>
+    <div class="card-body pb-2">
+        <cfif seasons.recordCount GT 0>
+        <div class="row g-2">
+            <cfoutput query="seasons">
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="form-check border rounded p-2">
+                    <input class="form-check-input" type="checkbox"
+                           name="season_ids" value="#id#"
+                           id="addSeason_#id#">
+                    <label class="form-check-label small" for="addSeason_#id#">
+                        <span class="badge bg-danger me-1">#numberFormat(discount_pct,"0")#% OFF</span>
+                        <strong>#season_name#</strong><br>
+                        <span class="text-muted" style="font-size:0.72rem;">
+                            #dateFormat(start_date,"dd-mmm-yyyy")# –
+                            #dateFormat(end_date,"dd-mmm-yyyy")#
+                        </span>
+                    </label>
+                </div>
+            </div>
+            </cfoutput>
+        </div>
+        <div class="mt-2 small text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Ticking a season auto-creates a discount offer on this product
+            for that season's dates. No manual offer creation needed.
+        </div>
+        <cfelse>
+        <p class="text-muted small mb-0">No seasons configured yet. Ask admin to add seasons.</p>
+        </cfif>
+    </div>
+</div>
             <!--- Submit --->
             <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-secondary" id="closeAddFormBtn">Cancel</button>
@@ -254,6 +309,7 @@
                     <th>Stock</th>
                     <th>Category</th>
                     <th>Expiry</th>
+                    <th>Season</th>
                     <th>Image</th>
                     <th>Status</th>
                     <th>Action</th>
@@ -288,6 +344,15 @@
                     </td>
                     <td><small>#category_name#</small></td>
                     <td><small><cfif len(trim(expiry_date))>#dateFormat(expiry_date,"dd-mmm-yyyy")#<cfelse>—</cfif></small></td>
+                    <td>
+    <cfif len(trim(season_tags))>
+        <cfloop list="#season_tags#" delimiters="|" index="stag">
+            <span class="badge bg-info text-dark" style="font-size:0.68rem;">#stag#</span>
+        </cfloop>
+    <cfelse>
+        <span class="text-muted small">—</span>
+    </cfif>
+</td>
                     <td>
                         <cfif len(trim(first_image))>
                             <img src="../../assets/images/products/#first_image#" width="40" height="40"
@@ -354,6 +419,12 @@
                         </select>
                     </td>
                     <td><input type="date" value="#expiry_date#" class="form-control form-control-sm editExpiry"></td>
+                    <td>
+    <cfset thisSeasonHtml = replaceNoCase(seasonChecksHTML, "PRODUCTID", id, "all")>
+    <div id="seasonChecks_#id#">
+        #thisSeasonHtml#
+    </div>
+</td>
                     <td>
                         <div id="existingImgs_#id#" class="d-flex flex-wrap gap-1 mb-1"></div>
                         <input type="file" class="form-control form-control-sm editImages"
@@ -500,7 +571,7 @@ $(function(){
             if(isNaN(wsPrice) || wsPrice <= 0)
                 errors.push("Wholesale price is required when wholesale is enabled");
             else if(wsPrice >= price)
-                errors.push("Wholesale price must be lower than retail price (₹" + price.toFixed(2) + ")");
+                errors.push("Wholesale price must be lower than retail price (" + price.toFixed(2) + ")");
             if(isNaN(wsMinQty) || wsMinQty < 1)
                 errors.push("Minimum wholesale quantity must be at least 1");
         }
@@ -581,6 +652,16 @@ $(function(){
             });
             $("#existingImgs_" + id).html(html);
         }, "json");
+
+        /* Pre-check seasons for this product */
+$.get(ADMIN_CTRL, { method: "getProductSeasons", product_id: id }, function(res){
+    $("#seasonChecks_" + id + " .editSeasonCheck").prop("checked", false);
+    if(res.success && res.data && res.data.length){
+        $.each(res.data, function(i, sid){
+            $("#editSeason_" + id + "_" + sid).prop("checked", true);
+        });
+    }
+}, "json");
     });
 
     /* ── Delete single image ── */
@@ -644,6 +725,15 @@ $(function(){
         fd.append("expiry_date",        row.find(".editExpiry").val());
         fd.append("wholesale_price",    wsPrice);
         fd.append("min_wholesale_qty",  wsMinQty);
+
+        /* Collect season selections */
+row.find(".editSeasonCheck:checked").each(function(){
+    fd.append("season_ids", $(this).val());
+});
+/* If none checked send empty so controller clears previous tags */
+if(!row.find(".editSeasonCheck:checked").length){
+    fd.append("season_ids", "");
+}
 
         var fileInput = row.find(".editImages")[0];
         if(fileInput && fileInput.files.length){
