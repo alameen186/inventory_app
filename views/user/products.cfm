@@ -141,7 +141,16 @@
         <cfoutput query="products">
         <div class="col-6 col-md-4 col-lg-3">
             <div class="card h-100 product-card" data-pid="#id#">
-
+<button class="btn btn-link p-0 position-absolute toggleWishBtn"
+                    data-product-id="#id#"
+                    title="Add to Wishlist"
+                    id="wishBtn_#id#"
+                    style="top:6px;right:6px;font-size:1.5rem;color:##ccc;
+                           z-index:2;line-height:1;background:rgba(255,255,255,0.85);
+                           border-radius:50%;width:32px;height:32px;
+                           display:flex;align-items:center;justify-content:center;">
+                &##9829;
+            </button>
                 <cfif len(first_image)>
                     <img src="../../assets/images/products/#first_image#"
                          class="card-img-top" style="height:180px;object-fit:cover;">
@@ -182,8 +191,8 @@
                             <small class="text-muted">No reviews yet</small>
                         </cfif>
                     </div>
-
                     <div class="mt-auto" onclick="event.stopPropagation()">
+                    
                         <cfif stock LTE 0>
                             <p class="text-danger fw-bold small mb-2">Out of Stock</p>
                             <div id="enqMsg_#id#"></div>
@@ -390,6 +399,64 @@ $(document).ready(function(){
     var thumbOffset  = 0;
     var thumbItemW   = 64;   // thumb 56px + gap 8px
     var visibleCount = 4;
+
+     /* ── WISHLIST TOGGLE on product listing ── */
+var WCTRL_PROD = "../../controllers/WishlistController.cfc";
+
+/* Colour all hearts on page load */
+$(document).on("mouseenter", ".toggleWishBtn", function(){
+    if($(this).css("color") === "rgb(204, 204, 204)")
+        $(this).css("color","#f87171");
+});
+$(document).on("mouseleave", ".toggleWishBtn", function(){
+    if($(this).data("wishlisted") !== true)
+        $(this).css("color","#ccc");
+});
+
+/* Toggle */
+$(document).on("click", ".toggleWishBtn", function(e){
+    e.stopPropagation();
+    var btn = $(this);
+    var pid = btn.data("product-id");
+
+    $.ajax({
+        url      : WCTRL_PROD + "?method=toggle",
+        type     : "POST",
+        data     : { product_id: pid },
+        dataType : "json",
+        success  : function(res){
+            if(res.success){
+                var wishlisted = res.data.wishlisted;
+                btn.data("wishlisted", wishlisted);
+                btn.css("color", wishlisted ? "#ef4444" : "#ccc");
+                btn.attr("title", wishlisted ? "Remove from Wishlist" : "Add to Wishlist");
+                /* Quick toast */
+                var toast = $('<div class="position-fixed bottom-0 end-0 m-3 alert alert-'
+                    + (wishlisted ? "success" : "secondary")
+                    + ' py-2 px-3 shadow" style="z-index:9999;">'
+                    + res.message + '</div>');
+                $("body").append(toast);
+                setTimeout(function(){ toast.fadeOut(400, function(){ $(this).remove(); }); }, 2000);
+            } else {
+                alert(res.message);
+            }
+        }
+    });
+});
+
+/* Load wishlist status for all products on page */
+$(".toggleWishBtn").each(function(){
+    var btn = $(this);
+    var pid = btn.data("product-id");
+    $.get(WCTRL_PROD + "?method=checkStatus", { product_id: pid }, function(res){
+        if(res.success && res.data.wishlisted){
+            btn.data("wishlisted", true).css("color","#ef4444")
+               .attr("title","Remove from Wishlist");
+        }
+    }, "json");
+});
+
+
 
     // ── SEARCH
     function getFilterParams(){
