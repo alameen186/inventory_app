@@ -89,15 +89,9 @@
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'enquiry'>active</cfif>"     data-section="enquiry">My Enquiries</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'chat'>active</cfif>"        data-section="chat">Chat</a></li>
         <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'tickets'>active</cfif>" data-section="tickets">My Tickets</a></li>
-        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'notifications'>active</cfif>" data-section="notifications"> Notifications
-</a></li>
-<li>
-    <a href="#" class="nav-link text-white menuLink 
-       <cfif section EQ 'loyalty'>active</cfif>" 
-       data-section="loyalty">
-        Loyalty Points
-    </a>
-</li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'notifications'>active</cfif>" data-section="notifications"> Notifications</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'loyalty'>active</cfif>"data-section="loyalty">Loyalty Points</a></li>
+        <li><a href="#" class="nav-link text-white menuLink <cfif section EQ 'wishlist'>active</cfif>"data-section="wishlist">Wishlist</a></li>
     </ul>
     </cfif>
 
@@ -378,6 +372,8 @@
             <cfinclude template="../user/notification_preferences.cfm">   
         <cfelseif section EQ "loyalty">
             <cfinclude template="../user/loyalty.cfm">     
+        <cfelseif url.section EQ "wishlist">
+            <cfinclude template="../user/wishlist.cfm">    
         <cfelseif section EQ "scheduledOrders">
             <cfif session.role_name EQ "vendor" AND session.plan_name NEQ "pro">
                 <div class="alert alert-warning">This feature requires the Pro plan.</div>

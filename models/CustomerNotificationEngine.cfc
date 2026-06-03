@@ -1253,4 +1253,89 @@
 
     <cfreturn result>
 </cffunction>
+
+<!--- WISHLIST NOTIFICATIONS --->
+<cffunction name="processWishlistNotifications" returntype="struct" output="false">
+    <cfset var result = { sent: 0, skipped: 0, errors: 0 }>
+    <cfset var notifModel = createObject("component", "models.Notification")>
+    <cfset var wishModel  = createObject("component", "models.Wishlist")>
+
+    <!--- 1. Back in Stock --->
+    <cfquery name="local.backInStock" datasource="#application.dsn#">
+        SELECT DISTINCT 
+            w.user_id,
+            p.id AS product_id,
+            p.product_name,
+            p.stock
+        FROM wishlists w
+        JOIN products p ON p.id = w.product_id
+        WHERE p.stock > 0
+          AND p.is_active = 1
+          AND NOT EXISTS (
+              SELECT 1 FROM notification_send_log 
+              WHERE user_id = w.user_id 
+                AND notification_type = 'wishlist_back_in_stock'
+                AND reference_id = CAST(p.id AS CHAR)
+                AND sent_at >= DATE_SUB(NOW(), INTERVAL 48 HOUR)
+          )
+    </cfquery>
+
+    <cfloop query="local.backInStock">
+        <cftry>
+            <cfset notifModel.create(
+                user_id   = local.backInStock.user_id,
+                sender_id = 0,
+                type      = "wishlist_back_in_stock",
+                title     = "Back in Stock! ✨",
+                message   = "#local.backInStock.product_name# is now available again! Only #local.backInStock.stock# left.",
+                link      = "index.cfm?page=dashboard&section=wishlist"
+            )>
+            <cfset logSent(local.backInStock.user_id, "wishlist_back_in_stock", local.backInStock.product_id)>
+            <cfset result.sent++>
+        <cfcatch>
+            <cfset result.errors++>
+        </cfcatch>
+        </cftry>
+    </cfloop>
+
+    <!--- 2. Price Drop on Wishlist Items --->
+    <cfquery name="local.priceDrops" datasource="#application.dsn#">
+        SELECT DISTINCT 
+            w.user_id,
+            p.id AS product_id,
+            p.product_name,
+            p.price AS current_price,
+            MAX(o.price) AS previous_price
+        FROM wishlists w
+        JOIN products p ON p.id = w.product_id
+        LEFT JOIN orders o ON o.product_id = p.id AND o.user_id = w.user_id
+        WHERE p.stock > 0
+        GROUP BY w.user_id, p.id, p.product_name, p.price
+        HAVING p.price < COALESCE(MAX(o.price), p.price + 1)
+    </cfquery>
+
+    <cfloop query="local.priceDrops">
+        <cfif NOT wasRecentlySent(local.priceDrops.user_id, "wishlist_price_drop", local.priceDrops.product_id, 48)>
+            <cftry>
+                <cfset notifModel.create(
+                    user_id   = local.priceDrops.user_id,
+                    sender_id = 0,
+                    type      = "wishlist_price_drop",
+                    title     = "Price Drop on Wishlist Item!",
+                    message   = "#local.priceDrops.product_name# dropped to ₹#numberFormat(local.priceDrops.current_price, '0.00')#!",
+                    link      = "index.cfm?page=dashboard&section=wishlist"
+                )>
+                <cfset logSent(local.priceDrops.user_id, "wishlist_price_drop", local.priceDrops.product_id)>
+                <cfset result.sent++>
+            <cfcatch>
+                <cfset result.errors++>
+            </cfcatch>
+            </cftry>
+        <cfelse>
+            <cfset result.skipped++>
+        </cfif>
+    </cfloop>
+
+    <cfreturn result>
+</cffunction>
 </cfcomponent>

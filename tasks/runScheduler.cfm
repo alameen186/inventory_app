@@ -312,6 +312,18 @@ Running scheduler [#testMode ? 'TEST MODE' : 'PRODUCTION'#]
     Errors: #festivalResult.errors#
 </cfoutput>
 
+<!--- 11. Wishlist Notifications (NEW) --->
+<cfset wishlistResult = notifEngine.processWishlistNotifications()>
+<cfoutput>
+    <br>
+    <strong>Wishlist Notifications:</strong>
+    Sent: #wishlistResult.sent#
+    |
+    Skipped: #wishlistResult.skipped#
+    |
+    Errors: #wishlistResult.errors#
+</cfoutput>
+
 
 <cfcatch>
 

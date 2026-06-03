@@ -187,6 +187,22 @@
             </cfif>
         </cfloop>
 
+        <!--- Notify wishlist users that item is back in stock --->
+<cfset var wishModel  = createObject("component", "models.Wishlist")>
+<cfset var wishUsers  = wishModel.getUsersByProduct(arguments.product_id)>
+<cfloop query="wishUsers">
+    <cfif wishUsers.user_id GT 0>
+        <cfset notifModel.create(
+            user_id   = wishUsers.user_id,
+            sender_id = 0,
+            type      = "wishlist_back_in_stock",
+            title     = "Wishlist item is back in stock!",
+            message   = "Great news! A product in your wishlist is now available. Check it out before it sells out.",
+            link      = "index.cfm?page=dashboard&section=wishlist"
+        )>
+    </cfif>
+</cfloop>
+
         <cfreturn true>
 
     <cfcatch>

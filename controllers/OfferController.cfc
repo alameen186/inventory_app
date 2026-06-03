@@ -430,6 +430,40 @@
                     <cfset finalMsg = finalMsg & ", " & chatFails & " failed [" & chatErrors & "]">
                 </cfif>
 
+                <!--- STEP 7b: Notify wishlist users about new offer --->
+<cfset var wishModel   = createObject("component","models.Wishlist")>
+<cfset var affectedIds = []>
+
+<cfif trim(form.offer_type) EQ "individual" AND val(form.product_id)>
+    <cfset arrayAppend(affectedIds, val(form.product_id))>
+<cfelseif trim(form.offer_type) EQ "seasonal" AND val(form.category_id)>
+    <!--- Get all products in the category --->
+    <cfquery name="local.catProds" datasource="#application.dsn#">
+        SELECT id FROM products
+        WHERE category_id = <cfqueryparam value="#val(form.category_id)#" cfsqltype="cf_sql_integer">
+        AND   vendor_id   = <cfqueryparam value="#session.user_id#"       cfsqltype="cf_sql_integer">
+        AND   is_active   = 1
+    </cfquery>
+    <cfloop query="local.catProds">
+        <cfset arrayAppend(affectedIds, local.catProds.id)>
+    </cfloop>
+</cfif>
+
+<cfloop array="#affectedIds#" index="local.wpid">
+    <cfset var wUsers = wishModel.getWishlistUsersForOffer(local.wpid)>
+    <cfloop query="wUsers">
+        <cfset notifModel.create(
+            user_id   = wUsers.user_id,
+            sender_id = session.user_id,
+            type      = "wishlist_offer_active",
+            title     = "Your wishlist item is on sale!",
+            message   = "'" & trim(form.offer_name) & "' — " & discountDisplay
+                      & " on a product in your wishlist. Limited time only!",
+            link      = "index.cfm?page=dashboard&section=wishlist"
+        )>
+    </cfloop>
+</cfloop>
+
                 <cfset jsonRes(true, finalMsg)>
 
             <cfcatch>

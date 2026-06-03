@@ -111,79 +111,94 @@
         <cfset var prevPage   = startPage - 1>
         <cfset var nextPage   = endPage + 1>
 
-        <!--- PRODUCT CARDS HTML (Updated with Offer Price) --->
-        <cfsavecontent variable="productHTML">
-        <cfoutput query="enrichedProducts">
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="card h-100 product-card" data-pid="#id#">
+       <!--- PRODUCT CARDS HTML --->
+<cfsavecontent variable="productHTML">
+<cfoutput query="enrichedProducts">
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100 product-card" data-pid="#id#">
 
-                    <cfif len(first_image)>
-                        <img src="../../assets/images/products/#first_image#" 
-                             class="card-img-top" style="height:180px;object-fit:cover;">
+            <!--- WISHLIST HEART BUTTON --->
+            <button class="btn btn-link p-0 position-absolute toggleWishBtn"
+                    data-product-id="#id#"
+                    title="Add to Wishlist"
+                    id="wishBtn_#id#"
+                    style="top:6px;right:6px;font-size:1.5rem;color:##ccc;
+                           z-index:2;line-height:1;background:rgba(255,255,255,0.85);
+                           border-radius:50%;width:32px;height:32px;
+                           display:flex;align-items:center;justify-content:center;">
+                &##9829;
+            </button>
+
+            <cfif len(first_image)>
+                <img src="../../assets/images/products/#first_image#"
+                     class="card-img-top" style="height:180px;object-fit:cover;">
+            <cfelse>
+                <img src="https://via.placeholder.com/200"
+                     class="card-img-top" style="height:180px;object-fit:cover;">
+            </cfif>
+
+            <div class="card-body d-flex flex-column text-center p-2">
+                <h6 class="card-title mb-1">#product_name#</h6>
+                <p class="text-muted small mb-1">#category_name#</p>
+
+                <!--- PRICE DISPLAY --->
+                <div class="mb-2">
+                    <cfif has_offer>
+                        <span class="text-muted text-decoration-line-through small">
+                            <i class="bi bi-currency-rupee"></i>#numberFormat(original_price, "0.00")#
+                        </span><br>
+                        <span class="fw-bold fs-5 text-danger">
+                            <i class="bi bi-currency-rupee"></i>#numberFormat(offer_price, "0.00")#
+                        </span>
+                        <span class="badge bg-danger ms-1">-#discount_percent#%</span>
                     <cfelse>
-                        <img src="https://via.placeholder.com/200" 
-                             class="card-img-top" style="height:180px;object-fit:cover;">
+                        <span class="fw-bold fs-5">
+                            <i class="bi bi-currency-rupee"></i>#numberFormat(price, "0.00")# /-
+                        </span>
                     </cfif>
-                    
-                    <div class="card-body d-flex flex-column text-center p-2">
-                        <h6 class="card-title mb-1">#product_name#</h6>
-                        <p class="text-muted small mb-1">#category_name#</p>
-                        
-                        <!--- === UPDATED PRICE DISPLAY === --->
-<div class="mb-2">
-    <cfif has_offer>
-        <span class="text-muted text-decoration-line-through small">
-            <i class="bi bi-currency-rupee"></i>#numberFormat(original_price, "0.00")#
-        </span><br>
-        <span class="fw-bold fs-5 text-danger">
-            <i class="bi bi-currency-rupee"></i>#numberFormat(offer_price, "0.00")#
-        </span>
-        <span class="badge bg-danger ms-1">-#discount_percent#%</span>
-    <cfelse>
-        <span class="fw-bold fs-5">
-            <i class="bi bi-currency-rupee"></i>#numberFormat(price, "0.00")# /-
-        </span>
-    </cfif>
-</div>
+                </div>
 
-                        <div class="mb-2">
-                            <cfif val(avg_rating) GT 0>
-                                <span class="text-warning small">
-                                    <cfloop from="1" to="5" index="s">
-                                        <cfif s LTE round(avg_rating)>&##9733;<cfelse>&##9734;</cfif>
-                                    </cfloop>
-                                </span>
-                                <small class="text-muted">#avg_rating# (#review_count#)</small>
-                            <cfelse>
-                                <small class="text-muted">No reviews yet</small>
-                            </cfif>
-                        </div>
+                <!--- RATINGS --->
+                <div class="mb-2">
+                    <cfif val(avg_rating) GT 0>
+                        <span class="text-warning small">
+                            <cfloop from="1" to="5" index="s">
+                                <cfif s LTE round(avg_rating)>&##9733;<cfelse>&##9734;</cfif>
+                            </cfloop>
+                        </span>
+                        <small class="text-muted">#avg_rating# (#review_count#)</small>
+                    <cfelse>
+                        <small class="text-muted">No reviews yet</small>
+                    </cfif>
+                </div>
 
-                        <div class="mt-auto" onclick="event.stopPropagation()">
-                            <cfif stock LTE 0>
-                                <p class="text-danger fw-bold small mb-2">Out of Stock</p>
-                                <div id="enqMsg_#id#"></div>
-                                <div id="enqBtnArea_#id#">
-                                    <form class="enquiryForm">
-                                        <input type="hidden" name="product_id" value="#id#">
-                                        <button type="submit" class="btn btn-warning btn-sm w-100">Request</button>
-                                    </form>
-                                </div>
-                            <cfelse>
-                                <form class="addToCartForm">
-                                    <input type="hidden" name="product_id"   value="#id#">
-                                    <input type="hidden" name="product_name" value="#product_name#">
-                                    <input type="hidden" name="price"        value="#offer_price#">  <!--- Send offer price --->
-                                    <input type="hidden" name="image"        value="#first_image#">
-                                    <button type="submit" class="btn btn-success btn-sm w-100">Add to Cart</button>
-                                </form>
-                            </cfif>
+                <!--- CART / ENQUIRY --->
+                <div class="mt-auto" onclick="event.stopPropagation()">
+                    <cfif stock LTE 0>
+                        <p class="text-danger fw-bold small mb-2">Out of Stock</p>
+                        <div id="enqMsg_#id#"></div>
+                        <div id="enqBtnArea_#id#">
+                            <form class="enquiryForm">
+                                <input type="hidden" name="product_id" value="#id#">
+                                <button type="submit" class="btn btn-warning btn-sm w-100">Request</button>
+                            </form>
                         </div>
-                    </div>
+                    <cfelse>
+                        <form class="addToCartForm">
+                            <input type="hidden" name="product_id"   value="#id#">
+                            <input type="hidden" name="product_name" value="#product_name#">
+                            <input type="hidden" name="price"        value="#offer_price#">
+                            <input type="hidden" name="image"        value="#first_image#">
+                            <button type="submit" class="btn btn-success btn-sm w-100">Add to Cart</button>
+                        </form>
+                    </cfif>
                 </div>
             </div>
-        </cfoutput>
-        </cfsavecontent>
+
+        </div>
+    </div>
+</cfoutput>
+</cfsavecontent>
 
         <!--- PAGINATION (unchanged) --->
         <cfsavecontent variable="paginationHTML">
